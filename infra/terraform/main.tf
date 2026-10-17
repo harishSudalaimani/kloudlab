@@ -71,18 +71,16 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_eip" "nat" {
-  for_each   = local.subnets
   domain     = "vpc"
   depends_on = [aws_internet_gateway.prod]
-  tags       = { Name = "${local.prefix}-prod-nat-${each.key}" }
+  tags       = { Name = "${local.prefix}-prod-nat" }
 }
 
 resource "aws_nat_gateway" "prod" {
-  for_each      = local.subnets
-  allocation_id = aws_eip.nat[each.key].id
-  subnet_id     = aws_subnet.public[each.key].id
+  allocation_id = aws_eip.nat.id
+  subnet_id     = values(aws_subnet.public)[0].id
   depends_on    = [aws_internet_gateway.prod]
-  tags          = { Name = "${local.prefix}-prod-nat-${each.key}" }
+  tags          = { Name = "${local.prefix}-prod-nat" }
 }
 
 resource "aws_route_table" "private" {
@@ -90,7 +88,7 @@ resource "aws_route_table" "private" {
   vpc_id   = aws_vpc.prod.id
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.prod[each.key].id
+    nat_gateway_id = aws_nat_gateway.prod.id
   }
   tags = { Name = "${local.prefix}-prod-private-${each.key}" }
 }
@@ -198,59 +196,53 @@ resource "aws_iam_role_policy_attachment" "eks_ecr_read" {
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-resource "aws_eks_node_group" "platform" {
-  cluster_name    = aws_eks_cluster.prod.name
-  node_group_name = "${local.prefix}-prod-platform"
-  node_role_arn   = aws_iam_role.eks_nodes.arn
-  subnet_ids      = values(aws_subnet.private)[*].id
-  instance_types  = var.platform_instance_types
-  capacity_type   = "ON_DEMAND"
-  disk_size       = 40
-
-  scaling_config {
-    desired_size = var.platform_desired_size
-    min_size     = var.platform_min_size
-    max_size     = var.platform_max_size
+locals {
+  baseline_node_groups = {
+    platform = {
+      instance_types = var.platform_instance_types
+      desired_size   = var.platform_desired_size
+      min_size       = var.platform_min_size
+      max_size       = var.platform_max_size
+    }
+    backend = {
+      instance_types = var.backend_instance_types
+      desired_size   = var.backend_desired_size
+      min_size       = var.backend_min_size
+      max_size       = var.backend_max_size
+    }
+    observability = {
+      instance_types = var.observability_instance_types
+      desired_size   = var.observability_desired_size
+      min_size       = var.observability_min_size
+      max_size       = var.observability_max_size
+    }
   }
-
-  update_config { max_unavailable = 1 }
-  labels = { workload = "platform" }
-  depends_on = [
-    aws_iam_role_policy_attachment.eks_worker,
-    aws_iam_role_policy_attachment.eks_ecr_read,
-    aws_eks_addon.vpc_cni,
-  ]
-  tags = { Name = "${local.prefix}-prod-platform" }
 }
 
-resource "aws_eks_node_group" "labs" {
+resource "aws_eks_node_group" "baseline" {
+  for_each        = local.baseline_node_groups
   cluster_name    = aws_eks_cluster.prod.name
-  node_group_name = "${local.prefix}-prod-labs"
+  node_group_name = "${local.prefix}-prod-${each.key}"
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = values(aws_subnet.private)[*].id
-  instance_types  = var.lab_instance_types
+  instance_types  = each.value.instance_types
   capacity_type   = "ON_DEMAND"
   disk_size       = 50
 
   scaling_config {
-    desired_size = var.lab_desired_size
-    min_size     = var.lab_min_size
-    max_size     = var.lab_max_size
+    desired_size = each.value.desired_size
+    min_size     = each.value.min_size
+    max_size     = each.value.max_size
   }
 
   update_config { max_unavailable = 1 }
-  labels = { workload = "student-labs" }
-  taint {
-    key    = "workload"
-    value  = "student-labs"
-    effect = "NO_SCHEDULE"
-  }
+  labels = { workload = each.key }
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker,
     aws_iam_role_policy_attachment.eks_ecr_read,
     aws_eks_addon.vpc_cni,
   ]
-  tags = { Name = "${local.prefix}-prod-labs" }
+  tags = { Name = "${local.prefix}-prod-${each.key}" }
 }
 
 resource "aws_eks_addon" "required" {
@@ -258,10 +250,7 @@ resource "aws_eks_addon" "required" {
   cluster_name = aws_eks_cluster.prod.name
   addon_name   = each.key
   preserve     = true
-  depends_on = [
-    aws_eks_node_group.platform,
-    aws_eks_node_group.labs,
-  ]
+  depends_on   = [aws_eks_node_group.baseline]
 }
 
 resource "aws_dynamodb_table" "sessions" {
@@ -517,4 +506,364 @@ resource "aws_ecr_lifecycle_policy" "web" {
       action = { type = "expire" }
     }]
   })
+}
+
+resource "aws_eks_access_entry" "karpenter_nodes" {
+  cluster_name  = aws_eks_cluster.prod.name
+  principal_arn = aws_iam_role.karpenter_node.arn
+  type          = "EC2_LINUX"
+}
+
+resource "aws_iam_role" "karpenter_node" {
+  name = "${local.prefix}-prod-karpenter-node"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "karpenter_node" {
+  for_each = toset([
+    "AmazonEKS_CNI_Policy",
+    "AmazonEKSWorkerNodePolicy",
+    "AmazonEC2ContainerRegistryPullOnly",
+    "AmazonSSMManagedInstanceCore",
+  ])
+  role       = aws_iam_role.karpenter_node.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/${each.key}"
+}
+
+resource "aws_iam_role" "karpenter_controller" {
+  name = "${local.prefix}-prod-karpenter-controller"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.eks.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${replace(aws_eks_cluster.prod.identity[0].oidc[0].issuer, "https://", "")}:aud" = "sts.amazonaws.com"
+          "${replace(aws_eks_cluster.prod.identity[0].oidc[0].issuer, "https://", "")}:sub" = "system:serviceaccount:kube-system:karpenter"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_sqs_queue" "karpenter_interruptions" {
+  name                      = local.cluster_name
+  message_retention_seconds = 300
+  sqs_managed_sse_enabled   = true
+  tags                      = { Name = "${local.cluster_name}-interruptions" }
+}
+
+resource "aws_cloudwatch_event_rule" "karpenter_spot_interruption" {
+  name        = "${local.cluster_name}-spot-interruption"
+  description = "Forward EC2 Spot interruption notices to Karpenter."
+  event_pattern = jsonencode({
+    source      = ["aws.ec2"]
+    detail-type = ["EC2 Spot Instance Interruption Warning"]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "karpenter_rebalance" {
+  name        = "${local.cluster_name}-rebalance"
+  description = "Forward EC2 rebalance recommendations to Karpenter."
+  event_pattern = jsonencode({
+    source      = ["aws.ec2"]
+    detail-type = ["EC2 Instance Rebalance Recommendation"]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "karpenter_instance_state" {
+  name        = "${local.cluster_name}-instance-state"
+  description = "Forward EC2 state changes to Karpenter."
+  event_pattern = jsonencode({
+    source      = ["aws.ec2"]
+    detail-type = ["EC2 Instance State-change Notification"]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "karpenter_health" {
+  name        = "${local.cluster_name}-health"
+  description = "Forward AWS Health events to Karpenter."
+  event_pattern = jsonencode({
+    source      = ["aws.health"]
+    detail-type = ["AWS Health Event"]
+    detail      = { service = ["EC2"] }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "karpenter_interruptions" {
+  for_each = {
+    spot      = aws_cloudwatch_event_rule.karpenter_spot_interruption.name
+    rebalance = aws_cloudwatch_event_rule.karpenter_rebalance.name
+    state     = aws_cloudwatch_event_rule.karpenter_instance_state.name
+    health    = aws_cloudwatch_event_rule.karpenter_health.name
+  }
+  rule      = each.value
+  target_id = "karpenter-interruption-queue"
+  arn       = aws_sqs_queue.karpenter_interruptions.arn
+}
+
+resource "aws_sqs_queue_policy" "karpenter_interruptions" {
+  queue_url = aws_sqs_queue.karpenter_interruptions.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sqs:SendMessage"
+        Resource  = aws_sqs_queue.karpenter_interruptions.arn
+        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.karpenter_spot_interruption.arn } }
+      },
+      {
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sqs:SendMessage"
+        Resource  = aws_sqs_queue.karpenter_interruptions.arn
+        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.karpenter_rebalance.arn } }
+      },
+      {
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sqs:SendMessage"
+        Resource  = aws_sqs_queue.karpenter_interruptions.arn
+        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.karpenter_instance_state.arn } }
+      },
+      {
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sqs:SendMessage"
+        Resource  = aws_sqs_queue.karpenter_interruptions.arn
+        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.karpenter_health.arn } }
+      },
+      {
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "sqs:*"
+        Resource  = aws_sqs_queue.karpenter_interruptions.arn
+        Condition = { Bool = { "aws:SecureTransport" = "false" } }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "karpenter_controller" {
+  name = "${local.prefix}-prod-karpenter-controller"
+  role = aws_iam_role.karpenter_controller.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "RegionalResourceDiscovery"
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeAvailabilityZones", "ec2:DescribeCapacityReservations", "ec2:DescribeImages",
+          "ec2:DescribeInstances", "ec2:DescribeInstanceStatus", "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeInstanceTypes", "ec2:DescribeLaunchTemplates", "ec2:DescribePlacementGroups",
+          "ec2:DescribeSecurityGroups", "ec2:DescribeSpotPriceHistory", "ec2:DescribeSubnets", "ec2:DescribeVpcs",
+        ]
+        Resource  = "*"
+        Condition = { StringEquals = { "aws:RequestedRegion" = var.aws_region } }
+      },
+      {
+        Sid      = "ReadEksAmiParameters"
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}::parameter/aws/service/*"
+      },
+      {
+        Sid      = "ReadEc2Pricing"
+        Effect   = "Allow"
+        Action   = "pricing:GetProducts"
+        Resource = "*"
+      },
+      {
+        Sid      = "DescribeThisCluster"
+        Effect   = "Allow"
+        Action   = "eks:DescribeCluster"
+        Resource = aws_eks_cluster.prod.arn
+      },
+      {
+        Sid    = "ReadLaunchDependencies"
+        Effect = "Allow"
+        Action = ["ec2:RunInstances", "ec2:CreateFleet"]
+        Resource = [
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}::image/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}::snapshot/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:security-group/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:subnet/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:capacity-reservation/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:placement-group/*",
+        ]
+      },
+      {
+        Sid      = "UseKarpenterLaunchTemplates"
+        Effect   = "Allow"
+        Action   = ["ec2:RunInstances", "ec2:CreateFleet"]
+        Resource = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*"
+        Condition = {
+          StringEquals = { "aws:ResourceTag/kubernetes.io/cluster/${local.cluster_name}" = "owned" }
+          StringLike   = { "aws:ResourceTag/karpenter.sh/nodepool" = "*" }
+        }
+      },
+      {
+        Sid    = "CreateTaggedKarpenterCapacity"
+        Effect = "Allow"
+        Action = ["ec2:RunInstances", "ec2:CreateFleet", "ec2:CreateLaunchTemplate"]
+        Resource = [
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:fleet/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:volume/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:spot-instances-request/*",
+        ]
+        Condition = {
+          StringEquals = {
+            "aws:RequestTag/kubernetes.io/cluster/${local.cluster_name}" = "owned"
+            "aws:RequestTag/eks:eks-cluster-name"                        = local.cluster_name
+          }
+          StringLike = { "aws:RequestTag/karpenter.sh/nodepool" = "*" }
+        }
+      },
+      {
+        Sid    = "TagCapacityOnCreation"
+        Effect = "Allow"
+        Action = "ec2:CreateTags"
+        Resource = [
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:fleet/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:volume/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:spot-instances-request/*",
+        ]
+        Condition = {
+          StringEquals = {
+            "aws:RequestTag/kubernetes.io/cluster/${local.cluster_name}" = "owned"
+            "aws:RequestTag/eks:eks-cluster-name"                        = local.cluster_name
+            "ec2:CreateAction"                                           = ["RunInstances", "CreateFleet", "CreateLaunchTemplate"]
+          }
+          StringLike = { "aws:RequestTag/karpenter.sh/nodepool" = "*" }
+        }
+      },
+      {
+        Sid      = "TagKarpenterInstances"
+        Effect   = "Allow"
+        Action   = "ec2:CreateTags"
+        Resource = "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*"
+        Condition = {
+          StringEquals                = { "aws:ResourceTag/kubernetes.io/cluster/${local.cluster_name}" = "owned" }
+          StringEqualsIfExists        = { "aws:RequestTag/eks:eks-cluster-name" = local.cluster_name }
+          StringLike                  = { "aws:ResourceTag/karpenter.sh/nodepool" = "*" }
+          "ForAllValues:StringEquals" = { "aws:TagKeys" = ["eks:eks-cluster-name", "karpenter.sh/nodeclaim", "Name"] }
+        }
+      },
+      {
+        Sid    = "DeleteKarpenterCapacity"
+        Effect = "Allow"
+        Action = ["ec2:TerminateInstances", "ec2:RebootInstances", "ec2:DeleteLaunchTemplate"]
+        Resource = [
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+          "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
+        ]
+        Condition = {
+          StringEquals = { "aws:ResourceTag/kubernetes.io/cluster/${local.cluster_name}" = "owned" }
+          StringLike   = { "aws:ResourceTag/karpenter.sh/nodepool" = "*" }
+        }
+      },
+      {
+        Sid       = "PassKarpenterNodeRole"
+        Effect    = "Allow"
+        Action    = "iam:PassRole"
+        Resource  = aws_iam_role.karpenter_node.arn
+        Condition = { StringEquals = { "iam:PassedToService" = ["ec2.amazonaws.com", "ec2.amazonaws.com.cn"] } }
+      },
+      {
+        Sid      = "CreateTaggedKarpenterInstanceProfiles"
+        Effect   = "Allow"
+        Action   = "iam:CreateInstanceProfile"
+        Resource = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*"
+        Condition = {
+          StringEquals = {
+            "aws:RequestTag/kubernetes.io/cluster/${local.cluster_name}" = "owned"
+            "aws:RequestTag/eks:eks-cluster-name"                        = local.cluster_name
+            "aws:RequestTag/topology.kubernetes.io/region"               = var.aws_region
+          }
+          StringLike = { "aws:RequestTag/karpenter.k8s.aws/ec2nodeclass" = "*" }
+        }
+      },
+      {
+        Sid      = "TagKarpenterInstanceProfiles"
+        Effect   = "Allow"
+        Action   = "iam:TagInstanceProfile"
+        Resource = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*"
+        Condition = {
+          StringEquals = {
+            "aws:ResourceTag/kubernetes.io/cluster/${local.cluster_name}" = "owned"
+            "aws:ResourceTag/topology.kubernetes.io/region"               = var.aws_region
+            "aws:RequestTag/kubernetes.io/cluster/${local.cluster_name}"  = "owned"
+            "aws:RequestTag/eks:eks-cluster-name"                         = local.cluster_name
+            "aws:RequestTag/topology.kubernetes.io/region"                = var.aws_region
+          }
+          StringLike = {
+            "aws:ResourceTag/karpenter.k8s.aws/ec2nodeclass" = "*"
+            "aws:RequestTag/karpenter.k8s.aws/ec2nodeclass"  = "*"
+          }
+        }
+      },
+      {
+        Sid      = "ManageKarpenterInstanceProfiles"
+        Effect   = "Allow"
+        Action   = ["iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile", "iam:DeleteInstanceProfile"]
+        Resource = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*"
+        Condition = {
+          StringEquals = {
+            "aws:ResourceTag/kubernetes.io/cluster/${local.cluster_name}" = "owned"
+            "aws:ResourceTag/topology.kubernetes.io/region"               = var.aws_region
+          }
+          StringLike = { "aws:ResourceTag/karpenter.k8s.aws/ec2nodeclass" = "*" }
+        }
+      },
+      {
+        Sid      = "ReadKarpenterInstanceProfile"
+        Effect   = "Allow"
+        Action   = "iam:GetInstanceProfile"
+        Resource = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*"
+      },
+      {
+        Sid      = "ListKarpenterInstanceProfiles"
+        Effect   = "Allow"
+        Action   = "iam:ListInstanceProfiles"
+        Resource = "*"
+      },
+      {
+        Sid      = "ReadKarpenterInterruptions"
+        Effect   = "Allow"
+        Action   = ["sqs:DeleteMessage", "sqs:GetQueueUrl", "sqs:ReceiveMessage"]
+        Resource = aws_sqs_queue.karpenter_interruptions.arn
+      },
+    ]
+  })
+}
+
+resource "aws_ec2_tag" "karpenter_private_subnets" {
+  for_each    = aws_subnet.private
+  resource_id = each.value.id
+  key         = "karpenter.sh/discovery"
+  value       = local.cluster_name
+}
+
+resource "aws_ec2_tag" "karpenter_cluster_security_group" {
+  resource_id = aws_eks_cluster.prod.vpc_config[0].cluster_security_group_id
+  key         = "karpenter.sh/discovery"
+  value       = local.cluster_name
 }

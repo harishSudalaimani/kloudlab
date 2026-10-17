@@ -15,3 +15,8 @@ output "ecr_api_repository_url" { value = aws_ecr_repository.api.repository_url 
 output "ecr_web_repository_url" { value = aws_ecr_repository.web.repository_url }
 output "github_actions_role_arn" { value = aws_iam_role.github_actions.arn }
 output "update_kubeconfig_command" { value = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.prod.name} --role-arn ${var.cluster_admin_role_arn}" }
+
+output "karpenter_controller_role_arn" { value = aws_iam_role.karpenter_controller.arn }
+output "karpenter_node_role_name" { value = aws_iam_role.karpenter_node.name }
+output "karpenter_interruption_queue_name" { value = aws_sqs_queue.karpenter_interruptions.name }
+output "baseline_node_group_names" { value = { for name, group in aws_eks_node_group.baseline : name => group.node_group_name } }

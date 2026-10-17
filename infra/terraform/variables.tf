@@ -69,42 +69,62 @@ variable "github_repository" {
 variable "platform_instance_types" {
   description = "On-demand EC2 types for the always-on API/platform node group."
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["m8a.medium"]
 }
 
 variable "platform_desired_size" {
   type    = number
-  default = 2
+  default = 1
 }
 
 variable "platform_min_size" {
   type    = number
-  default = 2
+  default = 1
 }
 
 variable "platform_max_size" {
   type    = number
-  default = 4
+  default = 2
 }
 
-variable "lab_instance_types" {
-  description = "On-demand EC2 types for guided lab workloads. These nodes are tainted for lab pods."
+variable "backend_instance_types" {
+  description = "On-demand EC2 types for the API node group."
   type        = list(string)
-  default     = ["t3.large"]
+  default     = ["m8a.medium"]
 }
 
-variable "lab_desired_size" {
-  description = "Baseline lab capacity so guided workloads can schedule. This node remains billed while provisioned."
-  type        = number
-  default     = 1
-}
-
-variable "lab_min_size" {
+variable "backend_desired_size" {
   type    = number
   default = 1
 }
 
-variable "lab_max_size" {
+variable "backend_min_size" {
   type    = number
-  default = 6
+  default = 1
+}
+
+variable "backend_max_size" {
+  type    = number
+  default = 2
+}
+
+variable "observability_instance_types" {
+  description = "On-demand EC2 types for the observability node group."
+  type        = list(string)
+  default     = ["m8a.medium"]
+}
+
+variable "observability_desired_size" {
+  type    = number
+  default = 1
+}
+
+variable "observability_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "observability_max_size" {
+  type    = number
+  default = 2
 }
