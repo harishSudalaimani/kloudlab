@@ -1,0 +1,17 @@
+output "aws_region" { value = var.aws_region }
+output "vpc_id" { value = aws_vpc.prod.id }
+output "private_subnet_ids" { value = values(aws_subnet.private)[*].id }
+output "eks_cluster_name" { value = aws_eks_cluster.prod.name }
+output "eks_cluster_endpoint" { value = aws_eks_cluster.prod.endpoint }
+output "eks_operator_role_arn" { value = var.cluster_admin_role_arn }
+output "api_irsa_role_arn" { value = aws_iam_role.api.arn }
+output "api_service_account" { value = "system:serviceaccount:kloudlab-system:kloudlab-api" }
+output "sessions_table_name" { value = aws_dynamodb_table.sessions.name }
+output "cognito_user_pool_id" { value = aws_cognito_user_pool.students.id }
+output "cognito_app_client_id" { value = aws_cognito_user_pool_client.web.id }
+output "cognito_issuer" { value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.students.id}" }
+output "cognito_hosted_ui_domain" { value = "https://${aws_cognito_user_pool_domain.students.domain}.auth.${var.aws_region}.amazoncognito.com" }
+output "ecr_api_repository_url" { value = aws_ecr_repository.api.repository_url }
+output "ecr_web_repository_url" { value = aws_ecr_repository.web.repository_url }
+output "github_actions_role_arn" { value = aws_iam_role.github_actions.arn }
+output "update_kubeconfig_command" { value = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.prod.name} --role-arn ${var.cluster_admin_role_arn}" }

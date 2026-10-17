@@ -1,0 +1,17 @@
+/backend/target/
+/web/node_modules/
+/web/dist/
+.env
+.env.*
+!.env.example
+!/web/.env.example
+/backend/.env
+/web/.env.local
+*.tfstate
+*.tfstate.*
+/infra/terraform/.terraform/
+/infra/terraform/terraform.tfvars
+
+/infra/terraform/state/.terraform/
+*.tfplan
+*.tfplan.*
