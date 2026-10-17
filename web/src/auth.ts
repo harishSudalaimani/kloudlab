@@ -1,21 +1,34 @@
-const domain = import.meta.env.VITE_COGNITO_DOMAIN as string
-const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID as string
-const redirectUri = import.meta.env.VITE_COGNITO_REDIRECT_URI as string
-const logoutUri = import.meta.env.VITE_COGNITO_LOGOUT_URI as string
-const scopes = (import.meta.env.VITE_COGNITO_SCOPES as string | undefined) ?? 'openid email'
+type CognitoSettings = { domain: string; clientId: string; redirectUri: string; logoutUri: string; scopes: string }
+
+function settings(): CognitoSettings {
+  const config = {
+    domain: (import.meta.env.VITE_COGNITO_DOMAIN as string | undefined)?.trim(),
+    clientId: (import.meta.env.VITE_COGNITO_CLIENT_ID as string | undefined)?.trim(),
+    redirectUri: (import.meta.env.VITE_COGNITO_REDIRECT_URI as string | undefined)?.trim(),
+    logoutUri: (import.meta.env.VITE_COGNITO_LOGOUT_URI as string | undefined)?.trim(),
+    scopes: ((import.meta.env.VITE_COGNITO_SCOPES as string | undefined) ?? 'openid email').trim(),
+  }
+  const { domain, clientId, redirectUri, logoutUri, scopes } = config
+  if (!domain || !clientId || !redirectUri || !logoutUri || /replace-me|replace-with/i.test(`${domain} ${clientId}`)) {
+    throw new Error('Account sign-in is not configured for this site yet.')
+  }
+  try { new URL(domain) } catch { throw new Error('The account sign-in configuration is invalid.') }
+  return { domain: domain.replace(/\/+$/, ''), clientId, redirectUri, logoutUri, scopes }
+}
 
 function base64url(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
 }
 
-export async function signIn() {
+async function startAuth(endpoint: 'login' | 'signup') {
+  const { domain, clientId, redirectUri, scopes } = settings()
   const random = crypto.getRandomValues(new Uint8Array(32))
   const verifier = base64url(random)
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
   const state = base64url(crypto.getRandomValues(new Uint8Array(24)))
   sessionStorage.setItem('pkce_verifier', verifier)
   sessionStorage.setItem('oauth_state', state)
-  const url = new URL('/oauth2/authorize', domain)
+  const url = new URL(endpoint === 'signup' ? '/signup' : '/oauth2/authorize', domain)
   url.search = new URLSearchParams({
     response_type: 'code', client_id: clientId, redirect_uri: redirectUri,
     scope: scopes, state, code_challenge: base64url(new Uint8Array(digest)), code_challenge_method: 'S256',
@@ -23,9 +36,15 @@ export async function signIn() {
   window.location.assign(url)
 }
 
+export function signIn() { return startAuth('login') }
+export function signUp() { return startAuth('signup') }
+
 export async function handleCallback() {
+  const { domain, clientId, redirectUri } = settings()
   const params = new URLSearchParams(location.search)
   if (params.get('state') !== sessionStorage.getItem('oauth_state')) throw new Error('Sign-in state mismatch')
+  const authError = params.get('error_description') ?? params.get('error')
+  if (authError) throw new Error(authError)
   const code = params.get('code')
   const verifier = sessionStorage.getItem('pkce_verifier')
   if (!code || !verifier) throw new Error('Sign-in response is incomplete')
@@ -44,6 +63,7 @@ export async function handleCallback() {
 }
 
 export async function accessToken(): Promise<string | null> {
+  const { domain, clientId } = settings()
   const access = sessionStorage.getItem('access_token')
   const expires = Number(sessionStorage.getItem('access_expires_at') ?? 0)
   if (access && Date.now() < expires - 30_000) return access
@@ -61,6 +81,7 @@ export async function accessToken(): Promise<string | null> {
 }
 
 export async function signOut() {
+  const { domain, clientId, logoutUri } = settings()
   const refresh = sessionStorage.getItem('refresh_token')
   sessionStorage.clear()
   if (refresh) {

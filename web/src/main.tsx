@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { handleCallback, signIn, signUp } from './auth'
 import './style.css'
 type Track = { slug: string; title: string; short: string; description: string; symbol: string; labs: string[] }
 
@@ -30,7 +31,7 @@ function Header({ theme, toggle }: { theme: string; toggle: () => void }) {
       <nav className="main-nav" aria-label="Main navigation">
         <a className="nav-labs" href="/labs">Labs</a><a href="/about">About</a><a href="/faq">FAQ</a>
       </nav>
-      <div className="header-actions"><ThemeButton theme={theme} toggle={toggle} /><a className="button button-small" href="/labs">Explore labs <span aria-hidden="true">↗</span></a></div>
+      <div className="header-actions"><ThemeButton theme={theme} toggle={toggle} /><a className="nav-login" href="/login">Log in</a><a className="button button-small" href="/signup">Sign up <span aria-hidden="true">↗</span></a></div>
     </div>
   </header>
 }
@@ -111,6 +112,28 @@ function FaqPage() {
   return <><main className="page-main faq-page"><div className="breadcrumb"><a href="/">Home</a><span>/</span><span>FAQ</span></div><section className="page-intro"><span className="eyebrow">GOOD QUESTIONS</span><h1>What to know about <span className="gradient-text">KloudLab.</span></h1><p>Learn about KloudLab’s approach to cloud and platform engineering.</p></section><section className="faq-list">{questions.map((item, index) => <details className="faq-item" key={item.question}><summary><span className="faq-index">0{index + 1}</span><span>{item.question}</span><span className="faq-toggle" aria-hidden="true">+</span></summary><p>{item.answer}</p></details>)}</section><section className="faq-contact"><div><span className="eyebrow">START EXPLORING</span><h2>Choose a skill to build.</h2></div><a className="button" href="/labs">Browse learning paths <span aria-hidden="true">↗</span></a></section></main><Footer /></>
 }
 
+function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
+  const signup = mode === 'signup'
+  const [error, setError] = useState('')
+  async function continueWithKloudLab() {
+    setError('')
+    try { await (signup ? signUp() : signIn()) }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not open account access.') }
+  }
+  return <><main className="access-page"><section className="access-card"><a className="back-link" href="/">← Back to KloudLab</a><img className="access-mark" src="/kloudlab-mark.svg" alt="" /><span className="eyebrow">KLOUDLAB ACCOUNT</span><h1>{signup ? 'Create your account.' : 'Welcome back.'}</h1><p>{signup ? 'Set up your account to continue with KloudLab.' : 'Sign in to continue with KloudLab.'}</p><button type="button" className="button access-submit" onClick={() => void continueWithKloudLab()}>{signup ? 'Continue to sign up' : 'Continue to log in'} <span aria-hidden="true">↗</span></button>{error && <p className="auth-error" role="alert">{error}</p>}<div className="access-switch">{signup ? <>Already have an account? <a href="/login">Log in</a></> : <>New to KloudLab? <a href="/signup">Sign up</a></>}</div></section><div className="access-side"><span className="eyebrow">BUILD SKILLS THAT TRAVEL</span><h2>Practice the tools.<br /><span className="gradient-text">Keep the confidence.</span></h2><p>Guided labs for cloud, Kubernetes, and the engineering practices that connect them.</p><a href="/labs" className="text-link">Explore labs <span aria-hidden="true">→</span></a></div></main><Footer /></>
+}
+
+function CallbackPage() {
+  const [message, setMessage] = useState('Completing sign-in…')
+  const started = useRef(false)
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    handleCallback().catch((cause: Error) => setMessage(cause.message))
+  }, [])
+  return <><main className="workspace"><span className="eyebrow">KLOUDLAB ACCOUNT</span><h1>Completing sign-in</h1><p role="status">{message}</p><a className="text-link" href="/">Return to KloudLab</a></main><Footer /></>
+}
+
 function NotFound() {
   return <><main className="page-main not-found"><span className="eyebrow">404 · PAGE NOT FOUND</span><h1>We can’t find that page.</h1><p>Explore KloudLab’s learning paths to find a topic that interests you.</p><a className="button" href="/labs">Browse learning paths <span aria-hidden="true">↗</span></a></main><Footer /></>
 }
@@ -124,6 +147,9 @@ function PublicSite({ theme, toggle }: { theme: string; toggle: () => void }) {
   else if (path === '/about') content = <AboutPage />
   else if (path === '/faq') content = <FaqPage />
   else if (path === '/labs') content = <LabsPage />
+  else if (path === '/login') content = <AuthPage mode="login" />
+  else if (path === '/signup') content = <AuthPage mode="signup" />
+  else if (path === '/callback') content = <CallbackPage />
   else if (trackSlug) content = <TrackPage slug={trackSlug} />
   else content = <NotFound />
   return <div className="site-shell"><Header theme={theme} toggle={toggle} />{content}</div>
