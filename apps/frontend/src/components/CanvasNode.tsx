@@ -20,10 +20,12 @@ function announcePortClick(nodeId: string, direction: 'input' | 'output') {
 export function CanvasNode({ id, data, selected }: NodeProps<ComponentFlowNode>) {
   const component = catalogById.get(data.typeId)
   if (!component) return null
+  const inputTypes = [...new Set(component.ports.filter((port) => port.direction === 'input').flatMap((port) => port.connectionTypes))]
+  const outputTypes = [...new Set(component.ports.filter((port) => port.direction === 'output').flatMap((port) => port.connectionTypes))]
 
   return (
     <article className={`component-node${selected ? ' is-selected' : ''}${data.connectionSource ? ' is-connection-source' : ''}${data.connectionTarget ? ' is-connection-target' : ''}`} style={{ '--node-accent': component.accent } as CSSProperties}>
-      <Handle id="input" type="target" position={Position.Left} className="node-handle node-handle-input" isConnectable onClick={(event) => { event.stopPropagation(); announcePortClick(id, 'input') }} title="Choose as connection target" />
+      <Handle id="input" type="target" position={Position.Left} className="node-handle node-handle-input" isConnectable onClick={(event) => { event.stopPropagation(); announcePortClick(id, 'input') }} title={`Accepts: ${inputTypes.join(', ') || 'no connections'}`} />
       <div className="component-node-head">
         <div className="component-glyph">{component.symbol}</div>
         <span className="component-node-kind">{component.category}</span>
@@ -38,7 +40,7 @@ export function CanvasNode({ id, data, selected }: NodeProps<ComponentFlowNode>)
         <span className="node-port-count"><i className="port-dot input-dot" />Input</span>
         <span className="node-port-count">Output<i className="port-dot output-dot" /></span>
       </div>
-      <Handle id="output" type="source" position={Position.Right} className="node-handle node-handle-output" isConnectable onClick={(event) => { event.stopPropagation(); announcePortClick(id, 'output') }} title="Choose as connection source" />
+      <Handle id="output" type="source" position={Position.Right} className="node-handle node-handle-output" isConnectable onClick={(event) => { event.stopPropagation(); announcePortClick(id, 'output') }} title={`Provides: ${outputTypes.join(', ') || 'no connections'}`} />
     </article>
   )
 }

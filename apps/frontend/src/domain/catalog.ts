@@ -15,6 +15,12 @@ export type ComponentCategory =
   | 'Identity'
   | 'Observability'
   | 'Security'
+  | 'AI & ML'
+  | 'Data & Workflow'
+  | 'Developer Tools'
+  | 'API & Integration'
+  | 'FinOps'
+  | 'Runtime'
 
 export type ComponentAvailability = 'open-source' | 'open-core' | 'cloud-hosting' | 'managed-service'
 
@@ -24,8 +30,19 @@ export interface ComponentPort {
   id: string
   direction: PortDirection
   connectionTypes: string[]
+  protocols?: string[]
+  allowedComponentTypes?: string[]
   required?: boolean
   multiple?: boolean
+}
+
+export interface ComponentValidationRule {
+  id: string
+  scope: 'configuration' | 'connection' | 'architecture'
+  severity: 'error' | 'warning' | 'info'
+  message: string
+  description?: string
+  options?: string[]
 }
 
 export interface ConfigProperty {
@@ -54,7 +71,7 @@ export interface ComponentDefinition {
     additionalProperties: false
   }
   ports: ComponentPort[]
-  validationRules: { id: string; scope: 'configuration' | 'connection' | 'architecture'; severity: 'error' | 'warning'; message: string }[]
+  validationRules: ComponentValidationRule[]
   documentation: string[]
   implementation?: { kind: 'pulumi-go' | 'kubernetes' | 'external'; reference: string; version: string }
 }
@@ -101,6 +118,8 @@ const categoryAccent: Record<ComponentCategory, string> = {
   'Service Mesh': '#a895df', 'Application Platform': '#81b995', GitOps: '#d38fa7', 'CI/CD': '#d6af6b',
   'Source Control': '#d18a76', 'Artifact Registry': '#b98ac9', Database: '#63b2bb', Messaging: '#d0a56f',
   Storage: '#91ae74', Identity: '#9b91da', Observability: '#77a9d7', Security: '#8eae6d',
+  'AI & ML': '#9b88d5', 'Data & Workflow': '#75a6b5', 'Developer Tools': '#b38b6c',
+  'API & Integration': '#d18d69', FinOps: '#9aa968', Runtime: '#7f9a9c',
 }
 
 function openSourceTool(
@@ -111,13 +130,16 @@ function openSourceTool(
   symbol: string,
   ports: ComponentPort[],
   documentation: string,
+  availability: ComponentAvailability = 'open-source',
 ): ComponentDefinition {
-  return definition(typeId, displayName, description, category, symbol, categoryAccent[category], {
+  const component = definition(typeId, displayName, description, category, symbol, categoryAccent[category], {
     name,
     namespace: { type: 'string', title: 'Namespace', pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' },
     replicas: { type: 'number', title: 'Replicas', minimum: 1, maximum: 100 },
     release: { type: 'string', title: 'Release or version', pattern: '^.{0,60}$' },
   }, ['name'], ports, [], [documentation])
+  component.availability = availability
+  return component
 }
 
 const name = { type: 'string', title: 'Name', pattern: '^.{1,80}$' } satisfies ConfigProperty
@@ -136,7 +158,33 @@ const tool = (
   symbol: string,
   portType: string,
   documentation: string,
-) => openSourceTool(typeId, displayName, description, category, symbol, flowPorts(portType), documentation)
+  availability: ComponentAvailability = 'open-source',
+) => {
+  const gatewayTypes = ['envoy-gateway', 'traefik', 'kong', 'nginx', 'haproxy', 'envoy-proxy', 'apisix', 'caddy', 'contour']
+  const databaseTypes = ['mysql', 'mariadb', 'valkey', 'clickhouse', 'cassandra', 'sqlite', 'tidb', 'influxdb', 'questdb', 'duckdb', 'druid', 'etcd', 'ferretdb', 'yugabytedb']
+  const messagingTypes = ['nats', 'rabbitmq', 'kafka', 'pulsar', 'activemq-artemis', 'mosquitto', 'emqx']
+  const ports: ComponentPort[] = gatewayTypes.includes(typeId)
+    ? [
+        { id: 'route', direction: 'input' as const, connectionTypes: ['http-route'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-service'] },
+        { id: 'service', direction: 'output' as const, connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-workload'] },
+      ]
+    : typeId === 'keda'
+      ? [{ id: 'scaled-workload', direction: 'output', connectionTypes: ['autoscaling'], allowedComponentTypes: ['kubernetes-workload'] }]
+      : ['openbao', 'external-secrets'].includes(typeId)
+        ? [{ id: 'secrets', direction: 'output', connectionTypes: ['secrets'], allowedComponentTypes: ['kubernetes-workload'] }]
+        : databaseTypes.includes(typeId)
+          ? [
+              { id: 'client', direction: 'input', connectionTypes: ['database-client'], protocols: ['TCP'], allowedComponentTypes: ['kubernetes-workload'] },
+              { id: 'database', direction: 'output', connectionTypes: ['database'], protocols: ['TCP'] },
+            ]
+          : messagingTypes.includes(typeId)
+            ? [
+                { id: 'client', direction: 'input', connectionTypes: ['messaging-client'], allowedComponentTypes: ['kubernetes-workload'] },
+                { id: 'endpoint', direction: 'output', connectionTypes: ['messaging-endpoint'] },
+              ]
+            : flowPorts(portType)
+  return openSourceTool(typeId, displayName, description, category, symbol, ports, documentation, availability)
+}
 
 const extendedCatalog: ComponentDefinition[] = [
   tool('opentofu', 'OpenTofu', 'Infrastructure as code for provisioning and managing cloud resources.', 'Infrastructure', 'TF', 'infrastructure', 'https://opentofu.org/docs/'),
@@ -199,6 +247,168 @@ const extendedCatalog: ComponentDefinition[] = [
   tool('cert-manager', 'cert-manager', 'Automated certificate issuance and renewal for Kubernetes.', 'Security', 'CERT', 'security', 'https://cert-manager.io/docs/'),
 ]
 
+const additionalCatalog: ComponentDefinition[] = [
+  // KloudLab's own infrastructure toolchain and AWS resources.
+  openSourceTool('pulumi', 'Pulumi', 'Infrastructure as code using Go and cloud provider SDKs.', 'Infrastructure', 'PUL', [
+    { id: 'source', direction: 'input', connectionTypes: ['iac-source'], allowedComponentTypes: ['github', 'gitlab'] },
+    { id: 'provider', direction: 'output', connectionTypes: ['pulumi-program'], allowedComponentTypes: ['pulumi-aws-provider'] },
+  ], 'https://www.pulumi.com/docs/'),
+  openSourceTool('github', 'GitHub', 'Git repository and collaboration platform used by KloudLab.', 'Source Control', 'GH', [
+    { id: 'repository', direction: 'output', connectionTypes: ['iac-source'], allowedComponentTypes: ['pulumi', 'github-actions'] },
+  ], 'https://docs.github.com/', 'managed-service'),
+  openSourceTool('github-actions', 'GitHub Actions', 'Repository workflows that build, validate, and deploy KloudLab infrastructure.', 'CI/CD', 'GHA', [
+    { id: 'repository', direction: 'input', connectionTypes: ['iac-source'], allowedComponentTypes: ['github'] },
+    { id: 'oidc', direction: 'output', connectionTypes: ['oidc-token'], allowedComponentTypes: ['aws-iam-role'] },
+  ], 'https://docs.github.com/actions', 'managed-service'),
+  openSourceTool('aws-iam-role', 'AWS IAM role for GitHub OIDC', 'Short-lived AWS access for trusted GitHub Actions branches.', 'Security', 'IAM', [
+    { id: 'trust', direction: 'input', connectionTypes: ['oidc-token'], allowedComponentTypes: ['github-actions'], required: true, multiple: false },
+    { id: 'identity', direction: 'output', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['pulumi-aws-provider'] },
+  ], 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html', 'cloud-hosting'),
+  openSourceTool('pulumi-aws-provider', 'Pulumi AWS Provider', 'Pulumi provider package used by KloudLab to provision AWS infrastructure.', 'Infrastructure', 'AWS', [
+    { id: 'program', direction: 'input', connectionTypes: ['pulumi-program'], allowedComponentTypes: ['pulumi'], required: true, multiple: false },
+    { id: 'identity', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
+    { id: 'resources', direction: 'output', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['aws-vpc', 'eks-cluster', 'aws-s3', 'aws-kms', 'aws-route53', 'aws-subnet', 'aws-security-group', 'aws-nat-gateway'] },
+  ], 'https://www.pulumi.com/registry/packages/aws/'),
+  openSourceTool('aws-s3', 'Amazon S3 bucket', 'Object storage used for encrypted, versioned Pulumi state.', 'Storage', 'S3', [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'encryption', direction: 'input', connectionTypes: ['encryption-key'], allowedComponentTypes: ['aws-kms'] },
+    { id: 'objects', direction: 'output', connectionTypes: ['object-storage'] },
+  ], 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html', 'cloud-hosting'),
+  openSourceTool('aws-kms', 'AWS KMS key', 'Customer managed encryption key with rotation for state and secrets.', 'Security', 'KMS', [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'key', direction: 'output', connectionTypes: ['encryption-key'], allowedComponentTypes: ['aws-s3'] },
+  ], 'https://docs.aws.amazon.com/kms/latest/developerguide/overview.html', 'cloud-hosting'),
+  openSourceTool('aws-route53', 'Amazon Route 53', 'DNS hosting and health checks for public and private zones.', 'Networking', 'R53', [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'dns', direction: 'output', connectionTypes: ['dns-record'] },
+  ], 'https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html', 'cloud-hosting'),
+  openSourceTool('aws-subnet', 'AWS subnet', 'Public or private address range inside an Amazon VPC.', 'Networking', 'SUB', [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'network', direction: 'input', connectionTypes: ['network'], allowedComponentTypes: ['aws-vpc'], required: true, multiple: false },
+    { id: 'subnet', direction: 'output', connectionTypes: ['network'] },
+  ], 'https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html', 'cloud-hosting'),
+  openSourceTool('aws-security-group', 'AWS security group', 'Stateful network rules for cloud network interfaces.', 'Security', 'SG', [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'network', direction: 'input', connectionTypes: ['network'], allowedComponentTypes: ['aws-vpc'], required: true, multiple: false },
+    { id: 'rules', direction: 'output', connectionTypes: ['network-policy'] },
+  ], 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html', 'cloud-hosting'),
+  openSourceTool('aws-nat-gateway', 'AWS NAT Gateway', 'Managed outbound internet access for private subnets.', 'Networking', 'NAT', [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'network', direction: 'input', connectionTypes: ['network'], allowedComponentTypes: ['aws-subnet'], required: true, multiple: false },
+    { id: 'egress', direction: 'output', connectionTypes: ['network-egress'] },
+  ], 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html', 'cloud-hosting'),
+
+  // Infrastructure, containers, delivery, and API routing.
+  tool('ansible', 'Ansible', 'Agentless automation for operating systems, networks, and applications.', 'Infrastructure', 'ANS', 'automation', 'https://docs.ansible.com/'),
+  tool('packer', 'Packer', 'Build identical machine images for multiple platforms.', 'Infrastructure', 'PKR', 'machine-image', 'https://developer.hashicorp.com/packer/docs'),
+  tool('terragrunt', 'Terragrunt', 'Keep infrastructure as code configurations DRY across environments.', 'Infrastructure', 'TG', 'iac-source', 'https://terragrunt.gruntwork.io/docs/'),
+  tool('atlantis', 'Atlantis', 'Run infrastructure plans and applies from pull requests.', 'Infrastructure', 'ATL', 'iac-source', 'https://www.runatlantis.io/docs/'),
+  tool('sops', 'Mozilla SOPS', 'Encrypt configuration files and secrets with age, PGP, or cloud KMS.', 'Security', 'SOPS', 'secrets', 'https://getsops.io/docs/'),
+  tool('aws-cdk', 'AWS Cloud Development Kit', 'Define AWS infrastructure using familiar programming languages.', 'Infrastructure', 'CDK', 'cloud-resource', 'https://docs.aws.amazon.com/cdk/v2/guide/home.html'),
+  tool('nginx', 'NGINX', 'Web server, reverse proxy, and HTTP load balancer.', 'Gateway', 'NGX', 'http', 'https://nginx.org/en/docs/'),
+  tool('haproxy', 'HAProxy', 'High availability TCP and HTTP load balancer and proxy.', 'Gateway', 'HAP', 'http', 'https://www.haproxy.org/#docs'),
+  tool('envoy-proxy', 'Envoy Proxy', 'Layer 4 and layer 7 proxy for service and edge traffic.', 'Gateway', 'ENV', 'http', 'https://www.envoyproxy.io/docs/'),
+  tool('apisix', 'Apache APISIX', 'Extensible API gateway with routing, authentication, and traffic policies.', 'Gateway', 'APX', 'http', 'https://apisix.apache.org/docs/'),
+  tool('caddy', 'Caddy', 'Web server and reverse proxy with automatic HTTPS.', 'Gateway', 'CAD', 'http', 'https://caddyserver.com/docs/'),
+  tool('contour', 'Contour', 'Kubernetes ingress controller powered by Envoy.', 'Gateway', 'CNT', 'http', 'https://projectcontour.io/docs/'),
+  tool('headscale', 'Headscale', 'Self-hosted control server for a WireGuard based private network.', 'Networking', 'HS', 'network', 'https://headscale.net/stable/'),
+  tool('wireguard', 'WireGuard', 'Modern, lightweight VPN tunnel for secure network connectivity.', 'Networking', 'WG', 'network', 'https://www.wireguard.com/'),
+  tool('kube-vip', 'kube-vip', 'Virtual IP and load balancing for Kubernetes control planes and services.', 'Networking', 'VIP', 'network', 'https://kube-vip.io/docs/'),
+  tool('docker', 'Docker Engine', 'Build and run OCI containers across development and production.', 'Runtime', 'DCK', 'container-image', 'https://docs.docker.com/engine/'),
+  tool('podman', 'Podman', 'Daemonless container engine with Docker compatible workflows.', 'Runtime', 'POD', 'container-image', 'https://docs.podman.io/'),
+  tool('containerd', 'containerd', 'Industry standard container runtime for Kubernetes and other platforms.', 'Runtime', 'CTD', 'container-image', 'https://containerd.io/docs/'),
+  tool('buildah', 'Buildah', 'Build OCI container images without a long-running daemon.', 'CI/CD', 'BLD', 'container-image', 'https://buildah.io/'),
+  tool('kubernetes', 'Kubernetes', 'Open source orchestration platform for containerized workloads.', 'Compute', 'K8S', 'workload', 'https://kubernetes.io/docs/'),
+  tool('k3s', 'K3s', 'Lightweight Kubernetes distribution for edge and resource constrained clusters.', 'Compute', 'K3S', 'workload', 'https://docs.k3s.io/'),
+  tool('kind', 'kind', 'Run local Kubernetes clusters using container nodes.', 'Compute', 'KIND', 'workload', 'https://kind.sigs.k8s.io/'),
+  tool('kubevirt', 'KubeVirt', 'Run and manage virtual machines alongside Kubernetes containers.', 'Compute', 'KV', 'workload', 'https://kubevirt.io/user-guide/'),
+  tool('openfaas', 'OpenFaaS', 'Build and operate serverless functions on Kubernetes or containers.', 'Application Platform', 'FAAS', 'workload', 'https://docs.openfaas.com/'),
+  tool('wasmcloud', 'wasmCloud', 'Build portable WebAssembly applications and distributed services.', 'Application Platform', 'WASM', 'workload', 'https://wasmcloud.com/docs/'),
+  tool('argo-rollouts', 'Argo Rollouts', 'Progressive delivery with canary, blue-green, and analysis strategies.', 'GitOps', 'AR', 'gitops-deployment', 'https://argo-rollouts.readthedocs.io/'),
+  tool('flagger', 'Flagger', 'Progressive delivery operator for Kubernetes.', 'GitOps', 'FLG', 'gitops-deployment', 'https://docs.flagger.app/'),
+  tool('kargo', 'Kargo', 'Promote software changes through multi-stage Kubernetes delivery.', 'GitOps', 'KGO', 'gitops-deployment', 'https://docs.kargo.io/'),
+  tool('keptn', 'Keptn', 'Cloud native application lifecycle orchestration and delivery automation.', 'GitOps', 'KEPTN', 'gitops-deployment', 'https://keptn.sh/docs/'),
+  tool('dagger', 'Dagger', 'Portable programmable CI/CD pipelines that run in containers.', 'CI/CD', 'DAG', 'workflow', 'https://docs.dagger.io/'),
+  tool('earthly', 'Earthly', 'Reproducible build automation using containerized targets.', 'CI/CD', 'EARTH', 'workflow', 'https://docs.earthly.dev/'),
+  tool('woodpecker', 'Woodpecker CI', 'Lightweight container based continuous integration server.', 'CI/CD', 'WP', 'workflow', 'https://woodpecker-ci.org/docs/'),
+  tool('buildpacks', 'Cloud Native Buildpacks', 'Turn source code into production ready OCI container images.', 'CI/CD', 'CNB', 'container-image', 'https://buildpacks.io/docs/'),
+  tool('gitlab-ci', 'GitLab CI/CD', 'Pipelines, runners, and deployment workflows for GitLab repositories.', 'CI/CD', 'GLCI', 'workflow', 'https://docs.gitlab.com/ci/', 'open-core'),
+  tool('gitlab', 'GitLab', 'Source control, code review, CI/CD, and project collaboration.', 'Source Control', 'GL', 'git-source', 'https://docs.gitlab.com/', 'open-core'),
+  tool('nexus', 'Nexus Repository', 'Repository manager for packages, containers, and build artifacts.', 'Artifact Registry', 'NX', 'artifact', 'https://help.sonatype.com/en/sonatype-nexus-repository.html'),
+  tool('oci-distribution', 'OCI Distribution', 'Open source implementation of the OCI container registry protocol.', 'Artifact Registry', 'OCI', 'artifact', 'https://distribution.github.io/distribution/'),
+  tool('chartmuseum', 'ChartMuseum', 'Open source Helm chart repository server.', 'Artifact Registry', 'CM', 'artifact', 'https://chartmuseum.com/docs/'),
+
+  // Databases, queues, storage, and identity.
+  tool('sqlite', 'SQLite', 'Embedded SQL database for local applications and edge workloads.', 'Database', 'SQL', 'database', 'https://sqlite.org/docs.html'),
+  tool('tidb', 'TiDB', 'Distributed SQL database compatible with the MySQL ecosystem.', 'Database', 'TIDB', 'database', 'https://docs.pingcap.com/tidb/stable/'),
+  tool('influxdb', 'InfluxDB', 'Time series database for metrics, events, and operational data.', 'Database', 'INF', 'database', 'https://docs.influxdata.com/'),
+  tool('questdb', 'QuestDB', 'High performance time series database with SQL support.', 'Database', 'QDB', 'database', 'https://questdb.com/docs/'),
+  tool('duckdb', 'DuckDB', 'In-process analytical database for local and embedded workloads.', 'Database', 'DUCK', 'database', 'https://duckdb.org/docs/'),
+  tool('druid', 'Apache Druid', 'Real-time analytics database for event driven workloads.', 'Database', 'DR', 'database', 'https://druid.apache.org/docs/latest/'),
+  tool('etcd', 'etcd', 'Consistent distributed key value store used for critical cluster state.', 'Database', 'ETCD', 'database', 'https://etcd.io/docs/'),
+  tool('ferretdb', 'FerretDB', 'Open source document database compatible with the MongoDB wire protocol.', 'Database', 'FER', 'database', 'https://docs.ferretdb.io/'),
+  tool('yugabytedb', 'YugabyteDB', 'Distributed SQL database for resilient cloud native applications.', 'Database', 'YB', 'database', 'https://docs.yugabyte.com/'),
+  tool('pulsar', 'Apache Pulsar', 'Distributed messaging and event streaming platform.', 'Messaging', 'PULSAR', 'messaging', 'https://pulsar.apache.org/docs/'),
+  tool('activemq-artemis', 'Apache ActiveMQ Artemis', 'High performance multi protocol message broker.', 'Messaging', 'AMQ', 'messaging', 'https://activemq.apache.org/components/artemis/documentation/'),
+  tool('mosquitto', 'Eclipse Mosquitto', 'Lightweight MQTT broker for IoT and device messaging.', 'Messaging', 'MQTT', 'messaging', 'https://mosquitto.org/documentation/'),
+  tool('emqx', 'EMQX', 'Scalable MQTT messaging platform for connected devices.', 'Messaging', 'EMQX', 'messaging', 'https://docs.emqx.com/'),
+  tool('strimzi', 'Strimzi', 'Operators for running Apache Kafka on Kubernetes.', 'Messaging', 'STR', 'messaging', 'https://strimzi.io/documentation/'),
+  tool('seaweedfs', 'SeaweedFS', 'Distributed object, file, and key value storage system.', 'Storage', 'SW', 'storage', 'https://github.com/seaweedfs/seaweedfs/wiki'),
+  tool('garage', 'Garage', 'Self-hosted, geo-distributed S3 compatible object storage.', 'Storage', 'GAR', 'storage', 'https://garagehq.deuxfleurs.fr/documentation/'),
+  tool('juicefs', 'JuiceFS', 'Cloud native shared file system with object storage backends.', 'Storage', 'JFS', 'storage', 'https://juicefs.com/docs/'),
+  tool('glusterfs', 'GlusterFS', 'Scale out distributed file storage for unstructured data.', 'Storage', 'GLU', 'storage', 'https://docs.gluster.org/'),
+  tool('openstack-swift', 'OpenStack Swift', 'Distributed object storage service for large data sets.', 'Storage', 'SWIFT', 'storage', 'https://docs.openstack.org/swift/latest/'),
+  tool('authentik', 'Authentik', 'Identity provider for SSO, OAuth2, SAML, and application access.', 'Identity', 'AK', 'identity', 'https://docs.goauthentik.io/'),
+  tool('zitadel', 'ZITADEL', 'Identity platform for secure login, organizations, and access control.', 'Identity', 'ZID', 'identity', 'https://zitadel.com/docs/'),
+  tool('spire', 'SPIRE', 'Workload identity issuing and attesting SPIFFE identities.', 'Security', 'SPIRE', 'identity', 'https://spiffe.io/docs/latest/spire/'),
+  tool('spicedb', 'SpiceDB', 'Relationship based authorization database inspired by Zanzibar.', 'Identity', 'SPICE', 'identity', 'https://authzed.com/docs/spicedb'),
+  tool('ory-hydra', 'Ory Hydra', 'Open source OAuth 2.0 and OpenID Connect server.', 'Identity', 'HYDRA', 'identity', 'https://www.ory.sh/docs/hydra/'),
+  tool('casbin', 'Casbin', 'Authorization library for access control models and policies.', 'Identity', 'CAS', 'identity', 'https://casbin.org/docs/'),
+
+  // Observability, security, AI/ML, and data platforms.
+  tool('thanos', 'Thanos', 'Highly available Prometheus compatible metrics storage and querying.', 'Observability', 'TH', 'telemetry', 'https://thanos.io/tip/thanos/'),
+  tool('grafana-mimir', 'Grafana Mimir', 'Horizontally scalable, long term Prometheus metrics backend.', 'Observability', 'MIMIR', 'telemetry', 'https://grafana.com/docs/mimir/latest/'),
+  tool('grafana-alloy', 'Grafana Alloy', 'OpenTelemetry collector distribution for metrics, logs, and traces.', 'Observability', 'ALLOY', 'telemetry', 'https://grafana.com/docs/alloy/latest/'),
+  tool('signoz', 'SigNoz', 'Open source observability platform for traces, metrics, and logs.', 'Observability', 'SZ', 'telemetry', 'https://signoz.io/docs/'),
+  tool('openobserve', 'OpenObserve', 'Open source platform for logs, metrics, traces, and analytics.', 'Observability', 'OO', 'telemetry', 'https://openobserve.ai/docs/'),
+  tool('vector', 'Vector', 'High performance observability data pipeline and telemetry agent.', 'Observability', 'VEC', 'telemetry', 'https://vector.dev/docs/'),
+  tool('fluentd', 'Fluentd', 'Unified log collection and routing across data sources.', 'Observability', 'FD', 'telemetry', 'https://docs.fluentd.org/'),
+  tool('zabbix', 'Zabbix', 'Infrastructure monitoring for networks, servers, and applications.', 'Observability', 'ZBX', 'telemetry', 'https://www.zabbix.com/documentation/current/'),
+  tool('netdata', 'Netdata', 'Real time monitoring and troubleshooting for systems and services.', 'Observability', 'ND', 'telemetry', 'https://learn.netdata.cloud/docs/'),
+  tool('pyroscope', 'Grafana Pyroscope', 'Continuous profiling for applications and services.', 'Observability', 'PYR', 'telemetry', 'https://grafana.com/docs/pyroscope/latest/'),
+  tool('opa', 'Open Policy Agent', 'General purpose policy engine for cloud native systems.', 'Security', 'OPA', 'security', 'https://www.openpolicyagent.org/docs/latest/'),
+  tool('cosign', 'Cosign', 'Sign, verify, and attest container images and software artifacts.', 'Security', 'COS', 'security', 'https://docs.sigstore.dev/cosign/'),
+  tool('syft', 'Syft', 'Generate software bills of materials from container images and filesystems.', 'Security', 'SYFT', 'security', 'https://oss.anchore.com/docs/'),
+  tool('grype', 'Grype', 'Scan container images and filesystems for known vulnerabilities.', 'Security', 'GRY', 'security', 'https://oss.anchore.com/docs/'),
+  tool('renovate', 'Renovate', 'Automate dependency updates across repositories and ecosystems.', 'Security', 'REN', 'security', 'https://docs.renovatebot.com/'),
+  tool('tetragon', 'Tetragon', 'eBPF based runtime security and observability for Kubernetes.', 'Security', 'TET', 'security', 'https://tetragon.io/docs/'),
+  tool('wazuh', 'Wazuh', 'Open source security monitoring, threat detection, and compliance platform.', 'Security', 'WAZ', 'security', 'https://documentation.wazuh.com/'),
+  tool('crowdsec', 'CrowdSec', 'Collaborative behavior detection and security blocking engine.', 'Security', 'CS', 'security', 'https://docs.crowdsec.net/'),
+  tool('kubeflow', 'Kubeflow', 'Machine learning platform for training and serving on Kubernetes.', 'AI & ML', 'KF', 'workload', 'https://www.kubeflow.org/docs/'),
+  tool('mlflow', 'MLflow', 'Track experiments and manage machine learning model lifecycles.', 'AI & ML', 'MLF', 'workflow', 'https://mlflow.org/docs/latest/'),
+  tool('kserve', 'KServe', 'Standardized model inference serving on Kubernetes.', 'AI & ML', 'KS', 'workload', 'https://kserve.github.io/website/'),
+  tool('ray', 'Ray', 'Distributed compute framework for AI and Python applications.', 'AI & ML', 'RAY', 'workload', 'https://docs.ray.io/'),
+  tool('vllm', 'vLLM', 'High throughput inference and serving engine for large language models.', 'AI & ML', 'VLLM', 'workload', 'https://docs.vllm.ai/'),
+  tool('ollama', 'Ollama', 'Run and serve large language models on local or hosted infrastructure.', 'AI & ML', 'OLL', 'workload', 'https://docs.ollama.com/'),
+  tool('feast', 'Feast', 'Open source feature store for machine learning systems.', 'AI & ML', 'FEAST', 'database', 'https://docs.feast.dev/'),
+  tool('bentoml', 'BentoML', 'Package and deploy machine learning models as production services.', 'AI & ML', 'BENTO', 'workload', 'https://docs.bentoml.com/'),
+  tool('airflow', 'Apache Airflow', 'Author, schedule, and monitor data engineering workflows.', 'Data & Workflow', 'AF', 'workflow', 'https://airflow.apache.org/docs/'),
+  tool('dagster', 'Dagster', 'Orchestrate data assets, pipelines, and machine learning workflows.', 'Data & Workflow', 'DAG', 'workflow', 'https://docs.dagster.io/'),
+  tool('spark', 'Apache Spark', 'Distributed engine for large scale data processing and analytics.', 'Data & Workflow', 'SPARK', 'workflow', 'https://spark.apache.org/docs/latest/'),
+  tool('flink', 'Apache Flink', 'Stateful stream processing for event driven applications.', 'Data & Workflow', 'FLINK', 'messaging', 'https://flink.apache.org/documentation/'),
+  tool('trino', 'Trino', 'Distributed SQL query engine for data across heterogeneous sources.', 'Data & Workflow', 'TRINO', 'database', 'https://trino.io/docs/current/'),
+  tool('superset', 'Apache Superset', 'Explore data and build dashboards with a modern BI platform.', 'Data & Workflow', 'SUPER', 'telemetry', 'https://superset.apache.org/docs/'),
+  tool('dbt-core', 'dbt Core', 'Transform analytics data with modular SQL and software engineering workflows.', 'Data & Workflow', 'DBT', 'workflow', 'https://docs.getdbt.com/docs/core/about-core-setup'),
+  tool('openlineage', 'OpenLineage', 'Collect and share lineage metadata for data pipelines.', 'Data & Workflow', 'OL', 'telemetry', 'https://openlineage.io/docs/'),
+  tool('go', 'Go', 'Programming language and runtime used by KloudLab infrastructure components.', 'Developer Tools', 'GO', 'artifact', 'https://go.dev/doc/'),
+  tool('openfeature', 'OpenFeature', 'Vendor neutral APIs for feature flagging in applications.', 'Developer Tools', 'OF', 'workload', 'https://openfeature.dev/docs/'),
+  tool('grpc', 'gRPC', 'High performance remote procedure call framework for service APIs.', 'API & Integration', 'gRPC', 'http', 'https://grpc.io/docs/'),
+  tool('apache-camel', 'Apache Camel', 'Integration framework for connecting APIs, services, and data systems.', 'API & Integration', 'CAMEL', 'messaging', 'https://camel.apache.org/manual/'),
+  tool('temporal', 'Temporal', 'Durable execution engine for reliable application workflows.', 'API & Integration', 'TEMP', 'workflow', 'https://docs.temporal.io/'),
+  tool('opencost', 'OpenCost', 'Measure Kubernetes infrastructure spend and allocate costs to teams.', 'FinOps', 'OC', 'telemetry', 'https://opencost.io/docs/'),
+  tool('kubecost', 'Kubecost', 'Kubernetes cost monitoring and optimization with a free open source core.', 'FinOps', 'KCOST', 'telemetry', 'https://docs.kubecost.com/architecture'),
+]
+
 export const catalog: ComponentDefinition[] = [
   definition('aws-vpc', 'Amazon VPC', 'Isolated network boundary for cloud resources.', 'Infrastructure', 'VPC', '#5f7f6b', {
     name,
@@ -206,9 +416,11 @@ export const catalog: ComponentDefinition[] = [
     region,
     availabilityZones: { type: 'number', title: 'Availability zones', minimum: 2, maximum: 6 },
   }, ['name', 'cidr', 'region', 'availabilityZones'], [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
     { id: 'network', direction: 'output', connectionTypes: ['network'] },
   ], [
     { id: 'vpc.cidr', scope: 'configuration', severity: 'error', message: 'Use a valid IPv4 network range.' },
+    { id: 'vpc.capacity', scope: 'configuration', severity: 'warning', message: 'This network CIDR may be too small for a growing cluster.', description: 'Small address pools can run out as nodes, pods, load balancers, and private endpoints consume addresses.', options: ['Choose a larger VPC CIDR, such as a /20 or larger address block.', 'Keep this range only if pod and subnet capacity has been calculated for expected growth.'] },
   ], ['https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html'], { kind: 'pulumi-go', reference: 'components/network', version: '1.0.0' }),
 
   definition('eks-cluster', 'Amazon EKS', 'Managed Kubernetes control plane with private worker subnets.', 'Compute', 'EKS', '#447eb4', {
@@ -216,13 +428,14 @@ export const catalog: ComponentDefinition[] = [
     region,
     kubernetesVersion: { type: 'string', title: 'Kubernetes version', enum: ['1.34', '1.33', '1.32'] },
     apiAccess: { type: 'string', title: 'API endpoint', enum: ['Private', 'Private and public'] },
-    availabilityZones: { type: 'number', title: 'Availability zones', minimum: 2, maximum: 6 },
+    availabilityZones: { type: 'number', title: 'Availability zones', minimum: 1, maximum: 6 },
   }, ['name', 'region', 'kubernetesVersion', 'apiAccess', 'availabilityZones'], [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
     { id: 'network', direction: 'input', connectionTypes: ['network'], required: true, multiple: false },
     { id: 'workloads', direction: 'output', connectionTypes: ['workload'] },
     { id: 'telemetry', direction: 'output', connectionTypes: ['telemetry'] },
   ], [
-    { id: 'eks.multi-az', scope: 'configuration', severity: 'error', message: 'Production clusters need at least two availability zones.' },
+    { id: 'eks.multi-az', scope: 'configuration', severity: 'warning', message: 'This cluster spans fewer than two availability zones.', description: 'A zone outage could make the whole cluster unavailable.', options: ['Use at least two availability zones for the cluster.', 'Keep one zone only for a deliberate development or cost-saving environment.'] },
   ], ['https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html'], { kind: 'pulumi-go', reference: 'components/eks', version: '1.0.0' }),
 
   definition('kubernetes-workload', 'Kubernetes workload', 'Application or platform service running in a cluster.', 'Compute', 'APP', '#7b70b2', {
@@ -232,14 +445,36 @@ export const catalog: ComponentDefinition[] = [
     exposure: { type: 'string', title: 'Exposure', enum: ['Private', 'Gateway'] },
   }, ['name', 'namespace', 'replicas', 'exposure'], [
     { id: 'cluster', direction: 'input', connectionTypes: ['workload'], required: true, multiple: false },
-    { id: 'http', direction: 'input', connectionTypes: ['http'], multiple: false },
+    { id: 'http', direction: 'input', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kgateway', 'envoy-gateway', 'traefik', 'kong', 'nginx', 'haproxy', 'envoy-proxy', 'apisix', 'caddy', 'contour'], multiple: false },
     { id: 'oidc', direction: 'input', connectionTypes: ['oidc'] },
     { id: 'identity', direction: 'input', connectionTypes: ['identity-decision'] },
+    { id: 'database', direction: 'input', connectionTypes: ['database'], protocols: ['TCP'] },
+    { id: 'database-client', direction: 'output', connectionTypes: ['database-client'], protocols: ['TCP'], allowedComponentTypes: ['postgresql', 'mysql', 'mariadb', 'valkey', 'clickhouse', 'cassandra', 'sqlite', 'tidb', 'influxdb', 'questdb', 'duckdb', 'druid', 'etcd', 'ferretdb', 'yugabytedb'] },
+    { id: 'messaging-client', direction: 'output', connectionTypes: ['messaging-client'], allowedComponentTypes: ['nats', 'rabbitmq', 'kafka', 'pulsar', 'activemq-artemis', 'mosquitto', 'emqx'] },
+    { id: 'messaging-endpoint', direction: 'input', connectionTypes: ['messaging-endpoint'], allowedComponentTypes: ['nats', 'rabbitmq', 'kafka', 'pulsar', 'activemq-artemis', 'mosquitto', 'emqx'] },
+    { id: 'messaging-endpoint', direction: 'input', connectionTypes: ['messaging-endpoint'], allowedComponentTypes: ['nats', 'rabbitmq', 'kafka', 'pulsar', 'activemq-artemis', 'mosquitto', 'emqx'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd', 'flux', 'argo-rollouts', 'flagger', 'kargo'] },
+    { id: 'secrets', direction: 'input', connectionTypes: ['secrets'], allowedComponentTypes: ['infisical', 'openbao', 'external-secrets'] },
+    { id: 'autoscaling', direction: 'input', connectionTypes: ['autoscaling'], allowedComponentTypes: ['keda'] },
+    { id: 'service', direction: 'output', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-service'] },
     { id: 'authorization', direction: 'output', connectionTypes: ['authorization-check'] },
     { id: 'telemetry', direction: 'output', connectionTypes: ['telemetry'] },
   ], [
-    { id: 'workload.private', scope: 'configuration', severity: 'warning', message: 'Prefer private service exposure unless a gateway is required.' },
+    { id: 'workload.private', scope: 'configuration', severity: 'warning', message: 'Gateway exposure is selected, but no gateway route reaches this workload.', description: 'The application is marked for gateway exposure but has no compatible route connection.', options: ['Connect a Kubernetes Service to an HTTP gateway route.', 'Set exposure to Private if the application should remain internal.'] },
+    { id: 'workload.redundancy', scope: 'configuration', severity: 'warning', message: 'This workload has a single replica.', description: 'A single pod restart or node failure can interrupt the application.', options: ['Set replicas to 2 or more.', 'Keep one replica for a development workload where interruption is acceptable.'] },
+    { id: 'workload.autoscaling', scope: 'architecture', severity: 'info', message: 'Consider autoscaling this workload.', description: 'The workload has multiple fixed replicas and no autoscaler is connected to it.', options: ['Add KEDA and connect it to this workload to scale from events or metrics.', 'Keep a fixed replica count if load is predictable.'] },
+    { id: 'workload.secrets', scope: 'architecture', severity: 'info', message: 'No secrets manager is connected to this workload.', description: 'A secrets manager can centralize rotation and control which workloads can read credentials.', options: ['Add Infisical, OpenBao, or External Secrets Operator and connect its secret output.', 'Use your cloud provider’s managed secrets service if it fits the hosting environment.'] },
   ], ['https://kubernetes.io/docs/concepts/workloads/']),
+
+  definition('kubernetes-service', 'Kubernetes Service', 'Stable in-cluster endpoint that routes HTTP traffic to application workloads.', 'Networking', 'SVC', '#4d9da4', {
+    name,
+    serviceType: { type: 'string', title: 'Service type', enum: ['ClusterIP', 'NodePort', 'LoadBalancer'] },
+    port: { type: 'number', title: 'Service port', minimum: 1, maximum: 65535 },
+    protocol: { type: 'string', title: 'Application protocol', enum: ['HTTP', 'HTTPS'] },
+  }, ['name', 'serviceType', 'port', 'protocol'], [
+    { id: 'backend', direction: 'input', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-workload'], required: true },
+    { id: 'route', direction: 'output', connectionTypes: ['http-route'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kgateway', 'envoy-gateway', 'traefik', 'kong'] },
+  ], [], ['https://kubernetes.io/docs/concepts/services-networking/service/']),
 
   definition('kgateway', 'Gateway', 'Routes approved HTTP traffic to application services.', 'Gateway', 'GW', '#d27f4d', {
     name,
@@ -248,7 +483,8 @@ export const catalog: ComponentDefinition[] = [
     tls: { type: 'string', title: 'TLS', enum: ['Managed certificate', 'Bring your own'] },
   }, ['name', 'hostname', 'exposure', 'tls'], [
     { id: 'cluster', direction: 'input', connectionTypes: ['workload'], required: true, multiple: false },
-    { id: 'service', direction: 'output', connectionTypes: ['http'] },
+    { id: 'route', direction: 'input', connectionTypes: ['http-route'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-service'] },
+    { id: 'service', direction: 'output', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-workload'] },
   ], [
     { id: 'gateway.tls', scope: 'configuration', severity: 'error', message: 'Public routes must use TLS.' },
   ], ['https://gateway-api.sigs.k8s.io/']),
@@ -256,12 +492,14 @@ export const catalog: ComponentDefinition[] = [
   definition('postgresql', 'PostgreSQL', 'Durable relational data store for application or identity services.', 'Database', 'PG', '#407f91', {
     name,
     engine: { type: 'string', title: 'Engine', enum: ['PostgreSQL 17', 'PostgreSQL 16'] },
-    exposure: { type: 'string', title: 'Network access', enum: ['Private only'] },
+    exposure: { type: 'string', title: 'Network access', enum: ['Private only', 'Public'] },
     backupDays: { type: 'number', title: 'Backup retention (days)', minimum: 1, maximum: 35 },
   }, ['name', 'engine', 'exposure', 'backupDays'], [
-    { id: 'database', direction: 'output', connectionTypes: ['database'] },
+    { id: 'client', direction: 'input', connectionTypes: ['database-client'], protocols: ['TCP'], allowedComponentTypes: ['kubernetes-workload'] },
+    { id: 'database', direction: 'output', connectionTypes: ['database'], protocols: ['TCP'] },
   ], [
-    { id: 'database.private', scope: 'configuration', severity: 'error', message: 'Database endpoints must stay private.' },
+    { id: 'database.private', scope: 'configuration', severity: 'warning', message: 'This database is configured for public network access.', description: 'A public database endpoint increases the chance of unauthorized access and data exposure.', options: ['Change network access to Private only.', 'If public access is required, restrict inbound CIDRs and require TLS and strong authentication.'] },
+    { id: 'database.backup', scope: 'configuration', severity: 'warning', message: 'Database backup retention is under seven days.', description: 'A short retention window may not be enough to recover from delayed discovery or accidental deletion.', options: ['Increase backup retention to at least 7 days.', 'Use 14–35 days when recovery requirements or compliance needs justify it.'] },
   ], ['https://www.postgresql.org/docs/']),
 
   definition('auth0', 'Auth0', 'External identity provider for user authentication and OIDC tokens.', 'Identity', 'ID', '#b65f74', {
@@ -279,7 +517,7 @@ export const catalog: ComponentDefinition[] = [
     endpoint: { type: 'string', title: 'Endpoint', enum: ['Private service'] },
     modelVersion: { type: 'string', title: 'Authorization model', pattern: '^.{1,80}$' },
   }, ['name', 'datastore', 'endpoint', 'modelVersion'], [
-    { id: 'database', direction: 'input', connectionTypes: ['database'], required: true, multiple: false },
+    { id: 'database', direction: 'input', connectionTypes: ['database'], protocols: ['TCP'], required: true, multiple: false },
     { id: 'check', direction: 'input', connectionTypes: ['authorization-check'], required: true },
     { id: 'decision', direction: 'output', connectionTypes: ['identity-decision'] },
   ], [
@@ -297,7 +535,7 @@ export const catalog: ComponentDefinition[] = [
     { id: 'logs', direction: 'output', connectionTypes: ['logs'] },
     { id: 'traces', direction: 'output', connectionTypes: ['traces'] },
   ], [
-    { id: 'otel.auth', scope: 'configuration', severity: 'warning', message: 'Authenticate collector receivers before accepting remote telemetry.' },
+    { id: 'otel.auth', scope: 'configuration', severity: 'warning', message: 'Collector receivers do not require authentication.', description: 'Untrusted clients could send telemetry, consume resources, or inject misleading data.', options: ['Require authenticated receiver access.', 'Keep the receiver on a private network and restrict which workloads can reach it.'] },
   ], ['https://opentelemetry.io/docs/collector/']),
 
   definition('prometheus', 'Prometheus', 'Time-series metrics collection and querying.', 'Observability', 'P', '#d26951', {
@@ -343,11 +581,12 @@ export const catalog: ComponentDefinition[] = [
     recovery: { type: 'string', title: 'Recovery path', enum: ['Independent backup'] },
     secretReference: { type: 'string', title: 'Reference example', description: 'A path or identifier only. Never enter secret values.' },
   }, ['name', 'deployment', 'recovery'], [
-    { id: 'secrets', direction: 'output', connectionTypes: ['secrets'] },
+    { id: 'secrets', direction: 'output', connectionTypes: ['secrets'], allowedComponentTypes: ['kubernetes-workload'] },
   ], [
     { id: 'secrets.recovery', scope: 'configuration', severity: 'warning', message: 'Secrets management needs an independent recovery path.' },
   ], ['https://infisical.com/docs/documentation/getting-started/introduction']),
   ...extendedCatalog,
+  ...additionalCatalog,
 ]
 
 export const catalogById = new Map(catalog.map((component) => [component.typeId, component]))
@@ -381,6 +620,9 @@ export function defaultConfig(component: ComponentDefinition, suffix = ''): Reco
   }
   if (component.typeId === 'kgateway') {
     defaults.hostname = 'app.example.com'
+  }
+  if (component.typeId === 'kubernetes-service') {
+    defaults.port = 80
   }
   if (component.typeId === 'auth0') {
     defaults.domain = 'tenant.example.auth0.com'

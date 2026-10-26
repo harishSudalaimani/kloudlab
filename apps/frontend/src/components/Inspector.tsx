@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { ComponentFlowNode } from './CanvasNode'
 import { catalogById, type ComponentDefinition, type ConfigProperty } from '../domain/catalog'
 import type { ValidationIssue } from '../domain/canvas'
@@ -17,6 +17,7 @@ interface InspectorProps {
   onBeginEdit: () => void
   onDuplicate: () => void
   onDelete: () => void
+  onDeleteConnection: (edgeId: string) => void
   onFocusNode: (nodeId: string) => void
   mobileOpen: boolean
   onMobileToggle: () => void
@@ -95,6 +96,13 @@ function ComponentProperties({ component, node, onChange, onBeginEdit, onDuplica
           </label>
         ))}
       </div>
+      <div className="component-ports">
+        <span className="inspector-section-heading">Compatible connections</span>
+        {component.ports.map((port) => <div className="component-port-row" key={`${port.direction}-${port.id}`}>
+          <i className={port.direction}>{port.direction === 'input' ? 'IN' : 'OUT'}</i>
+          <span><strong>{port.id}</strong><small>{port.connectionTypes.join(' · ')}{port.protocols?.length ? ` · ${port.protocols.join('/')}` : ''}{port.allowedComponentTypes?.length ? ` · ${port.allowedComponentTypes.map((typeId) => catalogById.get(typeId)?.displayName ?? typeId).join(', ')}` : ''}{port.required ? ' · required' : ''}{port.multiple === false ? ' · one connection' : ''}</small></span>
+        </div>)}
+      </div>
       <div className="inspector-docs">
         <span className="inspector-section-heading">Documentation</span>
         {component.documentation.map((url) => <a href={url} target="_blank" rel="noreferrer" key={url}><span>{new URL(url).hostname.replace(/^www\./, '')}</span><Icon name="external" size={13} /></a>)}
@@ -108,9 +116,19 @@ function ComponentProperties({ component, node, onChange, onBeginEdit, onDuplica
 }
 
 export function Inspector(props: InspectorProps) {
+  const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null)
   const component = props.node ? catalogById.get(props.node.data.typeId) ?? null : null
   const errorCount = props.issues.filter((issue) => issue.severity === 'error').length
   const warningCount = props.issues.filter((issue) => issue.severity === 'warning').length
+  const infoCount = props.issues.filter((issue) => issue.severity === 'info').length
+  const statusTitle = errorCount ? 'Needs attention' : warningCount ? 'Review recommendations' : infoCount ? 'Improvement ideas' : 'No issues found'
+  const statusDescription = errorCount
+    ? `${errorCount} blocking issue${errorCount === 1 ? '' : 's'} found.`
+    : warningCount
+      ? `${warningCount} risk${warningCount === 1 ? '' : 's'} to review.`
+      : infoCount
+        ? `${infoCount} improvement${infoCount === 1 ? '' : 's'} available.`
+        : 'Settings and connections look good.'
 
   return (
     <aside className={`inspector-panel${props.mobileOpen ? ' mobile-open' : ''}`} role="dialog" aria-modal="true" aria-label={props.tab === 'validate' ? 'Design review' : 'Component settings'}>
@@ -120,7 +138,7 @@ export function Inspector(props: InspectorProps) {
           <h2>{props.tab === 'validate' ? 'Design review' : 'Component settings'}</h2>
         </div>
         <button className="icon-button inspector-collapse" aria-label="Close panel" title="Close" onClick={props.onMobileToggle}><Icon name="close" size={16} /></button>
-        <div className="inspector-header-status"><span className={errorCount ? 'status-dot error' : 'status-dot'} />{errorCount ? `${errorCount} issues` : 'Ready'}</div>
+        <div className="inspector-header-status"><span className={`status-dot${errorCount ? ' error' : warningCount ? ' warning' : infoCount ? ' info' : ''}`} />{errorCount ? `${errorCount} errors` : warningCount ? `${warningCount} warnings` : infoCount ? `${infoCount} suggestions` : 'Ready'}</div>
       </div>
       <div className="inspector-tabs" role="tablist" aria-label="Inspector views">
         <button className={props.tab === 'properties' ? 'active' : ''} role="tab" aria-selected={props.tab === 'properties'} onClick={() => props.onTabChange('properties')}>
@@ -128,34 +146,45 @@ export function Inspector(props: InspectorProps) {
         </button>
         <button className={props.tab === 'validate' ? 'active' : ''} role="tab" aria-selected={props.tab === 'validate'} onClick={() => props.onTabChange('validate')}>
           <Icon name="check" size={14} />Validate
-          {(errorCount + warningCount) > 0 && <span className="tab-count">{errorCount + warningCount}</span>}
+          {(errorCount + warningCount + infoCount) > 0 && <span className="tab-count">{errorCount + warningCount + infoCount}</span>}
         </button>
       </div>
 
       {props.tab === 'validate' ? (
         <div className="validation-panel">
           <div className="validation-summary">
-            <div className={`validation-badge ${errorCount ? 'has-errors' : 'is-valid'}`}><Icon name={errorCount ? 'alert' : 'check'} size={18} /></div>
-            <div><strong>{errorCount ? 'Needs attention' : 'No issues found'}</strong><span>{errorCount ? `${errorCount} items need attention` : 'Settings and connections look good.'}</span></div>
+            <div className={`validation-badge ${errorCount ? 'has-errors' : warningCount ? 'has-warnings' : infoCount ? 'has-info' : 'is-valid'}`}><Icon name={errorCount ? 'alert' : warningCount ? 'alert' : infoCount ? 'info' : 'check'} size={18} /></div>
+            <div><strong>{statusTitle}</strong><span>{statusDescription}</span></div>
           </div>
           <div className="validation-counts">
             <div><span className="validation-count error-count">{errorCount}</span><span>Errors</span></div>
             <div><span className="validation-count warning-count">{warningCount}</span><span>Warnings</span></div>
+            <div><span className="validation-count info-count">{infoCount}</span><span>Info</span></div>
           </div>
           {props.issues.length === 0 ? (
-            <div className="validation-empty"><span className="success-mark"><Icon name="check" size={17} /></span><strong>Everything looks good</strong><p>No issues were found in component settings or connections.</p></div>
+            <div className="validation-empty"><span className="success-mark"><Icon name="check" size={17} /></span><strong>Everything looks good</strong><p>No validation findings for the current architecture.</p></div>
           ) : (
             <div className="issue-list">
               {props.issues.map((issue) => (
-                <button className={`issue-row ${issue.severity}`} key={issue.id} onClick={() => issue.nodeId && props.onFocusNode(issue.nodeId)}>
-                  <Icon name={issue.severity === 'error' ? 'alert' : 'alert'} size={15} />
-                  <span>{issue.message}{issue.nodeId && <small>{props.nodes.find((node) => node.id === issue.nodeId)?.data.title}</small>}</span>
-                  {issue.nodeId && <Icon name="chevron-right" size={14} />}
-                </button>
+                <article className={`issue-card ${issue.severity}`} key={issue.id}>
+                  <button className={`issue-row ${issue.severity}`} aria-expanded={expandedIssueId === issue.id} onClick={() => setExpandedIssueId((current) => current === issue.id ? null : issue.id)}>
+                    <Icon name={issue.severity === 'info' ? 'info' : 'alert'} size={15} />
+                    <span><strong>{issue.message}</strong>{issue.nodeId && <small>{props.nodes.find((node) => node.id === issue.nodeId)?.data.title}</small>}</span>
+                    <span className={`issue-severity-label ${issue.severity}`}>{issue.severity}</span>
+                    <Icon name="chevron-down" size={14} />
+                  </button>
+                  {expandedIssueId === issue.id && <div className="issue-details">
+                    <p>{issue.description ?? issue.message}</p>
+                    <strong>Options to consider</strong>
+                    <ul>{(issue.options ?? (issue.nodeId ? ['Review the component settings and correct the configuration.', 'Check the component documentation for supported values.'] : ['Review the architecture structure and update the design.'])).map((option) => <li key={option}>{option}</li>)}</ul>
+                    {issue.nodeId && <button className="issue-locate" onClick={() => props.onFocusNode(issue.nodeId!)}><Icon name="cursor" size={13} />Show component</button>}
+                    {issue.edgeId && <button className="issue-remove" onClick={() => props.onDeleteConnection(issue.edgeId!)}><Icon name="trash" size={13} />Remove invalid connection</button>}
+                  </div>}
+                </article>
               ))}
             </div>
           )}
-          <div className="validation-note"><Icon name="shield" size={15} /><span>Confirm the requirements of your chosen platform before deployment.</span></div>
+          <div className="validation-note"><Icon name="shield" size={15} /><span>Open a finding to see why it matters and which options can resolve it.</span></div>
         </div>
       ) : component && props.node ? (
         <ComponentProperties component={component} node={props.node} onChange={props.onConfigChange} onBeginEdit={props.onBeginEdit} onDuplicate={props.onDuplicate} onDelete={props.onDelete} />

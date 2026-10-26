@@ -4,7 +4,7 @@ export type IconName =
   | 'search' | 'plus' | 'chevron-down' | 'chevron-right' | 'folder' | 'save' | 'download'
   | 'upload' | 'undo' | 'redo' | 'sparkles' | 'layers' | 'sliders' | 'check' | 'alert'
   | 'x' | 'copy' | 'trash' | 'external' | 'command' | 'menu' | 'arrow-up-right' | 'close'
-  | 'file' | 'clock' | 'cloud' | 'dots' | 'cursor' | 'shield' | 'grid' | 'book' | 'link' | 'sun' | 'moon' | 'info'
+  | 'file' | 'clock' | 'cloud' | 'dots' | 'cursor' | 'shield' | 'grid' | 'book' | 'link' | 'sun' | 'moon' | 'info' | 'mail' | 'arrow-left' | 'maximize' | 'minimize'
 
 const paths: Record<IconName, ReactNode> = {
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
@@ -42,6 +42,10 @@ const paths: Record<IconName, ReactNode> = {
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></>,
   moon: <path d="M20.8 14.2A8.5 8.5 0 0 1 9.8 3.2 8.5 8.5 0 1 0 20.8 14.2Z" />,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
+  mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+  'arrow-left': <><path d="M19 12H5M12 19l-7-7 7-7" /></>,
+  maximize: <><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" /></>,
+  minimize: <><path d="M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5" /></>,
 }
 
 export function Icon({ name, size = 16, strokeWidth = 1.8 }: { name: IconName; size?: number; strokeWidth?: number }) {

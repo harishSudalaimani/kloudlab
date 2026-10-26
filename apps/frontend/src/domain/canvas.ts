@@ -1,4 +1,5 @@
 import { catalogById, defaultConfig, type ComponentDefinition } from './catalog'
+import { checkConnection, type ExistingConnection } from './connections'
 import { createDefaultAuthorizationModel, isAuthorizationModel, type AuthorizationModel } from './authorization'
 
 export interface CanvasNodeDocument {
@@ -29,9 +30,12 @@ export interface CanvasDocument {
 
 export interface ValidationIssue {
   id: string
-  severity: 'error' | 'warning'
+  severity: 'error' | 'warning' | 'info'
   message: string
+  description?: string
+  options?: string[]
   nodeId?: string
+  edgeId?: string
 }
 
 export const STORAGE_KEY = 'kloudlab.canvas-library.v1'
@@ -103,8 +107,11 @@ export function createEmptyCanvas(name = 'Untitled architecture'): CanvasDocumen
 export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const nodesById = new Map<string, CanvasNodeDocument>()
-  const edgesSeen = new Set<string>()
   const componentByNode = new Map<string, ComponentDefinition>()
+  const validConnections: ExistingConnection[] = []
+  const addRuleIssue = (rule: ComponentDefinition['validationRules'][number], nodeId: string) => {
+    issues.push({ id: `${nodeId}.${rule.id}`, severity: rule.severity, message: rule.message, description: rule.description, options: rule.options, nodeId })
+  }
 
   if (!document.name.trim()) issues.push({ id: 'canvas.name', severity: 'error', message: 'Give this architecture a name.' })
   else if (document.name.length > 200) issues.push({ id: 'canvas.name.length', severity: 'error', message: 'Architecture names must be 200 characters or fewer.' })
@@ -156,58 +163,115 @@ export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
       }
     }
     for (const rule of component.validationRules) {
+      if (rule.scope === 'architecture') {
+        continue
+      }
       if (rule.scope !== 'configuration') continue
       if (rule.id === 'eks.multi-az' && Number(config.availabilityZones) < 2) {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
       }
       if (rule.id === 'vpc.cidr' && typeof config.cidr === 'string') {
         const [address, prefix, extra] = config.cidr.split('/')
         const octets = address?.split('.').map(Number)
         if (extra !== undefined || !octets || octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255) || !/^\d{1,2}$/.test(prefix ?? '') || Number(prefix) > 32) {
-          issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+          addRuleIssue(rule, canvasNode.id)
         }
       }
+      if (rule.id === 'vpc.capacity' && typeof config.cidr === 'string') {
+        const prefix = Number(config.cidr.split('/')[1])
+        if (Number.isFinite(prefix) && prefix > 20) addRuleIssue(rule, canvasNode.id)
+      }
       if (rule.id === 'gateway.tls' && config.exposure === 'Public' && config.tls === '') {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
       }
       if (rule.id === 'database.private' && config.exposure !== 'Private only') {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
+      }
+      if (rule.id === 'database.backup' && Number(config.backupDays) < 7) {
+        addRuleIssue(rule, canvasNode.id)
       }
       if (rule.id === 'openfga.private' && config.endpoint !== 'Private service') {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
       }
       if (rule.id === 'grafana.restricted' && config.access === 'Public') {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
       }
       if (rule.id === 'otel.auth' && config.authentication !== 'Authenticated') {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
       }
       if (rule.id === 'secrets.recovery' && config.recovery !== 'Independent backup') {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+        addRuleIssue(rule, canvasNode.id)
       }
-      if (rule.id === 'workload.private' && config.exposure === 'Gateway' && !document.edges.some((edge) => edge.target === canvasNode.id && edge.targetPort === 'http')) {
-        issues.push({ id: `${canvasNode.id}.${rule.id}`, severity: rule.severity, message: rule.message, nodeId: canvasNode.id })
+      if (rule.id === 'workload.redundancy' && Number(config.replicas) < 2) {
+        addRuleIssue(rule, canvasNode.id)
       }
     }
   }
 
   for (const edge of document.edges) {
-    const key = `${edge.source}:${edge.sourcePort}->${edge.target}:${edge.targetPort}`
-    if (edgesSeen.has(key)) {
-      issues.push({ id: `edge.${edge.id}.duplicate`, severity: 'error', message: 'This connection already exists.' })
-    }
-    edgesSeen.add(key)
-    const sourceComponent = componentByNode.get(edge.source)
-    const targetComponent = componentByNode.get(edge.target)
-    if (!sourceComponent || !targetComponent) {
-      issues.push({ id: `edge.${edge.id}.endpoint`, severity: 'error', message: 'Remove this connection: one endpoint is missing.' })
+    const source = nodesById.get(edge.source)
+    const target = nodesById.get(edge.target)
+    if (!source || !target || !componentByNode.has(edge.source) || !componentByNode.has(edge.target)) {
+      issues.push({ id: `edge.${edge.id}.endpoint`, severity: 'error', message: 'This connection points to a missing component.', description: 'One endpoint no longer exists in the architecture.', options: ['Remove this connection.', 'Restore the missing component if it was deleted by mistake.'], edgeId: edge.id, nodeId: target?.id ?? source?.id })
       continue
     }
-    if (edge.sourcePort !== 'output' || edge.targetPort !== 'input') {
-      issues.push({ id: `edge.${edge.id}.type`, severity: 'error', message: 'Use the output point and input point to connect components.' })
+    const check = checkConnection(
+      { id: source.id, typeId: source.typeId, config: source.config },
+      { id: target.id, typeId: target.typeId, config: target.config },
+      validConnections,
+      { sourcePort: edge.sourcePort, targetPort: edge.targetPort },
+    )
+    if (!check.valid) {
+      issues.push({ id: `edge.${edge.id}.incompatible`, severity: 'error', message: check.reason, description: 'The source and destination ports do not describe a supported integration.', options: check.options, edgeId: edge.id, nodeId: target.id })
       continue
+    }
+    const connection = { source: edge.source, sourcePort: check.pair.source.id, target: edge.target, targetPort: check.pair.target.id }
+    validConnections.push(connection)
+  }
+
+  for (const [nodeId, component] of componentByNode) {
+    const rule = component.validationRules.find((candidate) => candidate.id === 'workload.private')
+    const canvasNode = nodesById.get(nodeId)
+    if (!rule || !canvasNode || canvasNode.config.exposure !== 'Gateway') continue
+    const gatewayTypes = ['kgateway', 'envoy-gateway', 'traefik', 'kong', 'nginx', 'haproxy', 'envoy-proxy', 'apisix', 'caddy', 'contour']
+    const directGateway = validConnections.some((edge) => edge.target === nodeId && edge.targetPort === 'http' && gatewayTypes.includes(nodesById.get(edge.source)?.typeId ?? ''))
+    const services = validConnections.filter((edge) => edge.source === nodeId && edge.sourcePort === 'service' && nodesById.get(edge.target)?.typeId === 'kubernetes-service')
+    const routedService = services.some((backend) => validConnections.some((route) => route.source === backend.target && route.sourcePort === 'route' && gatewayTypes.includes(nodesById.get(route.target)?.typeId ?? '')))
+    if (!directGateway && !routedService) addRuleIssue(rule, nodeId)
+  }
+
+  for (const [nodeId, component] of componentByNode) {
+    const canvasNode = nodesById.get(nodeId)
+    if (!canvasNode || component.typeId !== 'kubernetes-workload') continue
+    const autoscalingRule = component.validationRules.find((candidate) => candidate.id === 'workload.autoscaling')
+    if (Number(canvasNode.config.replicas) >= 3 && autoscalingRule && !validConnections.some((edge) => edge.target === nodeId && edge.targetPort === 'autoscaling' && nodesById.get(edge.source)?.typeId === 'keda')) {
+      addRuleIssue(autoscalingRule, nodeId)
+    }
+    const secretsRule = component.validationRules.find((candidate) => candidate.id === 'workload.secrets')
+    if (secretsRule && !validConnections.some((edge) => edge.target === nodeId && edge.targetPort === 'secrets' && ['infisical', 'openbao', 'external-secrets'].includes(nodesById.get(edge.source)?.typeId ?? ''))) {
+      addRuleIssue(secretsRule, nodeId)
     }
   }
+
+  for (const [nodeId, component] of componentByNode) {
+    for (const port of component.ports.filter((candidate) => candidate.required)) {
+      const linked = validConnections.some((edge) => port.direction === 'input'
+        ? edge.target === nodeId && edge.targetPort === port.id
+        : edge.source === nodeId && edge.sourcePort === port.id)
+      if (!linked) {
+        const direction = port.direction === 'input' ? 'input' : 'output'
+        issues.push({
+          id: `node.${nodeId}.port.${port.id}.required`,
+          severity: 'error',
+          message: `${component.displayName} is missing a required ${port.id} ${direction} connection.`,
+          description: `The ${port.id} port accepts ${port.connectionTypes.join(', ')} connections. This dependency is required for the component to work in this architecture.`,
+          options: [`Connect a component with a compatible ${port.connectionTypes.join(' or ')} port.`, 'Remove the component if this dependency is not needed.'],
+          nodeId,
+        })
+      }
+    }
+  }
+
   return issues
 }
 

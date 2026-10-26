@@ -1,6 +1,6 @@
 import { Icon } from './Icon'
 
-export type AppPage = 'home' | 'about' | 'playground'
+export type AppPage = 'home' | 'about' | 'playground' | 'login' | 'signup'
 export type Theme = 'dark' | 'light'
 
 interface SiteNavigationProps {
@@ -11,7 +11,7 @@ interface SiteNavigationProps {
   variant?: 'marketing' | 'workspace'
 }
 
-const pageNames: Record<AppPage, string> = {
+const pageNames: Record<'home' | 'about' | 'playground', string> = {
   home: 'Home',
   about: 'About',
   playground: 'Playground',
@@ -60,7 +60,8 @@ export function SiteNavigation({ page, theme, onNavigate, onToggleTheme, variant
       <PageLinks page={page} onNavigate={onNavigate} />
       <div className="site-header-actions">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-        <button className="button button-primary site-cta" onClick={() => onNavigate('playground')}>Open playground<Icon name="arrow-up-right" size={15} /></button>
+        <button className="site-auth-link" onClick={() => onNavigate('login')}>Log in</button>
+        <button className="button button-primary site-cta" onClick={() => onNavigate('signup')}>Sign up<Icon name="arrow-up-right" size={15} /></button>
       </div>
     </header>
   )
