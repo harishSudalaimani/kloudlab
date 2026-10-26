@@ -20,6 +20,8 @@ interface InspectorProps {
   onDelete: () => void
   onDeleteEdge: () => void
   onFocusNode: (nodeId: string) => void
+  mobileOpen: boolean
+  onMobileToggle: () => void
 }
 
 function fieldInput(
@@ -81,6 +83,7 @@ function ComponentProperties({ component, node, onChange, onBeginEdit, onDuplica
           <span>{component.category}</span>
           <strong>{component.displayName}</strong>
         </div>
+        <span className={`component-origin inspector-origin ${component.availability}`}>{component.availability === 'cloud-hosting' ? 'HOSTING' : component.availability === 'managed-service' ? 'MANAGED' : component.availability === 'open-core' ? 'OPEN CORE' : 'OPEN SOURCE'}</span>
         <span className="version-tag">v{node.data.componentVersion}</span>
       </div>
       <p className="component-description">{component.description}</p>
@@ -128,12 +131,13 @@ export function Inspector(props: InspectorProps) {
   const warningCount = props.issues.filter((issue) => issue.severity === 'warning').length
 
   return (
-    <aside className="inspector-panel">
+    <aside className={`inspector-panel${props.mobileOpen ? ' mobile-open' : ''}`}>
       <div className="inspector-header">
         <div>
           <span className="eyebrow">ARCHITECTURE</span>
           <h2>Inspector</h2>
         </div>
+        <button className="icon-button inspector-collapse" aria-label={props.mobileOpen ? 'Collapse inspector' : 'Expand inspector'} title={props.mobileOpen ? 'Collapse inspector' : 'Expand inspector'} onClick={props.onMobileToggle}><Icon name="chevron-down" size={16} /></button>
         <div className="inspector-header-status"><span className={errorCount ? 'status-dot error' : 'status-dot'} />{errorCount ? `${errorCount} issues` : 'Ready'}</div>
       </div>
       <div className="inspector-tabs" role="tablist" aria-label="Inspector views">
@@ -150,14 +154,14 @@ export function Inspector(props: InspectorProps) {
         <div className="validation-panel">
           <div className="validation-summary">
             <div className={`validation-badge ${errorCount ? 'has-errors' : 'is-valid'}`}><Icon name={errorCount ? 'alert' : 'check'} size={18} /></div>
-            <div><strong>{errorCount ? 'Needs attention' : 'Looks good so far'}</strong><span>{errorCount ? `${errorCount} errors to resolve` : 'Client-side checks only'}</span></div>
+            <div><strong>{errorCount ? 'Needs attention' : 'No issues found'}</strong><span>{errorCount ? `${errorCount} items need attention` : 'Settings and connections look good.'}</span></div>
           </div>
           <div className="validation-counts">
             <div><span className="validation-count error-count">{errorCount}</span><span>Errors</span></div>
             <div><span className="validation-count warning-count">{warningCount}</span><span>Warnings</span></div>
           </div>
           {props.issues.length === 0 ? (
-            <div className="validation-empty"><span className="success-mark"><Icon name="check" size={17} /></span><strong>No issues found</strong><p>Connections and component settings pass the local checks.</p></div>
+            <div className="validation-empty"><span className="success-mark"><Icon name="check" size={17} /></span><strong>Everything looks good</strong><p>No issues were found in component settings or connections.</p></div>
           ) : (
             <div className="issue-list">
               {props.issues.map((issue) => (
@@ -169,7 +173,7 @@ export function Inspector(props: InspectorProps) {
               ))}
             </div>
           )}
-          <div className="validation-note"><Icon name="shield" size={15} /><span>These checks run in your browser. The backend must validate the canvas before generating a plan.</span></div>
+          <div className="validation-note"><Icon name="shield" size={15} /><span>Confirm the requirements of your chosen platform before deployment.</span></div>
         </div>
       ) : component && props.node ? (
         <ComponentProperties component={component} node={props.node} onChange={props.onConfigChange} onBeginEdit={props.onBeginEdit} onDuplicate={props.onDuplicate} onDelete={props.onDelete} />
@@ -177,10 +181,8 @@ export function Inspector(props: InspectorProps) {
         <div className="edge-inspector">
           <div className="edge-preview"><span className="edge-preview-dot" /><span>{edgeDetails.source}</span><Icon name="arrow-up-right" size={15} /><span>{edgeDetails.target}</span></div>
           <span className="eyebrow">CONNECTION</span>
-          <h3>Data flow</h3>
-          <p>This connection describes a compatible path between component ports. It does not configure network routes or grant permission by itself.</p>
-          <div className="connection-detail"><span>Output port</span><strong>{props.edge?.sourcePort}</strong></div>
-          <div className="connection-detail"><span>Input port</span><strong>{props.edge?.targetPort}</strong></div>
+          <h3>Component relationship</h3>
+          <p>This relationship is part of the design. It does not configure traffic routes or permissions.</p>
           <button className="button button-danger" onClick={props.onDeleteEdge}><Icon name="trash" size={15} />Remove connection</button>
         </div>
       ) : (

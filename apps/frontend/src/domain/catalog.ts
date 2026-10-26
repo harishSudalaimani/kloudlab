@@ -1,11 +1,22 @@
 export type ComponentCategory =
   | 'Infrastructure'
   | 'Compute'
+  | 'Networking'
   | 'Gateway'
-  | 'Data'
+  | 'Service Mesh'
+  | 'Application Platform'
+  | 'GitOps'
+  | 'CI/CD'
+  | 'Source Control'
+  | 'Artifact Registry'
+  | 'Database'
+  | 'Messaging'
+  | 'Storage'
   | 'Identity'
   | 'Observability'
   | 'Security'
+
+export type ComponentAvailability = 'open-source' | 'open-core' | 'cloud-hosting' | 'managed-service'
 
 export type PortDirection = 'input' | 'output'
 
@@ -30,6 +41,7 @@ export interface ConfigProperty {
 export interface ComponentDefinition {
   typeId: string
   version: string
+  availability: ComponentAvailability
   displayName: string
   description: string
   category: ComponentCategory
@@ -64,6 +76,13 @@ function definition(
   return {
     typeId,
     version: '1.0.0',
+    availability: typeId === 'aws-vpc' || typeId === 'eks-cluster'
+      ? 'cloud-hosting'
+      : typeId === 'auth0'
+        ? 'managed-service'
+        : typeId === 'infisical'
+          ? 'open-core'
+          : 'open-source',
     displayName,
     description,
     category,
@@ -77,8 +96,108 @@ function definition(
   }
 }
 
+const categoryAccent: Record<ComponentCategory, string> = {
+  Infrastructure: '#85a6cb', Compute: '#8d8be0', Networking: '#63b5b8', Gateway: '#e3a16f',
+  'Service Mesh': '#a895df', 'Application Platform': '#81b995', GitOps: '#d38fa7', 'CI/CD': '#d6af6b',
+  'Source Control': '#d18a76', 'Artifact Registry': '#b98ac9', Database: '#63b2bb', Messaging: '#d0a56f',
+  Storage: '#91ae74', Identity: '#9b91da', Observability: '#77a9d7', Security: '#8eae6d',
+}
+
+function openSourceTool(
+  typeId: string,
+  displayName: string,
+  description: string,
+  category: ComponentCategory,
+  symbol: string,
+  ports: ComponentPort[],
+  documentation: string,
+): ComponentDefinition {
+  return definition(typeId, displayName, description, category, symbol, categoryAccent[category], {
+    name,
+    namespace: { type: 'string', title: 'Namespace', pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$' },
+    replicas: { type: 'number', title: 'Replicas', minimum: 1, maximum: 100 },
+    release: { type: 'string', title: 'Release or version', pattern: '^.{0,60}$' },
+  }, ['name'], ports, [], [documentation])
+}
+
 const name = { type: 'string', title: 'Name', pattern: '^.{1,80}$' } satisfies ConfigProperty
 const region = { type: 'string', title: 'Region', enum: ['ap-south-1', 'ap-southeast-1', 'us-east-1', 'eu-west-1'] } satisfies ConfigProperty
+
+const flowPorts = (type: string): ComponentPort[] => [
+  { id: 'input', direction: 'input', connectionTypes: [type] },
+  { id: 'output', direction: 'output', connectionTypes: [type] },
+]
+
+const tool = (
+  typeId: string,
+  displayName: string,
+  description: string,
+  category: ComponentCategory,
+  symbol: string,
+  portType: string,
+  documentation: string,
+) => openSourceTool(typeId, displayName, description, category, symbol, flowPorts(portType), documentation)
+
+const extendedCatalog: ComponentDefinition[] = [
+  tool('opentofu', 'OpenTofu', 'Infrastructure as code for provisioning and managing cloud resources.', 'Infrastructure', 'TF', 'infrastructure', 'https://opentofu.org/docs/'),
+  tool('crossplane', 'Crossplane', 'Compose infrastructure and platform APIs with Kubernetes.', 'Infrastructure', 'XP', 'infrastructure', 'https://docs.crossplane.io/'),
+  tool('cilium', 'Cilium', 'Kubernetes networking, network policy, and eBPF observability.', 'Networking', 'CIL', 'network', 'https://docs.cilium.io/'),
+  tool('calico', 'Calico', 'Kubernetes networking and network policy.', 'Networking', 'CAL', 'network', 'https://docs.tigera.io/calico/latest/about/'),
+  tool('metallb', 'MetalLB', 'Load balancing for bare-metal Kubernetes clusters.', 'Networking', 'MLB', 'network', 'https://metallb.universe.tf/'),
+  tool('coredns', 'CoreDNS', 'DNS server and service discovery for cloud-native environments.', 'Networking', 'DNS', 'network', 'https://coredns.io/manual/'),
+  tool('external-dns', 'ExternalDNS', 'Synchronize Kubernetes services and ingress with DNS providers.', 'Networking', 'DNS', 'network', 'https://kubernetes-sigs.github.io/external-dns/'),
+  tool('envoy-gateway', 'Envoy Gateway', 'Manage Envoy Proxy as a Kubernetes Gateway API implementation.', 'Gateway', 'EG', 'http', 'https://gateway.envoyproxy.io/docs/'),
+  tool('traefik', 'Traefik Proxy', 'Cloud-native ingress and application proxy.', 'Gateway', 'TR', 'http', 'https://doc.traefik.io/traefik/'),
+  tool('kong', 'Kong Gateway', 'API gateway for routing, security, and traffic management.', 'Gateway', 'KONG', 'http', 'https://docs.konghq.com/gateway/latest/'),
+  tool('istio', 'Istio', 'Service mesh for traffic control, security, and telemetry.', 'Service Mesh', 'IST', 'workload', 'https://istio.io/latest/docs/'),
+  tool('linkerd', 'Linkerd', 'Lightweight service mesh for Kubernetes workloads.', 'Service Mesh', 'LNK', 'workload', 'https://linkerd.io/2/overview/'),
+  tool('kuma', 'Kuma', 'Service mesh for Kubernetes and virtual machine workloads.', 'Service Mesh', 'KMA', 'workload', 'https://kuma.io/docs/latest/'),
+  tool('helm', 'Helm', 'Package and release manager for Kubernetes applications.', 'Application Platform', 'HELM', 'workload', 'https://helm.sh/docs/'),
+  tool('kustomize', 'Kustomize', 'Customize Kubernetes resources without templates.', 'Application Platform', 'K', 'workload', 'https://kubectl.docs.kubernetes.io/references/kustomize/'),
+  tool('keda', 'KEDA', 'Event-driven autoscaling for Kubernetes workloads.', 'Application Platform', 'KEDA', 'workload', 'https://keda.sh/docs/'),
+  tool('knative', 'Knative', 'Building blocks for deploying and scaling serverless workloads.', 'Application Platform', 'KN', 'workload', 'https://knative.dev/docs/'),
+  tool('dapr', 'Dapr', 'Portable APIs for building distributed applications.', 'Application Platform', 'DAPR', 'workload', 'https://docs.dapr.io/'),
+  tool('backstage', 'Backstage', 'Developer portal for services, software templates, and documentation.', 'Application Platform', 'BK', 'workload', 'https://backstage.io/docs/'),
+  tool('argocd', 'Argo CD', 'Declarative GitOps continuous delivery for Kubernetes.', 'GitOps', 'ARGO', 'git-source', 'https://argo-cd.readthedocs.io/'),
+  tool('flux', 'Flux CD', 'GitOps toolkit for keeping Kubernetes clusters in sync.', 'GitOps', 'FLUX', 'git-source', 'https://fluxcd.io/flux/'),
+  tool('tekton', 'Tekton', 'Kubernetes-native building blocks for CI/CD pipelines.', 'CI/CD', 'TEK', 'workflow', 'https://tekton.dev/docs/'),
+  tool('jenkins', 'Jenkins', 'Automation server for building, testing, and delivering software.', 'CI/CD', 'J', 'workflow', 'https://www.jenkins.io/doc/'),
+  tool('argo-workflows', 'Argo Workflows', 'Container-native workflow engine for Kubernetes.', 'CI/CD', 'AW', 'workflow', 'https://argo-workflows.readthedocs.io/'),
+  tool('buildkit', 'BuildKit', 'Efficient, portable toolkit for building container images.', 'CI/CD', 'BKIT', 'artifact', 'https://github.com/moby/buildkit'),
+  tool('forgejo', 'Forgejo', 'Self-hosted code collaboration and Git service.', 'Source Control', 'FJ', 'git-source', 'https://forgejo.org/docs/latest/'),
+  tool('gitea', 'Gitea', 'Lightweight self-hosted Git service and development platform.', 'Source Control', 'GT', 'git-source', 'https://docs.gitea.com/'),
+  tool('harbor', 'Harbor', 'Store, sign, scan, and distribute container images and artifacts.', 'Artifact Registry', 'HBR', 'artifact', 'https://goharbor.io/docs/'),
+  tool('zot', 'Zot Registry', 'Vendor-neutral OCI image and artifact registry.', 'Artifact Registry', 'ZOT', 'artifact', 'https://zotregistry.io/'),
+  tool('mysql', 'MySQL', 'Relational database for transactional applications.', 'Database', 'SQL', 'database', 'https://dev.mysql.com/doc/'),
+  tool('mariadb', 'MariaDB', 'Community-developed relational database server.', 'Database', 'MDB', 'database', 'https://mariadb.com/kb/en/documentation/'),
+  tool('valkey', 'Valkey', 'Open-source in-memory data structure store.', 'Database', 'VK', 'database', 'https://valkey.io/topics/'),
+  tool('clickhouse', 'ClickHouse', 'Column-oriented database for real-time analytics.', 'Database', 'CH', 'database', 'https://clickhouse.com/docs/'),
+  tool('cassandra', 'Apache Cassandra', 'Distributed wide-column database for high availability.', 'Database', 'CAS', 'database', 'https://cassandra.apache.org/doc/latest/'),
+  tool('nats', 'NATS', 'Messaging system for cloud-native and distributed applications.', 'Messaging', 'NATS', 'messaging', 'https://docs.nats.io/'),
+  tool('rabbitmq', 'RabbitMQ', 'Message broker supporting reliable application messaging.', 'Messaging', 'RMQ', 'messaging', 'https://www.rabbitmq.com/docs'),
+  tool('kafka', 'Apache Kafka', 'Distributed event streaming platform.', 'Messaging', 'KAF', 'messaging', 'https://kafka.apache.org/documentation/'),
+  tool('ceph', 'Ceph', 'Unified distributed storage for object, block, and file data.', 'Storage', 'CEPH', 'storage', 'https://docs.ceph.com/en/latest/'),
+  tool('longhorn', 'Longhorn', 'Distributed block storage for Kubernetes.', 'Storage', 'LH', 'storage', 'https://longhorn.io/docs/'),
+  tool('rook', 'Rook', 'Cloud-native storage orchestration for Kubernetes.', 'Storage', 'ROOK', 'storage', 'https://rook.io/docs/rook/latest/'),
+  tool('openebs', 'OpenEBS', 'Container-attached storage for Kubernetes.', 'Storage', 'OE', 'storage', 'https://openebs.io/docs/'),
+  tool('minio', 'MinIO', 'S3-compatible object storage for cloud-native environments.', 'Storage', 'MIN', 'storage', 'https://min.io/docs/minio/kubernetes/upstream/'),
+  tool('keycloak', 'Keycloak', 'Identity and access management with single sign-on and OIDC.', 'Identity', 'KC', 'identity', 'https://www.keycloak.org/documentation'),
+  tool('dex', 'Dex', 'OpenID Connect identity service for other applications.', 'Identity', 'DEX', 'identity', 'https://dexidp.io/docs/'),
+  tool('ory-kratos', 'Ory Kratos', 'Identity management for registration, login, and account recovery.', 'Identity', 'OK', 'identity', 'https://www.ory.sh/docs/kratos/'),
+  tool('authelia', 'Authelia', 'Identity and access gateway with multi-factor authentication.', 'Identity', 'AUTH', 'identity', 'https://www.authelia.com/overview/introduction/'),
+  tool('alertmanager', 'Alertmanager', 'Group, route, and manage alerts from Prometheus.', 'Observability', 'AM', 'telemetry', 'https://prometheus.io/docs/alerting/latest/alertmanager/'),
+  tool('jaeger', 'Jaeger', 'Distributed tracing platform for monitoring service requests.', 'Observability', 'JAE', 'telemetry', 'https://www.jaegertracing.io/docs/'),
+  tool('victoriametrics', 'VictoriaMetrics', 'Time-series monitoring and metrics storage.', 'Observability', 'VM', 'telemetry', 'https://docs.victoriametrics.com/'),
+  tool('fluent-bit', 'Fluent Bit', 'Lightweight processor and forwarder for logs and telemetry.', 'Observability', 'FB', 'telemetry', 'https://docs.fluentbit.io/manual/'),
+  tool('opensearch', 'OpenSearch', 'Search, analytics, and observability platform.', 'Observability', 'OS', 'telemetry', 'https://docs.opensearch.org/latest/'),
+  tool('openbao', 'OpenBao', 'Secrets management for infrastructure and applications.', 'Security', 'BAO', 'security', 'https://openbao.org/docs/'),
+  tool('external-secrets', 'External Secrets Operator', 'Synchronize secrets from external systems into Kubernetes.', 'Security', 'ESO', 'security', 'https://external-secrets.io/latest/'),
+  tool('kyverno', 'Kyverno', 'Policy engine for validating, mutating, and generating Kubernetes resources.', 'Security', 'KYO', 'security', 'https://kyverno.io/docs/'),
+  tool('opa-gatekeeper', 'OPA Gatekeeper', 'Policy enforcement for Kubernetes using Open Policy Agent.', 'Security', 'OPA', 'security', 'https://open-policy-agent.github.io/gatekeeper/website/docs/'),
+  tool('falco', 'Falco', 'Runtime threat detection for cloud-native systems.', 'Security', 'FAL', 'security', 'https://falco.org/docs/'),
+  tool('trivy', 'Trivy', 'Scanner for vulnerabilities, misconfigurations, and software artifacts.', 'Security', 'TRV', 'security', 'https://trivy.dev/latest/docs/'),
+  tool('cert-manager', 'cert-manager', 'Automated certificate issuance and renewal for Kubernetes.', 'Security', 'CERT', 'security', 'https://cert-manager.io/docs/'),
+]
 
 export const catalog: ComponentDefinition[] = [
   definition('aws-vpc', 'Amazon VPC', 'Isolated network boundary for cloud resources.', 'Infrastructure', 'VPC', '#5f7f6b', {
@@ -134,7 +253,7 @@ export const catalog: ComponentDefinition[] = [
     { id: 'gateway.tls', scope: 'configuration', severity: 'error', message: 'Public routes must use TLS.' },
   ], ['https://gateway-api.sigs.k8s.io/']),
 
-  definition('postgresql', 'PostgreSQL', 'Durable relational data store for application or identity services.', 'Data', 'PG', '#407f91', {
+  definition('postgresql', 'PostgreSQL', 'Durable relational data store for application or identity services.', 'Database', 'PG', '#407f91', {
     name,
     engine: { type: 'string', title: 'Engine', enum: ['PostgreSQL 17', 'PostgreSQL 16'] },
     exposure: { type: 'string', title: 'Network access', enum: ['Private only'] },
@@ -228,10 +347,11 @@ export const catalog: ComponentDefinition[] = [
   ], [
     { id: 'secrets.recovery', scope: 'configuration', severity: 'warning', message: 'Secrets management needs an independent recovery path.' },
   ], ['https://infisical.com/docs/documentation/getting-started/introduction']),
+  ...extendedCatalog,
 ]
 
 export const catalogById = new Map(catalog.map((component) => [component.typeId, component]))
-export const categories: ComponentCategory[] = ['Infrastructure', 'Compute', 'Gateway', 'Data', 'Identity', 'Observability', 'Security']
+export const categories = [...new Set(catalog.map((component) => component.category))].sort() as ComponentCategory[]
 
 export function defaultConfig(component: ComponentDefinition, suffix = ''): Record<string, string | number | boolean> {
   const defaults: Record<string, string | number | boolean> = {}
@@ -245,7 +365,7 @@ export function defaultConfig(component: ComponentDefinition, suffix = ''): Reco
     } else if (property.type === 'boolean') {
       defaults[key] = false
     } else {
-      defaults[key] = ''
+      defaults[key] = key === 'namespace' ? 'platform' : ''
     }
   }
   if (component.typeId === 'aws-vpc') {

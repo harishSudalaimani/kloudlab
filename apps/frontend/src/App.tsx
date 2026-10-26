@@ -6,6 +6,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  MarkerType,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -14,6 +15,7 @@ import {
   type Edge,
   type EdgeChange,
   type NodeChange,
+  type Viewport,
 } from '@xyflow/react'
 import { CanvasNode, type ComponentFlowNode, type ComponentNodeData } from './components/CanvasNode'
 import { Icon } from './components/Icon'
@@ -35,8 +37,14 @@ type SavedArchitecture = { document: CanvasDocument; updatedAt: string }
 type SaveState = 'saved' | 'saving' | 'unsaved'
 
 const nodeTypes = { component: CanvasNode }
-const edgeStyle = { stroke: '#82978a', strokeWidth: 1.8 }
-const edgeOptions = { type: 'smoothstep', animated: false, style: edgeStyle }
+const edgeStyle = { stroke: '#79a8cf', strokeWidth: 1.8 }
+const edgeMarker = { type: MarkerType.ArrowClosed, color: edgeStyle.stroke }
+const edgeOptions = { type: 'smoothstep', animated: false, style: edgeStyle, markerEnd: edgeMarker }
+const fallbackViewport = { x: 0, y: 0, zoom: 0.8 }
+const canvasFitOptions = { padding: 0.08 }
+const canvasSnapGrid: [number, number] = [16, 16]
+const canvasPanButtons = [1, 2]
+const flowProOptions = { hideAttribution: false }
 
 function fromDocument(document: CanvasDocument): { nodes: ComponentFlowNode[]; edges: Edge[] } {
   return {
@@ -62,6 +70,7 @@ function fromDocument(document: CanvasDocument): { nodes: ComponentFlowNode[]; e
       targetHandle: item.targetPort,
       type: 'smoothstep',
       style: edgeStyle,
+      markerEnd: edgeMarker,
     })),
   }
 }
@@ -142,6 +151,7 @@ function AppContent() {
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [toast, setToast] = useState('')
   const [mobileCatalogOpen, setMobileCatalogOpen] = useState(false)
+  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const toastTimer = useRef<number | undefined>(undefined)
   const nodesRef = useRef(nodes)
@@ -150,6 +160,21 @@ function AppContent() {
   const historyRef = useRef<CanvasDocument[]>([])
   const futureRef = useRef<CanvasDocument[]>([])
   const flow = useReactFlow<ComponentFlowNode, Edge>()
+  const isValidConnection = useCallback((connection: Connection | Edge) =>
+    componentConnectionValid(connection as Connection, nodesRef.current, edgesRef.current), [])
+  const onCanvasMoveEnd = useCallback((_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
+    setDocument((current) => ({ ...current, viewport }))
+  }, [])
+  const showNodeProperties = useCallback(() => {
+    setInspectorTab('properties')
+    setMobileInspectorOpen(true)
+  }, [])
+  const showSelectedEdge = useCallback(() => setMobileInspectorOpen(true), [])
+  const hideInspectorFromCanvas = useCallback(() => {
+    setInspectorTab('properties')
+    setMobileInspectorOpen(false)
+  }, [])
+  const stopNodeDrag = useCallback(() => setSaveState('unsaved'), [])
 
   nodesRef.current = nodes
   edgesRef.current = edges
@@ -221,9 +246,9 @@ function AppContent() {
       localStorage.setItem(ACTIVE_KEY, JSON.stringify(next))
       setLibrary(nextLibrary)
       setSaveState('saved')
-      if (!quiet) notify('Architecture saved in this browser')
+      if (!quiet) notify('Architecture saved on this device')
     } catch {
-      notify('Browser storage is unavailable. Export a JSON backup instead.')
+      notify('Could not save on this device. Export a copy instead.')
     }
   }, [notify])
 
@@ -245,6 +270,7 @@ function AppContent() {
     edgesRef.current = nextEdges
     setInspectorTab('properties')
     setMobileCatalogOpen(false)
+    setMobileInspectorOpen(true)
     setSaveState('unsaved')
   }, [checkpoint, flow])
 
@@ -434,10 +460,11 @@ function AppContent() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#" aria-label="KloudLab home"><span className="brand-mark"><i /><i /><i /></span><span>kloud<span>lab</span></span></a>
+        <span className="product-principle"><i />ARCHITECTURE STUDIO</span>
         <div className="topbar-divider" />
         <div className="project-title-wrap">
           <input aria-label="Architecture name" className="project-title" value={document.name} onFocus={checkpoint} onChange={(event) => { setDocument((current) => ({ ...current, name: event.target.value })); setSaveState('unsaved') }} />
-          <span className="save-indicator"><i className={`save-dot ${saveState}`} />{saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved to this browser' : 'Unsaved changes'}</span>
+          <span className="save-indicator"><i className={`save-dot ${saveState}`} />{saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved on this device' : 'Unsaved changes'}</span>
         </div>
         <div className="topbar-spacer" />
         <button className="button button-quiet library-trigger" onClick={() => setLibraryOpen(true)}><Icon name="folder" size={16} /><span>My architectures</span></button>
@@ -449,25 +476,29 @@ function AppContent() {
       <div className="workspace">
         <aside className={`catalog-panel${mobileCatalogOpen ? ' mobile-open' : ''}`}>
           <div className="catalog-header">
-            <div><span className="eyebrow">DESIGN SYSTEM</span><h1>Components</h1></div>
+            <div><span className="eyebrow">COMPONENT LIBRARY</span><h1>Components</h1></div>
             <button className="icon-button catalog-add" title="New architecture" onClick={newArchitecture}><Icon name="plus" size={17} /></button>
           </div>
-          <p className="catalog-intro">Drag components onto the canvas to map your architecture.</p>
+          <p className="catalog-intro">Explore open-source tools for cloud and Kubernetes architectures.</p>
           <label className="search-field"><Icon name="search" size={15} /><input placeholder="Find a component" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd>/</kbd></label>
-          <div className="category-filters" aria-label="Filter components">
-            <button className={category === 'All' ? 'active' : ''} onClick={() => setCategory('All')}>All <span>{catalog.length}</span></button>
-            {categories.map((item) => <button className={category === item ? 'active' : ''} key={item} onClick={() => setCategory(item)}>{item}</button>)}
+          <label className="category-filter" htmlFor="component-category">Browse by category</label>
+          <div className="category-select-wrap">
+            <select id="component-category" className="category-select" value={category} onChange={(event) => setCategory(event.target.value === 'All' ? 'All' : event.target.value as ComponentCategory)}>
+              <option value="All">All categories · {catalog.length}</option>
+              {categories.map((item) => <option key={item} value={item}>{item} · {catalog.filter((component) => component.category === item).length}</option>)}
+            </select>
+            <Icon name="chevron-down" size={15} />
           </div>
           <div className="catalog-list">
             {filteredComponents.length ? filteredComponents.map((component) => (
               <button className="catalog-item" key={component.typeId} draggable onDragStart={(event) => onCatalogDragStart(event, component)} onClick={() => addComponent(component)}>
                 <span className="catalog-symbol" style={{ '--node-accent': component.accent } as CSSProperties}>{component.symbol}</span>
-                <span className="catalog-item-copy"><strong>{component.displayName}</strong><small>{component.description}</small></span>
+                <span className="catalog-item-copy"><span className="catalog-item-title"><strong>{component.displayName}</strong><i className={`component-origin ${component.availability}`}>{component.availability === 'cloud-hosting' ? 'HOSTING' : component.availability === 'managed-service' ? 'MANAGED' : component.availability === 'open-core' ? 'OPEN CORE' : 'OPEN SOURCE'}</i></span><small>{component.description}</small></span>
                 <span className="catalog-item-add"><Icon name="plus" size={15} /></span>
               </button>
             )) : <div className="catalog-no-results"><Icon name="search" size={20} /><span>No components match</span><small>Try another name or category.</small></div>}
           </div>
-          <div className="catalog-footer"><span className="catalog-status"><i />Catalog v1.0</span><span>13 components</span></div>
+          <div className="catalog-footer"><span className="catalog-status"><i />Open-source ecosystem</span><span>{catalog.length} tools</span></div>
         </aside>
 
         <main className="canvas-column">
@@ -479,12 +510,14 @@ function AppContent() {
                 <button className="icon-button" title="Redo (⇧⌘Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" size={16} /></button>
               </div>
               <span className="toolbar-divider" />
-              <button className="toolbar-validate" onClick={() => setInspectorTab('validate')}><span className={`validation-led ${errors ? 'led-error' : warnings ? 'led-warning' : ''}`} /><span>{errors ? `${errors} errors` : warnings ? `${warnings} warnings` : 'All checks passed'}</span><Icon name="chevron-right" size={14} /></button>
+              <button className="toolbar-validate" onClick={() => { setInspectorTab('validate'); setMobileInspectorOpen(true) }}><span className={`validation-led ${errors ? 'led-error' : warnings ? 'led-warning' : ''}`} /><span>{errors ? `${errors} errors` : warnings ? `${warnings} warnings` : 'No issues found'}</span><Icon name="chevron-right" size={14} /></button>
+              <button className="toolbar-secondary" onClick={onImportClick}><Icon name="upload" size={14} /><span>Import</span></button>
+              <button className="icon-button toolbar-shortcuts" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" onClick={() => notify('⌘S save · ⌘Z undo · ⇧⌘Z redo · ⌘D duplicate · Delete remove')}><Icon name="command" size={15} /></button>
               <button className="icon-button fit-button" title="Fit canvas" onClick={fitCanvas}><Icon name="grid" size={16} /></button>
             </div>
           </div>
           <div className="canvas-area" onDrop={onCanvasDrop} onDragOver={(event) => event.preventDefault()}>
-            <div className="canvas-hint"><span className="hint-dot" />Local draft <span className="hint-separator">·</span> Drag to connect ports</div>
+            <div className="canvas-hint"><span className="hint-dot" />Drag tools to the canvas <span className="hint-separator">·</span> Connect components</div>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -492,45 +525,32 @@ function AppContent() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              isValidConnection={(connection) => componentConnectionValid(connection as Connection, nodesRef.current, edgesRef.current)}
+              isValidConnection={isValidConnection}
               onNodeDragStart={checkpoint}
-              onNodeDragStop={() => setSaveState('unsaved')}
-              onNodeClick={() => setInspectorTab('properties')}
-              onPaneClick={() => setInspectorTab('properties')}
-              onMoveEnd={(_, viewport) => setDocument((current) => ({ ...current, viewport }))}
-              onSelectionChange={({ nodes: selectedNodes, edges: selectedEdges }) => {
-                const selectedNodeIds = new Set(selectedNodes.map((node) => node.id))
-                const selectedEdgeIds = new Set(selectedEdges.map((edge) => edge.id))
-                setNodes((current) => {
-                  const next = current.map((node) => ({ ...node, selected: selectedNodeIds.has(node.id) }))
-                  nodesRef.current = next
-                  return next
-                })
-                setEdges((current) => {
-                  const next = current.map((edge) => ({ ...edge, selected: selectedEdgeIds.has(edge.id) }))
-                  edgesRef.current = next
-                  return next
-                })
-              }}
-              defaultViewport={document.viewport ?? { x: 0, y: 0, zoom: 0.8 }}
+              onNodeDragStop={stopNodeDrag}
+              onNodeClick={showNodeProperties}
+              onEdgeClick={showSelectedEdge}
+              onPaneClick={hideInspectorFromCanvas}
+              onMoveEnd={onCanvasMoveEnd}
+              defaultViewport={document.viewport ?? fallbackViewport}
               fitView={nodes.length > 0 && !document.viewport}
-              fitViewOptions={{ padding: 0.2 }}
+              fitViewOptions={canvasFitOptions}
               minZoom={0.2}
               maxZoom={1.6}
               snapToGrid
-              snapGrid={[16, 16]}
+              snapGrid={canvasSnapGrid}
               deleteKeyCode={null}
               selectionOnDrag
-              panOnDrag={[1, 2]}
-              proOptions={{ hideAttribution: false }}
+              panOnDrag={canvasPanButtons}
+              proOptions={flowProOptions}
             >
-              <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#d9dfd9" />
+              <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#263443" />
               <Controls position="bottom-right" showInteractive={false} />
-              <MiniMap position="bottom-left" pannable zoomable nodeColor={(node) => catalogById.get((node.data as ComponentNodeData).typeId)?.accent ?? '#a0aaa2'} maskColor="rgba(241, 244, 239, 0.72)" />
+              <MiniMap position="bottom-left" pannable zoomable nodeColor={(node) => catalogById.get((node.data as ComponentNodeData).typeId)?.accent ?? '#647484'} maskColor="rgba(6, 10, 15, 0.78)" />
             </ReactFlow>
             {nodes.length === 0 && <div className="canvas-empty"><div className="empty-grid"><span /><span /><span /><span /></div><strong>Your canvas is ready</strong><p>Choose a component from the catalog or drag one here to get started.</p><button className="button button-primary" onClick={() => addComponent(catalog[0])}><Icon name="plus" size={15} />Add your first component</button></div>}
           </div>
-          <footer className="canvas-footer"><span><Icon name="layers" size={14} />{nodes.length} components</span><i /> <span>{edges.length} connections</span><span className="canvas-footer-spacer" /><span><Icon name="cloud" size={14} />Saved locally</span></footer>
+          <footer className="canvas-footer"><span><Icon name="layers" size={14} />{nodes.length} components</span><i /> <span>{edges.length} connections</span><span className="canvas-footer-spacer" /><span><Icon name="cloud" size={14} />Saved on this device</span></footer>
         </main>
 
         <Inspector
@@ -547,6 +567,7 @@ function AppContent() {
           onDelete={deleteSelection}
           onDeleteEdge={deleteSelection}
           onFocusNode={(nodeId) => {
+            setMobileInspectorOpen(true)
             setNodes((current) => {
               const next = current.map((node) => ({ ...node, selected: node.id === nodeId }))
               nodesRef.current = next
@@ -560,17 +581,18 @@ function AppContent() {
             setInspectorTab('properties')
             flow.fitView({ nodes: [{ id: nodeId }], padding: 0.7, duration: 350 })
           }}
+          mobileOpen={mobileInspectorOpen}
+          onMobileToggle={() => setMobileInspectorOpen((open) => !open)}
         />
       </div>
 
       <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={importDocument} />
-      <div className="bottom-left-actions"><button className="icon-button" title="Import architecture JSON" onClick={onImportClick}><Icon name="upload" size={16} /></button><span>Import JSON</span><span className="bottom-action-divider" /><button className="icon-button" title="Keyboard shortcuts" onClick={() => notify('⌘S save · ⌘Z undo · ⇧⌘Z redo · ⌘D duplicate · Delete remove')}><Icon name="command" size={15} /></button><span>Shortcuts</span></div>
       {toast && <div role="status" className="toast"><span className="toast-check"><Icon name="check" size={14} /></span>{toast}</div>}
 
       {libraryOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setLibraryOpen(false) }}>
         <section className="library-dialog" role="dialog" aria-modal="true" aria-labelledby="library-title">
           <div className="dialog-header"><div><span className="eyebrow">YOUR WORKSPACE</span><h2 id="library-title">My architectures</h2></div><button className="icon-button" aria-label="Close" onClick={() => setLibraryOpen(false)}><Icon name="close" /></button></div>
-          <p className="dialog-description">Saved drafts stay in this browser. Export a JSON file to move an architecture to another device.</p>
+          <p className="dialog-description">Your designs are saved on this device. Export a copy to share or move them to another device.</p>
           <div className="library-toolbar"><span>{library.length} saved {library.length === 1 ? 'architecture' : 'architectures'}</span><button className="button button-primary" onClick={newArchitecture}><Icon name="plus" size={15} />New architecture</button></div>
           <div className="library-list">
             {library.length ? library.map((entry) => (
@@ -584,9 +606,9 @@ function AppContent() {
                   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { notify('Could not update the browser architecture library') }
                 }}><Icon name="trash" size={15} /></button>
               </article>
-            )) : <div className="library-empty"><span className="library-empty-icon"><Icon name="folder" size={21} /></span><strong>No saved architectures yet</strong><p>Save this canvas to keep it in your browser, or create a new design.</p><button className="button button-primary" onClick={() => saveArchitecture()}><Icon name="save" size={15} />Save current architecture</button></div>}
+            )) : <div className="library-empty"><span className="library-empty-icon"><Icon name="folder" size={21} /></span><strong>No saved architectures yet</strong><p>Save this canvas to keep it on this device, or create a new design.</p><button className="button button-primary" onClick={() => saveArchitecture()}><Icon name="save" size={15} />Save current architecture</button></div>}
           </div>
-          <div className="dialog-footer"><Icon name="shield" size={15} /><span>Drafts remain on this device. Nothing is sent to a server.</span><button className="button button-quiet" onClick={onImportClick}><Icon name="upload" size={15} />Import JSON</button></div>
+          <div className="dialog-footer"><Icon name="shield" size={15} /><span>Saved designs stay on this device until you export them.</span><button className="button button-quiet" onClick={onImportClick}><Icon name="upload" size={15} />Import JSON</button></div>
         </section>
       </div>}
     </div>

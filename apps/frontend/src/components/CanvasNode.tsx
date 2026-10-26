@@ -36,7 +36,10 @@ export function CanvasNode({ data, selected }: NodeProps<ComponentFlowNode>) {
         <span className="component-node-version">v{data.componentVersion}</span>
       </div>
       <div className="component-node-title" title={data.title}>{data.title || component.displayName}</div>
-      <div className="component-node-subtitle">{component.displayName}</div>
+      <div className="component-node-subtitle">
+        <span>{component.displayName}</span>
+        <i className={`component-origin ${component.availability}`}>{component.availability === 'cloud-hosting' ? 'CLOUD' : component.availability === 'managed-service' ? 'MANAGED' : component.availability === 'open-core' ? 'OPEN CORE' : 'OPEN SOURCE'}</i>
+      </div>
       <div className="component-node-footer">
         <span className="node-port-count"><i className="port-dot input-dot" />{inputs.length} in</span>
         <span className="node-port-count">{outputs.length} out<i className="port-dot output-dot" /></span>

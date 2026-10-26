@@ -50,6 +50,8 @@ The `infra/config` package validates project/environment/region labels, CIDR ove
 
 The local-first editor is in `apps/frontend`. It includes a component catalog, drag-and-drop canvas, typed connections, configuration inspector, browser-side validation, undo/redo, a browser-local architecture library, and versioned JSON import/export. It does not require AWS credentials.
 
+KloudLab's canvas is built with the open-source React Flow library. The design approach treats architectures as components connected by explicit relationships, drawing inspiration from [Meshery's design model](https://docs.meshery.io/concepts/logical/designs/). Cloud infrastructure and Kubernetes are hosting options; the catalog marks hosting platforms separately from open-source components. Auth0 remains the project's existing managed identity integration.
+
 ```sh
 cd apps/frontend
 pnpm install --frozen-lockfile

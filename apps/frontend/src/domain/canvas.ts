@@ -53,18 +53,18 @@ function config(typeId: string, values: Record<string, unknown>): Record<string,
 
 export function createStarterCanvas(): CanvasDocument {
   const nodes = [
-    node('vpc', 'aws-vpc', -300, 170, config('aws-vpc', { name: 'Platform network', cidr: '10.40.0.0/16' })),
-    node('eks', 'eks-cluster', 40, 170, config('eks-cluster', { name: 'Platform cluster' })),
-    node('gateway', 'kgateway', 400, -120, config('kgateway', { name: 'Public gateway', hostname: 'kloudlab.in' })),
-    node('api', 'kubernetes-workload', 400, 170, config('kubernetes-workload', { name: 'KloudLab API', namespace: 'platform', replicas: 3 })),
-    node('auth0', 'auth0', 400, 500, config('auth0', { name: 'Auth0 tenant' })),
-    node('fga', 'openfga', 740, 440, config('openfga', { name: 'OpenFGA', modelVersion: 'canvas-v1' })),
-    node('postgres', 'postgresql', 740, 710, config('postgresql', { name: 'Identity PostgreSQL', backupDays: 14 })),
-    node('collector', 'otel-collector', 1070, 170, config('otel-collector', { name: 'Telemetry gateway' })),
-    node('prometheus', 'prometheus', 1420, 40, config('prometheus', { name: 'Prometheus', retention: '30 days' })),
-    node('loki', 'loki', 1420, 300, config('loki', { name: 'Loki', retention: '30 days' })),
-    node('tempo', 'tempo', 1420, 560, config('tempo', { name: 'Tempo', retention: '14 days' })),
-    node('grafana', 'grafana', 1760, 300, config('grafana', { name: 'Grafana' })),
+    node('vpc', 'aws-vpc', -20, 200, config('aws-vpc', { name: 'Platform network', cidr: '10.40.0.0/16' })),
+    node('eks', 'eks-cluster', 210, 200, config('eks-cluster', { name: 'Platform cluster' })),
+    node('gateway', 'kgateway', 460, 0, config('kgateway', { name: 'Public gateway', hostname: 'kloudlab.in' })),
+    node('api', 'kubernetes-workload', 460, 200, config('kubernetes-workload', { name: 'KloudLab API', namespace: 'platform', replicas: 3 })),
+    node('auth0', 'auth0', 460, 430, config('auth0', { name: 'Auth0 tenant' })),
+    node('fga', 'openfga', 700, 330, config('openfga', { name: 'OpenFGA', modelVersion: 'canvas-v1' })),
+    node('postgres', 'postgresql', 700, 520, config('postgresql', { name: 'Identity PostgreSQL', backupDays: 14 })),
+    node('collector', 'otel-collector', 930, 200, config('otel-collector', { name: 'Telemetry gateway' })),
+    node('prometheus', 'prometheus', 1170, 0, config('prometheus', { name: 'Prometheus', retention: '30 days' })),
+    node('loki', 'loki', 1170, 200, config('loki', { name: 'Loki', retention: '30 days' })),
+    node('tempo', 'tempo', 1170, 400, config('tempo', { name: 'Tempo', retention: '14 days' })),
+    node('grafana', 'grafana', 1400, 200, config('grafana', { name: 'Grafana' })),
   ]
   const edges: CanvasEdgeDocument[] = [
     { id: 'edge-vpc-eks', source: 'vpc', sourcePort: 'network', target: 'eks', targetPort: 'network' },
@@ -205,7 +205,7 @@ export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
     const sourcePort = sourceComponent.ports.find((port) => port.id === edge.sourcePort && port.direction === 'output')
     const targetPort = targetComponent.ports.find((port) => port.id === edge.targetPort && port.direction === 'input')
     if (!sourcePort || !targetPort || !sourcePort.connectionTypes.some((type) => targetPort.connectionTypes.includes(type))) {
-      issues.push({ id: `edge.${edge.id}.type`, severity: 'error', message: 'These component ports do not support the same connection type.' })
+      issues.push({ id: `edge.${edge.id}.type`, severity: 'error', message: 'These components do not support this connection.' })
       continue
     }
     const targetKey = `${edge.target}:${edge.targetPort}`
