@@ -1,0 +1,54 @@
+name: Go CI
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/go.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/go.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Format, lint, and test Pulumi Go module
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: infra/go.mod
+          cache-dependency-path: infra/go.mod
+
+      - name: Check gofmt
+        shell: bash
+        run: |
+          mapfile -d '' -t gofiles < <(find . -type f -name '*.go' -print0)
+          files="$(gofmt -l "${gofiles[@]}")"
+          if [[ -n "$files" ]]; then
+            printf 'Go files need gofmt:\n%s\n' "$files"
+            exit 1
+          fi
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
+          working-directory: infra
+
+      - name: Run Go tests
+        run: go test ./...

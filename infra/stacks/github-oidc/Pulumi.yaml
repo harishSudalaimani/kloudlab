@@ -1,0 +1,17 @@
+name: kloudlab-github-oidc
+runtime: go
+main: .
+description: Branch-restricted GitHub Actions OIDC role for reviewed infrastructure deployments
+config:
+  aws:region:
+    default: ap-south-1
+  kloudlab-github-oidc:environment:
+    default: dev
+  kloudlab-github-oidc:roleName:
+    description: IAM role name used by the deployment workflow
+  kloudlab-github-oidc:repository:
+    description: GitHub owner/repository allowed to assume the role
+  kloudlab-github-oidc:branches:
+    description: Exact protected branch names allowed to assume the role
+  kloudlab-github-oidc:permissionsPolicyJson:
+    description: Reviewed least-privilege IAM permissions policy as JSON

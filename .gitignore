@@ -7,3 +7,5 @@
 !/web/.env.example
 /backend/.env
 /web/.env.local
+Pulumi.*.yaml
+.pulumi/

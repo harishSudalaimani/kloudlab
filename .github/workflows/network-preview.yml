@@ -1,0 +1,67 @@
+name: Network preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: kloudlab-network-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Preview ${{ matrix.stack }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stack: app
+            work-dir: infra/stacks/network-app
+          - stack: identity
+            work-dir: infra/stacks/network-identity
+          - stack: observability
+            work-dir: infra/stacks/network-observability
+          - stack: connectivity
+            work-dir: infra/stacks/network-connectivity
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: infra/go.mod
+          cache-dependency-path: infra/go.mod
+
+      - name: Download Go modules
+        run: go mod download
+        working-directory: infra
+
+      - name: Check deployment configuration
+        env:
+          AWS_NETWORK_PREVIEW_ROLE_ARN: ${{ vars.AWS_NETWORK_PREVIEW_ROLE_ARN }}
+          PULUMI_BACKEND_URL: ${{ vars.PULUMI_BACKEND_URL }}
+        run: |
+          [[ "$AWS_NETWORK_PREVIEW_ROLE_ARN" == arn:aws:iam::*:role/* ]]
+          [[ "$PULUMI_BACKEND_URL" == s3://* ]]
+
+      - name: Assume the network deployment role
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_NETWORK_PREVIEW_ROLE_ARN }}
+          aws-region: ap-south-1
+          role-session-name: kloudlab-network-preview-${{ github.run_id }}
+
+      - name: Preview stack
+        uses: pulumi/actions@v7
+        with:
+          command: preview
+          stack-name: dev
+          work-dir: ${{ matrix.work-dir }}
+          cloud-url: ${{ vars.PULUMI_BACKEND_URL }}
+          secrets-provider: awskms://alias/kloudlab-pulumi-state?region=ap-south-1

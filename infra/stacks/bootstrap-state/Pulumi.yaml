@@ -1,0 +1,11 @@
+name: kloudlab-bootstrap-state
+runtime: go
+main: .
+description: Protected S3 and KMS resources for the Pulumi DIY backend
+config:
+  aws:region:
+    default: ap-south-1
+  kloudlab-state:environment:
+    default: dev
+  kloudlab-state:bucketName:
+    description: Globally unique, lowercase S3 bucket name for Pulumi state
