@@ -7,13 +7,3 @@
 !/web/.env.example
 /backend/.env
 /web/.env.local
-*.tfstate
-*.tfstate.*
-/infra/terraform/.terraform/
-/infra/terraform/**/.terraform/
-/infra/terraform/karpenter/terraform.tfvars
-/infra/terraform/karpenter/*.tfplan
-/infra/terraform/terraform.tfvars
-/infra/terraform/state/.terraform/
-*.tfplan
-*.tfplan.*
