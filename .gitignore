@@ -9,3 +9,5 @@
 /web/.env.local
 Pulumi.*.yaml
 .pulumi/
+/apps/frontend/node_modules/
+/apps/frontend/dist/

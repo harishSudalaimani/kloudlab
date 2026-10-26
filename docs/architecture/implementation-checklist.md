@@ -53,9 +53,10 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 - [ ] Verify supported kgateway, Gateway API, and AWS load balancer integration versions.
 - [ ] Configure TLS, DNS, timeouts, request limits, security headers, and health checks.
-- [ ] Build the React/TypeScript React Flow editor and Go API.
-- [ ] Persist versioned canvas JSON and implement schema/connection validation.
-- [ ] Add export and project organization.
+- [x] Build the React/TypeScript React Flow editor with a component catalog, editable canvas, local validation, undo/redo, and browser-local drafts.
+- [ ] Build the Go API and shared server-side persistence for versioned canvas documents.
+- [x] Implement browser-side config and connection checks against the v1 canvas and component contracts.
+- [x] Add JSON import/export and a browser-local architecture library.
 
 **Deliverable:** website with a functional, saved architecture canvas.
 

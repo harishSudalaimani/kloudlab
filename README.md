@@ -1,13 +1,13 @@
 # KloudLab
 
-KloudLab is an architecture design platform in its infrastructure foundation phase. The product is intended to let users compose, validate, save, and later generate cloud-native architectures. Phase 2 now contains Pulumi implementations for protected state bootstrap, GitHub OIDC trust, and three VPCs with private connectivity. The code is not deployed and no AWS resources have been provisioned.
+KloudLab is an architecture design platform in its infrastructure foundation phase. The product is intended to let users compose, validate, save, and later generate cloud-native architectures. The React frontend now provides a local architecture editor with browser drafts and JSON import/export. Phase 2 contains Pulumi implementations for protected state bootstrap, GitHub OIDC trust, and three VPCs with private connectivity. The infrastructure code is not deployed and no AWS resources have been provisioned.
 
 ## Repository layout
 
 ```text
 .
 ├── apps/
-│   ├── frontend/                 # React + TypeScript editor (planned)
+│   ├── frontend/                 # React + TypeScript architecture editor
 │   └── api/                      # Go API (planned)
 ├── infra/
 │   ├── go.mod                    # Shared Pulumi Go module
@@ -45,6 +45,18 @@ The app, identity, and observability network stacks are configured with proposed
 - [Catalog component schema v1](docs/architecture/catalog-component-v1.schema.json)
 
 The `infra/config` package validates project/environment/region labels, CIDR overlap, resource prefixes, and standard tags without allowing custom tags to replace ownership keys.
+
+## Frontend
+
+The local-first editor is in `apps/frontend`. It includes a component catalog, drag-and-drop canvas, typed connections, configuration inspector, browser-side validation, undo/redo, a browser-local architecture library, and versioned JSON import/export. It does not require AWS credentials.
+
+```sh
+cd apps/frontend
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Use Node.js 20.19 or newer and pnpm 12.14. Open the local URL printed by Vite. Drafts are saved in the current browser's local storage; use **Export** to keep a portable JSON copy. The Go API and shared server-side persistence are not implemented yet, so drafts do not sync across browsers or users. Build the frontend with `pnpm build`.
 
 ## Infrastructure module
 
