@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ChangeEvent, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ChangeEvent, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import {
   addEdge,
   applyEdgeChanges,
@@ -18,9 +18,14 @@ import {
   type Viewport,
 } from '@xyflow/react'
 import { CanvasNode, type ComponentFlowNode, type ComponentNodeData } from './components/CanvasNode'
+import { AuthorizationDialog } from './components/AuthorizationDialog'
 import { Icon } from './components/Icon'
 import { Inspector, type InspectorTab } from './components/Inspector'
+import { SiteNavigation, type AppPage, type Theme } from './components/SiteNavigation'
+import { AboutPage } from './pages/AboutPage'
+import { HomePage } from './pages/HomePage'
 import { catalog, catalogById, categories, defaultConfig, type ComponentDefinition, type ComponentCategory } from './domain/catalog'
+import { createDefaultAuthorizationModel, type AuthorizationModel } from './domain/authorization'
 import {
   ACTIVE_KEY,
   createEmptyCanvas,
@@ -30,7 +35,6 @@ import {
   STORAGE_KEY,
   validateCanvas,
   type CanvasDocument,
-  type CanvasEdgeDocument,
 } from './domain/canvas'
 
 type SavedArchitecture = { document: CanvasDocument; updatedAt: string }
@@ -39,11 +43,12 @@ type SaveState = 'saved' | 'saving' | 'unsaved'
 const nodeTypes = { component: CanvasNode }
 const edgeStyle = { stroke: '#79a8cf', strokeWidth: 1.8 }
 const edgeMarker = { type: MarkerType.ArrowClosed, color: edgeStyle.stroke }
-const edgeOptions = { type: 'smoothstep', animated: false, style: edgeStyle, markerEnd: edgeMarker }
+const edgeOptions = { type: 'smoothstep', animated: false, style: edgeStyle, markerEnd: edgeMarker, interactionWidth: 28 }
 const fallbackViewport = { x: 0, y: 0, zoom: 0.8 }
 const canvasFitOptions = { padding: 0.08 }
 const canvasSnapGrid: [number, number] = [16, 16]
-const canvasPanButtons = [1, 2]
+const canvasPanButtons = [0]
+const quickAddIds = ['kubernetes-workload', 'postgresql', 'keycloak', 'prometheus', 'argocd', 'cilium']
 const flowProOptions = { hideAttribution: false }
 
 function fromDocument(document: CanvasDocument): { nodes: ComponentFlowNode[]; edges: Edge[] } {
@@ -65,12 +70,13 @@ function fromDocument(document: CanvasDocument): { nodes: ComponentFlowNode[]; e
     edges: document.edges.map((item) => ({
       id: item.id,
       source: item.source,
-      sourceHandle: item.sourcePort,
+      sourceHandle: 'output',
       target: item.target,
-      targetHandle: item.targetPort,
+      targetHandle: 'input',
       type: 'smoothstep',
       style: edgeStyle,
       markerEnd: edgeMarker,
+      interactionWidth: 28,
     })),
   }
 }
@@ -121,23 +127,23 @@ function documentFromFlow(
 }
 
 function componentConnectionValid(connection: Connection, nodes: ComponentFlowNode[], edges: Edge[]): boolean {
-  if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) return false
+  if (!connection.source || !connection.target || connection.sourceHandle !== 'output' || connection.targetHandle !== 'input') return false
   if (connection.source === connection.target) return false
   const source = nodes.find((node) => node.id === connection.source)
   const target = nodes.find((node) => node.id === connection.target)
-  const sourceComponent = source && catalogById.get(source.data.typeId)
-  const targetComponent = target && catalogById.get(target.data.typeId)
-  const output = sourceComponent?.ports.find((port) => port.id === connection.sourceHandle && port.direction === 'output')
-  const input = targetComponent?.ports.find((port) => port.id === connection.targetHandle && port.direction === 'input')
-  if (!output || !input || !output.connectionTypes.some((type) => input.connectionTypes.includes(type))) return false
+  if (!source || !target) return false
   const sameConnection = edges.some((edge) => edge.source === connection.source && edge.sourceHandle === connection.sourceHandle && edge.target === connection.target && edge.targetHandle === connection.targetHandle)
   if (sameConnection) return false
-  if (output.multiple === false && edges.some((edge) => edge.source === connection.source && edge.sourceHandle === connection.sourceHandle)) return false
-  if (input.multiple === false && edges.some((edge) => edge.target === connection.target && edge.targetHandle === connection.targetHandle)) return false
   return true
 }
 
-function AppContent() {
+interface AppContentProps {
+  theme: Theme
+  onToggleTheme: () => void
+  onNavigate: (page: AppPage) => void
+}
+
+function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
   const initialDocument = useMemo(readDocument, [])
   const initialFlow = useMemo(() => fromDocument(initialDocument), [initialDocument])
   const [document, setDocument] = useState(initialDocument)
@@ -148,10 +154,13 @@ function AppContent() {
   const [category, setCategory] = useState<ComponentCategory | 'All'>('All')
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('properties')
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [authorizationOpen, setAuthorizationOpen] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [toast, setToast] = useState('')
   const [mobileCatalogOpen, setMobileCatalogOpen] = useState(false)
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false)
+  const [connectionStart, setConnectionStart] = useState<string | null>(null)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const toastTimer = useRef<number | undefined>(undefined)
   const nodesRef = useRef(nodes)
@@ -169,10 +178,11 @@ function AppContent() {
     setInspectorTab('properties')
     setMobileInspectorOpen(true)
   }, [])
-  const showSelectedEdge = useCallback(() => setMobileInspectorOpen(true), [])
   const hideInspectorFromCanvas = useCallback(() => {
     setInspectorTab('properties')
     setMobileInspectorOpen(false)
+    setConnectionStart(null)
+    setQuickAddOpen(false)
   }, [])
   const stopNodeDrag = useCallback(() => setSaveState('unsaved'), [])
 
@@ -181,18 +191,22 @@ function AppContent() {
   documentRef.current = document
 
   const currentDocument = useMemo(() => documentFromFlow(document, nodes, edges), [document, nodes, edges])
+  const authorizationModel = useMemo(() => document.authorizationModel ?? createDefaultAuthorizationModel(), [document.authorizationModel])
+  const openFgaOnCanvas = nodes.some((node) => node.data.typeId === 'openfga')
   const issues = useMemo(() => validateCanvas(currentDocument), [currentDocument])
   const errors = issues.filter((issue) => issue.severity === 'error').length
   const warnings = issues.filter((issue) => issue.severity === 'warning').length
   const selectedNode = nodes.find((node) => node.selected) ?? null
-  const selectedEdge = edges.find((edge) => edge.selected)
-  const selectedEdgeDocument: CanvasEdgeDocument | null = selectedEdge ? {
-    id: selectedEdge.id,
-    source: selectedEdge.source,
-    sourcePort: selectedEdge.sourceHandle ?? '',
-    target: selectedEdge.target,
-    targetPort: selectedEdge.targetHandle ?? '',
-  } : null
+  const canvasNodes = useMemo(() => connectionStart
+    ? nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          connectionSource: node.id === connectionStart,
+          connectionTarget: node.id !== connectionStart,
+        },
+      }))
+    : nodes, [connectionStart, nodes])
   const filteredComponents = useMemo(() => catalog.filter((component) => {
     const matchesCategory = category === 'All' || component.category === category
     const search = query.trim().toLowerCase()
@@ -207,6 +221,22 @@ function AppContent() {
     toastTimer.current = window.setTimeout(() => setToast(''), 2600)
   }, [])
 
+  const updateAuthorizationModel = useCallback((model: AuthorizationModel) => {
+    setDocument((current) => {
+      const next = { ...current, authorizationModel: model }
+      documentRef.current = next
+      return next
+    })
+    setSaveState('unsaved')
+  }, [])
+
+  const navigateFromCanvas = useCallback((page: AppPage) => {
+    try {
+      localStorage.setItem(ACTIVE_KEY, JSON.stringify(documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)))
+    } catch { /* Keep navigation available if local saving is disabled. */ }
+    onNavigate(page)
+  }, [onNavigate])
+
   const checkpoint = useCallback(() => {
     historyRef.current = [...historyRef.current.slice(-49), documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)]
     futureRef.current = []
@@ -217,6 +247,9 @@ function AppContent() {
     setDocument(next)
     setNodes(parsed.nodes)
     setEdges(parsed.edges)
+    setMobileInspectorOpen(false)
+    setConnectionStart(null)
+    setQuickAddOpen(false)
     nodesRef.current = parsed.nodes
     edgesRef.current = parsed.edges
     documentRef.current = next
@@ -268,9 +301,10 @@ function AppContent() {
     setEdges(nextEdges)
     nodesRef.current = nextNodes
     edgesRef.current = nextEdges
-    setInspectorTab('properties')
     setMobileCatalogOpen(false)
-    setMobileInspectorOpen(true)
+    setMobileInspectorOpen(false)
+    setConnectionStart(null)
+    setQuickAddOpen(false)
     setSaveState('unsaved')
   }, [checkpoint, flow])
 
@@ -299,7 +333,46 @@ function AppContent() {
       return next
     })
     setSaveState('unsaved')
+    setConnectionStart(null)
   }, [checkpoint])
+
+  const onConnectorClick = useCallback((nodeId: string, direction: 'input' | 'output') => {
+    if (direction === 'output') {
+      setConnectionStart((current) => current === nodeId ? null : nodeId)
+      return
+    }
+    if (!connectionStart) {
+      notify('Choose an output point first')
+      return
+    }
+    const connection = { source: connectionStart, sourceHandle: 'output', target: nodeId, targetHandle: 'input' }
+    if (!componentConnectionValid(connection, nodesRef.current, edgesRef.current)) {
+      notify(connectionStart === nodeId ? 'Connect two different components' : 'That connection already exists')
+      setConnectionStart(null)
+      return
+    }
+    onConnect(connection)
+    setConnectionStart(null)
+  }, [connectionStart, notify, onConnect])
+
+  useEffect(() => {
+    const handleConnectorClick = (event: Event) => {
+      const { nodeId, direction } = (event as CustomEvent<{ nodeId: string; direction: 'input' | 'output' }>).detail
+      onConnectorClick(nodeId, direction)
+    }
+    window.addEventListener('kloudlab:connector-click', handleConnectorClick)
+    return () => window.removeEventListener('kloudlab:connector-click', handleConnectorClick)
+  }, [onConnectorClick])
+
+  const deleteConnection = useCallback((_event: ReactMouseEvent, edge: Edge) => {
+    checkpoint()
+    const next = edgesRef.current.filter((item) => item.id !== edge.id)
+    setEdges(next)
+    edgesRef.current = next
+    setSaveState('unsaved')
+    setConnectionStart(null)
+    notify('Connection removed · Undo to restore')
+  }, [checkpoint, notify])
 
   const updateConfig = useCallback((nodeId: string, key: string, value: string | number | boolean) => {
     setNodes((current) => {
@@ -347,6 +420,8 @@ function AppContent() {
     setEdges(nextEdges)
     nodesRef.current = nextNodes
     edgesRef.current = nextEdges
+    setMobileInspectorOpen(false)
+    setConnectionStart(null)
     setSaveState('unsaved')
   }, [checkpoint])
 
@@ -429,14 +504,18 @@ function AppContent() {
   }
 
   const onImportClick = () => fileInputRef.current?.click()
-  const fitCanvas = () => flow.fitView({ padding: 0.18, duration: 400 })
+  const fitCanvas = () => flow.fitView({ padding: 0.1, duration: 400 })
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       const editing = target?.matches('input, textarea, select, [contenteditable="true"]')
       const modifier = event.metaKey || event.ctrlKey
-      if (modifier && event.key.toLowerCase() === 's') {
+      if (event.key === 'Escape') {
+        setConnectionStart(null)
+        setQuickAddOpen(false)
+        setMobileInspectorOpen(false)
+      } else if (modifier && event.key.toLowerCase() === 's') {
         event.preventDefault()
         saveArchitecture()
       } else if (modifier && event.key.toLowerCase() === 'z' && !event.shiftKey && !editing) {
@@ -459,8 +538,8 @@ function AppContent() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#" aria-label="KloudLab home"><span className="brand-mark"><i /><i /><i /></span><span>kloud<span>lab</span></span></a>
-        <span className="product-principle"><i />ARCHITECTURE STUDIO</span>
+        <a className="brand" href="/" onClick={(event) => { event.preventDefault(); navigateFromCanvas('home') }} aria-label="KloudLab home"><span className="brand-mark"><i /><i /><i /></span><span>kloud<span>lab</span></span></a>
+        <SiteNavigation page="playground" theme={theme} onNavigate={navigateFromCanvas} onToggleTheme={onToggleTheme} variant="workspace" />
         <div className="topbar-divider" />
         <div className="project-title-wrap">
           <input aria-label="Architecture name" className="project-title" value={document.name} onFocus={checkpoint} onChange={(event) => { setDocument((current) => ({ ...current, name: event.target.value })); setSaveState('unsaved') }} />
@@ -476,7 +555,7 @@ function AppContent() {
       <div className="workspace">
         <aside className={`catalog-panel${mobileCatalogOpen ? ' mobile-open' : ''}`}>
           <div className="catalog-header">
-            <div><span className="eyebrow">COMPONENT LIBRARY</span><h1>Components</h1></div>
+            <div><span className="eyebrow">COMPONENT LIBRARY</span><h1>Components <span className="component-count-badge">{catalog.length}</span></h1></div>
             <button className="icon-button catalog-add" title="New architecture" onClick={newArchitecture}><Icon name="plus" size={17} /></button>
           </div>
           <p className="catalog-intro">Explore open-source tools for cloud and Kubernetes architectures.</p>
@@ -491,8 +570,8 @@ function AppContent() {
           </div>
           <div className="catalog-list">
             {filteredComponents.length ? filteredComponents.map((component) => (
-              <button className="catalog-item" key={component.typeId} draggable onDragStart={(event) => onCatalogDragStart(event, component)} onClick={() => addComponent(component)}>
-                <span className="catalog-symbol" style={{ '--node-accent': component.accent } as CSSProperties}>{component.symbol}</span>
+              <button className="catalog-item" key={component.typeId} style={{ '--node-accent': component.accent } as CSSProperties} draggable onDragStart={(event) => onCatalogDragStart(event, component)} onClick={() => addComponent(component)}>
+                <span className="catalog-symbol">{component.symbol}</span>
                 <span className="catalog-item-copy"><span className="catalog-item-title"><strong>{component.displayName}</strong><i className={`component-origin ${component.availability}`}>{component.availability === 'cloud-hosting' ? 'HOSTING' : component.availability === 'managed-service' ? 'MANAGED' : component.availability === 'open-core' ? 'OPEN CORE' : 'OPEN SOURCE'}</i></span><small>{component.description}</small></span>
                 <span className="catalog-item-add"><Icon name="plus" size={15} /></span>
               </button>
@@ -505,21 +584,20 @@ function AppContent() {
           <div className="canvas-toolbar">
             <div className="canvas-breadcrumb"><span>Architectures</span><Icon name="chevron-right" size={13} /><strong>{document.name || 'Untitled architecture'}</strong></div>
             <div className="canvas-toolbar-actions">
-              <div className="history-controls">
-                <button className="icon-button" title="Undo (⌘Z)" disabled={!canUndo} onClick={undo}><Icon name="undo" size={16} /></button>
-                <button className="icon-button" title="Redo (⇧⌘Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" size={16} /></button>
-              </div>
-              <span className="toolbar-divider" />
               <button className="toolbar-validate" onClick={() => { setInspectorTab('validate'); setMobileInspectorOpen(true) }}><span className={`validation-led ${errors ? 'led-error' : warnings ? 'led-warning' : ''}`} /><span>{errors ? `${errors} errors` : warnings ? `${warnings} warnings` : 'No issues found'}</span><Icon name="chevron-right" size={14} /></button>
+              <button className="toolbar-secondary access-model-trigger" onClick={() => setAuthorizationOpen(true)}><Icon name="shield" size={14} /><span>Access model</span></button>
               <button className="toolbar-secondary" onClick={onImportClick}><Icon name="upload" size={14} /><span>Import</span></button>
               <button className="icon-button toolbar-shortcuts" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" onClick={() => notify('⌘S save · ⌘Z undo · ⇧⌘Z redo · ⌘D duplicate · Delete remove')}><Icon name="command" size={15} /></button>
-              <button className="icon-button fit-button" title="Fit canvas" onClick={fitCanvas}><Icon name="grid" size={16} /></button>
             </div>
           </div>
           <div className="canvas-area" onDrop={onCanvasDrop} onDragOver={(event) => event.preventDefault()}>
-            <div className="canvas-hint"><span className="hint-dot" />Drag tools to the canvas <span className="hint-separator">·</span> Connect components</div>
+            <div className={`canvas-hint${connectionStart ? ' is-connecting' : ''}`}>
+              <span className="hint-dot" />
+              {connectionStart ? 'Choose an input point to finish the connection' : 'Drag to pan · Output → input connects · Click lines to delete'}
+              {connectionStart && <button onClick={() => setConnectionStart(null)}>Cancel</button>}
+            </div>
             <ReactFlow
-              nodes={nodes}
+              nodes={canvasNodes}
               edges={edges}
               nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
@@ -528,8 +606,8 @@ function AppContent() {
               isValidConnection={isValidConnection}
               onNodeDragStart={checkpoint}
               onNodeDragStop={stopNodeDrag}
-              onNodeClick={showNodeProperties}
-              onEdgeClick={showSelectedEdge}
+              onNodeDoubleClick={showNodeProperties}
+              onEdgeClick={deleteConnection}
               onPaneClick={hideInspectorFromCanvas}
               onMoveEnd={onCanvasMoveEnd}
               defaultViewport={document.viewport ?? fallbackViewport}
@@ -540,32 +618,50 @@ function AppContent() {
               snapToGrid
               snapGrid={canvasSnapGrid}
               deleteKeyCode={null}
-              selectionOnDrag
               panOnDrag={canvasPanButtons}
               proOptions={flowProOptions}
             >
-              <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#263443" />
+              <Background variant={BackgroundVariant.Lines} gap={28} size={1} color={theme === 'dark' ? '#293a49' : '#d6e2d9'} />
               <Controls position="bottom-right" showInteractive={false} />
-              <MiniMap position="bottom-left" pannable zoomable nodeColor={(node) => catalogById.get((node.data as ComponentNodeData).typeId)?.accent ?? '#647484'} maskColor="rgba(6, 10, 15, 0.78)" />
+              <MiniMap position="bottom-left" pannable zoomable nodeColor={(node) => catalogById.get((node.data as ComponentNodeData).typeId)?.accent ?? '#647484'} maskColor={theme === 'dark' ? 'rgba(6, 10, 15, 0.78)' : 'rgba(229, 239, 230, 0.76)'} />
             </ReactFlow>
+            <div className="canvas-actions" onMouseDown={(event) => event.stopPropagation()}>
+              <div className="quick-add-wrap">
+                <button className={`canvas-action canvas-action-primary${quickAddOpen ? ' active' : ''}`} onClick={() => setQuickAddOpen((open) => !open)}><Icon name="plus" size={16} /><span>Add component</span></button>
+                {quickAddOpen && <div className="quick-add-menu">
+                  <strong>Quick add</strong>
+                  {quickAddIds.map((typeId) => catalogById.get(typeId)).filter((component): component is ComponentDefinition => Boolean(component)).map((component) => (
+                    <button key={component.typeId} onClick={() => addComponent(component)}><span className="catalog-symbol" style={{ '--node-accent': component.accent } as CSSProperties}>{component.symbol}</span><span><strong>{component.displayName}</strong><small>{component.category}</small></span><Icon name="plus" size={15} /></button>
+                  ))}
+                  <small>Browse the full library on the left.</small>
+                </div>}
+              </div>
+              <span className="canvas-action-divider" />
+              <button className="canvas-action" title="Undo" aria-label="Undo" disabled={!canUndo} onClick={undo}><Icon name="undo" size={16} /></button>
+              <button className="canvas-action" title="Redo" aria-label="Redo" disabled={!canRedo} onClick={redo}><Icon name="redo" size={16} /></button>
+              <button className="canvas-action" title="Fit all components" aria-label="Fit all components" onClick={fitCanvas}><Icon name="grid" size={16} /></button>
+              <span className="canvas-action-divider" />
+              <button className="canvas-action" title="Edit selected component" aria-label="Edit selected component" disabled={!selectedNode} onClick={showNodeProperties}><Icon name="sliders" size={16} /></button>
+              <button className="canvas-action" title="Duplicate selected component" aria-label="Duplicate selected component" disabled={!selectedNode} onClick={duplicateNode}><Icon name="copy" size={16} /></button>
+              <button className="canvas-action canvas-action-danger" title="Delete selected component" aria-label="Delete selected component" disabled={!selectedNode} onClick={deleteSelection}><Icon name="trash" size={16} /></button>
+            </div>
             {nodes.length === 0 && <div className="canvas-empty"><div className="empty-grid"><span /><span /><span /><span /></div><strong>Your canvas is ready</strong><p>Choose a component from the catalog or drag one here to get started.</p><button className="button button-primary" onClick={() => addComponent(catalog[0])}><Icon name="plus" size={15} />Add your first component</button></div>}
           </div>
           <footer className="canvas-footer"><span><Icon name="layers" size={14} />{nodes.length} components</span><i /> <span>{edges.length} connections</span><span className="canvas-footer-spacer" /><span><Icon name="cloud" size={14} />Saved on this device</span></footer>
         </main>
 
+        {mobileInspectorOpen && <button className="inspector-backdrop" aria-label="Close panel" onClick={() => setMobileInspectorOpen(false)} />}
         <Inspector
           tab={inspectorTab}
           onTabChange={setInspectorTab}
           node={selectedNode}
-          edge={selectedEdgeDocument}
           nodes={nodes}
-          edges={currentDocument.edges}
+          connectionCount={currentDocument.edges.length}
           issues={issues}
           onConfigChange={updateConfig}
           onBeginEdit={checkpoint}
           onDuplicate={duplicateNode}
           onDelete={deleteSelection}
-          onDeleteEdge={deleteSelection}
           onFocusNode={(nodeId) => {
             setMobileInspectorOpen(true)
             setNodes((current) => {
@@ -583,6 +679,18 @@ function AppContent() {
           }}
           mobileOpen={mobileInspectorOpen}
           onMobileToggle={() => setMobileInspectorOpen((open) => !open)}
+        />
+        <AuthorizationDialog
+          open={authorizationOpen}
+          architectureName={document.name}
+          model={authorizationModel}
+          openFgaOnCanvas={openFgaOnCanvas}
+          onChange={updateAuthorizationModel}
+          onAddOpenFga={() => {
+            const component = catalogById.get('openfga')
+            if (component) addComponent(component)
+          }}
+          onClose={() => setAuthorizationOpen(false)}
         />
       </div>
 
@@ -615,6 +723,50 @@ function AppContent() {
   )
 }
 
+const THEME_STORAGE_KEY = 'kloudlab.theme'
+
+function currentPage(): AppPage {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+  return path === '/about' ? 'about' : path === '/playground' ? 'playground' : 'home'
+}
+
+function storedTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
+  } catch { return 'dark' }
+}
+
 export function App() {
-  return <ReactFlowProvider><AppContent /></ReactFlowProvider>
+  const [page, setPage] = useState<AppPage>(currentPage)
+  const [theme, setTheme] = useState<Theme>(storedTheme)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem(THEME_STORAGE_KEY, theme) } catch { /* Theme still applies for this session. */ }
+  }, [theme])
+
+  useEffect(() => {
+    const onPopState = () => setPage(currentPage())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const navigate = useCallback((nextPage: AppPage) => {
+    const path = nextPage === 'home' ? '/' : `/${nextPage}`
+    if (window.location.pathname !== path) window.history.pushState({}, '', path)
+    setPage(nextPage)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [])
+  const toggleTheme = useCallback(() => setTheme((current) => current === 'dark' ? 'light' : 'dark'), [])
+
+  if (page === 'playground') {
+    return <div className="site-root" data-theme={theme}><ReactFlowProvider><AppContent theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} /></ReactFlowProvider></div>
+  }
+  return (
+    <div className="site-root" data-theme={theme}>
+      {page === 'about'
+        ? <AboutPage theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} />
+        : <HomePage theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} />}
+    </div>
+  )
 }

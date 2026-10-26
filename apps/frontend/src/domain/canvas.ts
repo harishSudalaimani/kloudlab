@@ -1,4 +1,5 @@
 import { catalogById, defaultConfig, type ComponentDefinition } from './catalog'
+import { createDefaultAuthorizationModel, isAuthorizationModel, type AuthorizationModel } from './authorization'
 
 export interface CanvasNodeDocument {
   id: string
@@ -22,6 +23,7 @@ export interface CanvasDocument {
   name: string
   nodes: CanvasNodeDocument[]
   edges: CanvasEdgeDocument[]
+  authorizationModel?: AuthorizationModel
   viewport?: { x: number; y: number; zoom: number }
 }
 
@@ -90,19 +92,18 @@ export function createStarterCanvas(): CanvasDocument {
     name: 'KloudLab platform',
     nodes,
     edges,
+    authorizationModel: createDefaultAuthorizationModel(),
   }
 }
 
 export function createEmptyCanvas(name = 'Untitled architecture'): CanvasDocument {
-  return { schemaVersion: '1.0.0', id: makeId('canvas'), name, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 0.9 } }
+  return { schemaVersion: '1.0.0', id: makeId('canvas'), name, nodes: [], edges: [], authorizationModel: createDefaultAuthorizationModel(), viewport: { x: 0, y: 0, zoom: 0.9 } }
 }
 
 export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const nodesById = new Map<string, CanvasNodeDocument>()
   const edgesSeen = new Set<string>()
-  const incoming = new Map<string, number>()
-  const outgoing = new Map<string, number>()
   const componentByNode = new Map<string, ComponentDefinition>()
 
   if (!document.name.trim()) issues.push({ id: 'canvas.name', severity: 'error', message: 'Give this architecture a name.' })
@@ -202,30 +203,9 @@ export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
       issues.push({ id: `edge.${edge.id}.endpoint`, severity: 'error', message: 'Remove this connection: one endpoint is missing.' })
       continue
     }
-    const sourcePort = sourceComponent.ports.find((port) => port.id === edge.sourcePort && port.direction === 'output')
-    const targetPort = targetComponent.ports.find((port) => port.id === edge.targetPort && port.direction === 'input')
-    if (!sourcePort || !targetPort || !sourcePort.connectionTypes.some((type) => targetPort.connectionTypes.includes(type))) {
-      issues.push({ id: `edge.${edge.id}.type`, severity: 'error', message: 'These components do not support this connection.' })
+    if (edge.sourcePort !== 'output' || edge.targetPort !== 'input') {
+      issues.push({ id: `edge.${edge.id}.type`, severity: 'error', message: 'Use the output point and input point to connect components.' })
       continue
-    }
-    const targetKey = `${edge.target}:${edge.targetPort}`
-    const sourceKey = `${edge.source}:${edge.sourcePort}`
-    incoming.set(targetKey, (incoming.get(targetKey) ?? 0) + 1)
-    outgoing.set(sourceKey, (outgoing.get(sourceKey) ?? 0) + 1)
-    if (sourcePort.multiple === false && (outgoing.get(sourceKey) ?? 0) > 1) {
-      issues.push({ id: `edge.${edge.id}.source.cardinality`, severity: 'error', message: `The ${sourcePort.id} output accepts one connection.` })
-    }
-    if (targetPort.multiple === false && (incoming.get(targetKey) ?? 0) > 1) {
-      issues.push({ id: `edge.${edge.id}.target.cardinality`, severity: 'error', message: `The ${targetPort.id} input accepts one connection.` })
-    }
-  }
-
-  for (const [nodeId, component] of componentByNode) {
-    for (const port of component.ports) {
-      if (port.direction !== 'input' || !port.required) continue
-      if (!incoming.has(`${nodeId}:${port.id}`)) {
-        issues.push({ id: `node.${nodeId}.port.${port.id}`, severity: 'warning', message: `Connect the required ${port.id} input.`, nodeId })
-      }
     }
   }
   return issues
@@ -234,10 +214,11 @@ export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
 export function isCanvasDocument(value: unknown): value is CanvasDocument {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<CanvasDocument>
-  const allowedKeys = new Set(['schemaVersion', 'id', 'name', 'nodes', 'edges', 'viewport'])
+  const allowedKeys = new Set(['schemaVersion', 'id', 'name', 'nodes', 'edges', 'authorizationModel', 'viewport'])
   if (Object.keys(value).some((key) => !allowedKeys.has(key))) return false
   if (candidate.schemaVersion !== '1.0.0' || typeof candidate.id !== 'string' || !candidate.id || candidate.id.length > 128 || typeof candidate.name !== 'string' || !candidate.name || candidate.name.length > 200) return false
   if (!Array.isArray(candidate.nodes) || !Array.isArray(candidate.edges)) return false
+  if (Object.hasOwn(candidate, 'authorizationModel') && !isAuthorizationModel(candidate.authorizationModel)) return false
   if (Object.hasOwn(candidate, 'viewport') && (!candidate.viewport || typeof candidate.viewport !== 'object' || Object.keys(candidate.viewport).some((key) => !['x', 'y', 'zoom'].includes(key)) || !Number.isFinite(candidate.viewport.x) || !Number.isFinite(candidate.viewport.y) || !Number.isFinite(candidate.viewport.zoom) || candidate.viewport.zoom <= 0)) return false
   return candidate.nodes.every((item) => {
     if (!item || typeof item !== 'object' || Object.keys(item).some((key) => !['id', 'typeId', 'componentVersion', 'position', 'config'].includes(key))) return false

@@ -4,7 +4,7 @@ export type IconName =
   | 'search' | 'plus' | 'chevron-down' | 'chevron-right' | 'folder' | 'save' | 'download'
   | 'upload' | 'undo' | 'redo' | 'sparkles' | 'layers' | 'sliders' | 'check' | 'alert'
   | 'x' | 'copy' | 'trash' | 'external' | 'command' | 'menu' | 'arrow-up-right' | 'close'
-  | 'file' | 'clock' | 'cloud' | 'dots' | 'cursor' | 'shield' | 'grid' | 'book' | 'link'
+  | 'file' | 'clock' | 'cloud' | 'dots' | 'cursor' | 'shield' | 'grid' | 'book' | 'link' | 'sun' | 'moon' | 'info'
 
 const paths: Record<IconName, ReactNode> = {
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
@@ -39,6 +39,9 @@ const paths: Record<IconName, ReactNode> = {
   grid: <><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="3" width="8" height="8" rx="1" /><rect x="3" y="13" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" /></>,
   book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /></>,
   link: <><path d="M10 13a5 5 0 0 0 7.5.5l3-3A5 5 0 0 0 13.5 3l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3A5 5 0 0 0 10.5 21l1.7-1.7" /></>,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></>,
+  moon: <path d="M20.8 14.2A8.5 8.5 0 0 1 9.8 3.2 8.5 8.5 0 1 0 20.8 14.2Z" />,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
 }
 
 export function Icon({ name, size = 16, strokeWidth = 1.8 }: { name: IconName; size?: number; strokeWidth?: number }) {

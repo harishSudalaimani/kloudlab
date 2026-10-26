@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { ComponentFlowNode } from './CanvasNode'
 import { catalogById, type ComponentDefinition, type ConfigProperty } from '../domain/catalog'
-import type { CanvasEdgeDocument, ValidationIssue } from '../domain/canvas'
+import type { ValidationIssue } from '../domain/canvas'
 import { Icon } from './Icon'
 
 export type InspectorTab = 'properties' | 'validate'
@@ -10,15 +10,13 @@ interface InspectorProps {
   tab: InspectorTab
   onTabChange: (tab: InspectorTab) => void
   node: ComponentFlowNode | null
-  edge: CanvasEdgeDocument | null
   nodes: ComponentFlowNode[]
-  edges: CanvasEdgeDocument[]
+  connectionCount: number
   issues: ValidationIssue[]
   onConfigChange: (nodeId: string, key: string, value: string | number | boolean) => void
   onBeginEdit: () => void
   onDuplicate: () => void
   onDelete: () => void
-  onDeleteEdge: () => void
   onFocusNode: (nodeId: string) => void
   mobileOpen: boolean
   onMobileToggle: () => void
@@ -97,16 +95,6 @@ function ComponentProperties({ component, node, onChange, onBeginEdit, onDuplica
           </label>
         ))}
       </div>
-      <div className="field-section-title ports-title"><span>Connections</span><span className="field-section-count">{component.ports.length} ports</span></div>
-      <div className="inspector-port-list">
-        {component.ports.map((port) => (
-          <div className="inspector-port" key={port.id}>
-            <span className={`port-direction ${port.direction}`}>{port.direction === 'input' ? 'IN' : 'OUT'}</span>
-            <span className="inspector-port-name">{port.id}</span>
-            <span className="inspector-port-type">{port.connectionTypes.join(' / ')}</span>
-          </div>
-        ))}
-      </div>
       <div className="inspector-docs">
         <span className="inspector-section-heading">Documentation</span>
         {component.documentation.map((url) => <a href={url} target="_blank" rel="noreferrer" key={url}><span>{new URL(url).hostname.replace(/^www\./, '')}</span><Icon name="external" size={13} /></a>)}
@@ -121,23 +109,17 @@ function ComponentProperties({ component, node, onChange, onBeginEdit, onDuplica
 
 export function Inspector(props: InspectorProps) {
   const component = props.node ? catalogById.get(props.node.data.typeId) ?? null : null
-  const edgeDetails = props.edge
-    ? {
-        source: props.nodes.find((node) => node.id === props.edge?.source)?.data.title ?? 'Unknown component',
-        target: props.nodes.find((node) => node.id === props.edge?.target)?.data.title ?? 'Unknown component',
-      }
-    : null
   const errorCount = props.issues.filter((issue) => issue.severity === 'error').length
   const warningCount = props.issues.filter((issue) => issue.severity === 'warning').length
 
   return (
-    <aside className={`inspector-panel${props.mobileOpen ? ' mobile-open' : ''}`}>
+    <aside className={`inspector-panel${props.mobileOpen ? ' mobile-open' : ''}`} role="dialog" aria-modal="true" aria-label={props.tab === 'validate' ? 'Design review' : 'Component settings'}>
       <div className="inspector-header">
         <div>
-          <span className="eyebrow">ARCHITECTURE</span>
-          <h2>Inspector</h2>
+          <span className="eyebrow">DESIGN TOOLS</span>
+          <h2>{props.tab === 'validate' ? 'Design review' : 'Component settings'}</h2>
         </div>
-        <button className="icon-button inspector-collapse" aria-label={props.mobileOpen ? 'Collapse inspector' : 'Expand inspector'} title={props.mobileOpen ? 'Collapse inspector' : 'Expand inspector'} onClick={props.onMobileToggle}><Icon name="chevron-down" size={16} /></button>
+        <button className="icon-button inspector-collapse" aria-label="Close panel" title="Close" onClick={props.onMobileToggle}><Icon name="close" size={16} /></button>
         <div className="inspector-header-status"><span className={errorCount ? 'status-dot error' : 'status-dot'} />{errorCount ? `${errorCount} issues` : 'Ready'}</div>
       </div>
       <div className="inspector-tabs" role="tablist" aria-label="Inspector views">
@@ -177,14 +159,6 @@ export function Inspector(props: InspectorProps) {
         </div>
       ) : component && props.node ? (
         <ComponentProperties component={component} node={props.node} onChange={props.onConfigChange} onBeginEdit={props.onBeginEdit} onDuplicate={props.onDuplicate} onDelete={props.onDelete} />
-      ) : edgeDetails ? (
-        <div className="edge-inspector">
-          <div className="edge-preview"><span className="edge-preview-dot" /><span>{edgeDetails.source}</span><Icon name="arrow-up-right" size={15} /><span>{edgeDetails.target}</span></div>
-          <span className="eyebrow">CONNECTION</span>
-          <h3>Component relationship</h3>
-          <p>This relationship is part of the design. It does not configure traffic routes or permissions.</p>
-          <button className="button button-danger" onClick={props.onDeleteEdge}><Icon name="trash" size={15} />Remove connection</button>
-        </div>
       ) : (
         <div className="inspector-empty">
           <div className="empty-art"><span /><span /><span /></div>
@@ -192,7 +166,7 @@ export function Inspector(props: InspectorProps) {
           <p>Choose a component on the canvas to edit its configuration and connections.</p>
           <div className="inspector-summary-grid">
             <div><span>Components</span><strong>{props.nodes.length}</strong></div>
-            <div><span>Connections</span><strong>{props.edges.length}</strong></div>
+            <div><span>Connections</span><strong>{props.connectionCount}</strong></div>
           </div>
           <div className="inspector-help"><Icon name="command" size={14} /><span>Use <kbd>⌘</kbd> + <kbd>Z</kbd> to undo</span></div>
         </div>
