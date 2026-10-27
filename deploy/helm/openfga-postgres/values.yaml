@@ -1,0 +1,10 @@
+cluster:
+  name: openfga-postgres
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  storage:
+    size: 20Gi
+    # Set this to the encrypted EBS-backed StorageClass for the identity cluster.
+    storageClass: ""
+  database: openfga
+  owner: openfga

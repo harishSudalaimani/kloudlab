@@ -11,10 +11,11 @@ import (
 )
 
 type fgaClient struct {
-	baseURL string
-	storeID string
-	modelID string
-	http    *http.Client
+	baseURL  string
+	storeID  string
+	modelID  string
+	apiToken string
+	http     *http.Client
 }
 
 type fgaTuple struct {
@@ -54,6 +55,7 @@ func (c *fgaClient) post(ctx context.Context, path string, payload any, output a
 		return err
 	}
 	request.Header.Set("content-type", "application/json")
+	request.Header.Set("authorization", "Bearer "+c.apiToken)
 	response, err := c.http.Do(request)
 	if err != nil {
 		return fmt.Errorf("OpenFGA request failed: %w", err)

@@ -45,10 +45,11 @@ func main() {
 	}
 
 	openFGA := &fgaClient{
-		baseURL: strings.TrimRight(config.openFGAURL, "/"),
-		storeID: config.openFGAStoreID,
-		modelID: config.openFGAModelID,
-		http:    &http.Client{Timeout: 5 * time.Second},
+		baseURL:  strings.TrimRight(config.openFGAURL, "/"),
+		storeID:  config.openFGAStoreID,
+		modelID:  config.openFGAModelID,
+		apiToken: config.openFGAAPIToken,
+		http:     &http.Client{Timeout: 5 * time.Second},
 	}
 	api := &server{
 		db:       db,
@@ -65,32 +66,35 @@ func main() {
 }
 
 type appConfig struct {
-	port           string
-	databaseURL    string
-	auth0Issuer    string
-	auth0Audience  string
-	openFGAURL     string
-	openFGAStoreID string
-	openFGAModelID string
-	frontendOrigin string
+	port            string
+	databaseURL     string
+	auth0Issuer     string
+	auth0Audience   string
+	openFGAURL      string
+	openFGAStoreID  string
+	openFGAModelID  string
+	openFGAAPIToken string
+	frontendOrigin  string
 }
 
 func loadConfig() (appConfig, error) {
 	cfg := appConfig{
-		port:           env("PORT", "8080"),
-		databaseURL:    os.Getenv("DATABASE_URL"),
-		auth0Issuer:    strings.TrimRight(os.Getenv("AUTH0_ISSUER"), "/") + "/",
-		auth0Audience:  os.Getenv("AUTH0_AUDIENCE"),
-		openFGAURL:     os.Getenv("OPENFGA_API_URL"),
-		openFGAStoreID: os.Getenv("OPENFGA_STORE_ID"),
-		openFGAModelID: os.Getenv("OPENFGA_AUTHORIZATION_MODEL_ID"),
-		frontendOrigin: env("FRONTEND_ORIGIN", "http://localhost:5173"),
+		port:            env("PORT", "8080"),
+		databaseURL:     os.Getenv("DATABASE_URL"),
+		auth0Issuer:     strings.TrimRight(os.Getenv("AUTH0_ISSUER"), "/") + "/",
+		auth0Audience:   os.Getenv("AUTH0_AUDIENCE"),
+		openFGAURL:      os.Getenv("OPENFGA_API_URL"),
+		openFGAStoreID:  os.Getenv("OPENFGA_STORE_ID"),
+		openFGAModelID:  os.Getenv("OPENFGA_AUTHORIZATION_MODEL_ID"),
+		openFGAAPIToken: os.Getenv("OPENFGA_API_TOKEN"),
+		frontendOrigin:  env("FRONTEND_ORIGIN", "http://localhost:5173"),
 	}
 	missing := make([]string, 0)
 	for name, value := range map[string]string{
 		"DATABASE_URL": cfg.databaseURL, "AUTH0_ISSUER": cfg.auth0Issuer,
 		"AUTH0_AUDIENCE": cfg.auth0Audience, "OPENFGA_API_URL": cfg.openFGAURL,
 		"OPENFGA_STORE_ID": cfg.openFGAStoreID, "OPENFGA_AUTHORIZATION_MODEL_ID": cfg.openFGAModelID,
+		"OPENFGA_API_TOKEN": cfg.openFGAAPIToken,
 	} {
 		if value == "" || value == "/" {
 			missing = append(missing, name)

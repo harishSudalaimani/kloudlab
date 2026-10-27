@@ -1,0 +1,20 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.cluster.name }}
+  labels:
+    app.kubernetes.io/name: openfga-postgres
+    app.kubernetes.io/part-of: kloudlab
+spec:
+  instances: {{ .Values.cluster.instances }}
+  imageName: {{ .Values.cluster.imageName | quote }}
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: {{ .Values.cluster.database | quote }}
+      owner: {{ .Values.cluster.owner | quote }}
+  storage:
+    size: {{ .Values.cluster.storage.size | quote }}
+    {{- with .Values.cluster.storage.storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}

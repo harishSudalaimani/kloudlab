@@ -13,7 +13,7 @@ These items need evidence or an explicit decision before the related infrastruct
 | NAT and VPC endpoints | Development uses one shared NAT gateway per VPC; production validation requires one per AZ. S3 gateway endpoint is implemented; additional endpoints depend on egress and cost review. | Network preview |
 | DNS provider | Route 53 is proposed; registrar, hosted zone ownership, and current nameservers are unknown. | DNS changes |
 | Domain and certificates | `kloudlab.in` and proposed subdomains are unverified; ACM validation and TLS termination choice are open. | Gateway implementation |
-| Database placement | OpenFGA requires durable private PostgreSQL; application database placement and sizing are undecided. | Database implementation |
+| Database placement | PostgreSQL is self-hosted in Kubernetes and deployed with Helm; per-cluster placement, sizing, encryption, backup destination, and recovery objectives remain to be decided. | Database implementation |
 | EKS/Kubernetes versions | Select supported versions and compatible add-on/Gateway API versions when implementation starts. | Cluster implementation |
 | kgateway integration | Verify kgateway release, Gateway API version, AWS load balancer controller design, and single ownership of each load balancer. | Gateway implementation |
 | Auth0 tenant settings | Tenant, issuer, audience, callback URLs, and token profile have not been configured. | Authentication implementation |

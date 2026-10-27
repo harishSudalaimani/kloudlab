@@ -59,7 +59,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Set the Auth0 domain, SPA client ID, and API audience in `apps/frontend/.env.local`. Start PostgreSQL, OpenFGA with `apps/api/openfga/model.fga`, and the API using the environment documented in `apps/api/README.md`; Vite proxies `/api` to `localhost:8080`. The API requires Go 1.26. Use **Export** to keep a portable JSON copy. Build the frontend with `pnpm build`.
+Set the Auth0 domain, SPA client ID, and API audience in `apps/frontend/.env.local`. Start PostgreSQL, OpenFGA with `apps/api/openfga/model.fga`, and the API using the environment documented in `apps/api/README.md`, including `OPENFGA_API_TOKEN`; Vite proxies `/api` to `localhost:8080`. The API requires Go 1.26. Use **Export** to keep a portable JSON copy. Build the frontend with `pnpm build`.
 
 ## Infrastructure module
 

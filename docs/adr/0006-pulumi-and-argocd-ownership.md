@@ -9,7 +9,7 @@ AWS resources and Kubernetes application releases need different delivery lifecy
 
 ## Decision
 
-Pulumi Go owns AWS networking, EKS, foundational IAM, databases, DNS/certificates, and explicitly identified bootstrap prerequisites. Argo CD owns ongoing Kubernetes application releases and configuration, including kgateway, OpenFGA, Infisical integrations, telemetry components, and application workloads. Bootstrap resources must have one declared owner; after an ownership transfer, remove the former manager's declaration before enabling the new one. Use separate GitOps roots per cluster, reviewed changes, restricted production sources, health checks, and rollback procedures.
+Pulumi Go owns AWS networking, EKS, foundational IAM, DNS/certificates, and explicitly identified bootstrap prerequisites. Application data stores, including PostgreSQL, run as self-hosted Kubernetes workloads rather than managed database services. Helm charts own Kubernetes application releases and configuration, including CloudNativePG, OpenFGA, kgateway, Infisical integrations, telemetry components, and application workloads. Bootstrap resources must have one declared owner; after an ownership transfer, remove the former manager's declaration before enabling the new one. Use separate GitOps roots per cluster, reviewed changes, restricted production sources, health checks, and rollback procedures.
 
 ## Consequences
 

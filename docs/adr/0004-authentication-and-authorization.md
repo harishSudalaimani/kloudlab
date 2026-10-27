@@ -13,6 +13,8 @@ Use Auth0 for OAuth 2.0/OpenID Connect authentication and token issuance. The Go
 
 Use OpenFGA for relationship-based checks over users, organizations, memberships, and canvases. Check permissions in the backend on every protected operation. Keep OpenFGA private and reachable only from approved workloads. Editing a canvas does not grant infrastructure generation, approval, or execution permissions. Protected operations fail closed if authorization cannot be established.
 
+Deploy OpenFGA and its PostgreSQL datastore as self-hosted Kubernetes workloads using Helm. Auth0 and EKS are the managed-service exceptions. Authenticate API-to-OpenFGA requests with a pre-shared service token, and keep that token in the secret manager.
+
 ## Consequences
 
 - Auth0 is the explicit managed authentication exception; its service terms and configuration require review.
