@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kloudlab-identity
+  namespace: argocd
+spec:
+  description: Applications and platform services for the KloudLab identity cluster.
+  sourceRepos:
+    - https://github.com/harishSudalaimani/kloudlab.git
+  destinations:
+    # The identity root Application is stored in Argo CD on the management cluster.
+    - name: in-cluster
+      namespace: argocd
+    - name: kloudlab-identity
+      namespace: kube-system
+    - name: kloudlab-identity
+      namespace: kloudlab-identity
+    - name: kloudlab-identity
+      namespace: opentelemetry
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+  namespaceResourceWhitelist:
+    - group: argoproj.io
+      kind: Application
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: DaemonSet
+    - group: apps
+      kind: Deployment
+    - group: batch
+      kind: Job
+    - group: coordination.k8s.io
+      kind: Lease
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

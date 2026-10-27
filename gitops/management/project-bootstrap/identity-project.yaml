@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-identity-projects
+  namespace: argocd
+spec:
+  # This small bootstrap Application stays in the existing default project so it
+  # can create the AppProject that constrains identity workloads.
+  project: default
+  source:
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    targetRevision: main
+    path: gitops/management/projects
+    directory:
+      recurse: false
+      include: identity.yaml
+  destination:
+    name: in-cluster
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
