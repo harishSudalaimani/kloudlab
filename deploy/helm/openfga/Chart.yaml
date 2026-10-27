@@ -1,9 +1,0 @@
-apiVersion: v2
-name: kloudlab-openfga
-description: KloudLab configuration for the official OpenFGA Helm chart.
-type: application
-version: 0.1.0
-dependencies:
-  - name: openfga
-    version: 0.3.16
-    repository: https://openfga.github.io/helm-charts

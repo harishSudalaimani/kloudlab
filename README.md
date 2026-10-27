@@ -4,40 +4,14 @@ KloudLab is an architecture design platform in its infrastructure foundation pha
 
 ## Repository layout
 
-```text
-.
-├── apps/
-│   ├── frontend/                 # React + TypeScript architecture editor
-│   └── api/                      # Go API, Auth0 validation, PostgreSQL, OpenFGA checks
-├── infra/
-│   ├── go.mod                    # Shared Pulumi Go module
-│   ├── components/               # Reusable AWS resources and component contracts
-│   │   ├── database/
-│   │   ├── dns/
-│   │   ├── eks/
-│   │   ├── iam/
-│   │   ├── network/
-│   │   ├── observability/
-│   │   └── secrets/
-│   ├── config/                   # Naming, tags, and common configuration
-│   └── stacks/                   # State, OIDC, and independent network Pulumi projects
-├── gitops/
-│   ├── bootstrap/                # Argo CD bootstrap configuration (planned)
-│   ├── clusters/{app,identity,observability}/
-│   └── applications/
-├── docs/
-│   ├── architecture/
-│   ├── adr/
-│   ├── operations/               # Phase 2 bootstrap and recovery runbook
-│   └── security/
-└── .github/workflows/            # Go CI and network preview
-```
+See the [canonical target repository structure](docs/architecture/repository-structure.md). It records the intended app, Pulumi, GitOps, workflow, and documentation boundaries, with migration rules for areas that are not implemented yet.
 
 The app, identity, and observability network stacks are configured with proposed CIDRs. Review connected networks and account settings before preview. VPC peering creates routes only; service security rules and workload traffic will be designed alongside EKS and its consumers.
 
 ## Architecture decisions and plan
 
-- [System boundaries and proposed repository tree](docs/architecture/system-boundaries.md)
+- [System boundaries](docs/architecture/system-boundaries.md)
+- [Canonical repository structure](docs/architecture/repository-structure.md)
 - [Phased implementation checklist](docs/architecture/implementation-checklist.md)
 - [Open decisions and assumptions](docs/architecture/open-decisions.md)
 - [Architecture decision records](docs/adr/README.md)
@@ -59,7 +33,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Set the Auth0 domain, SPA client ID, and API audience in `apps/frontend/.env.local`. Start PostgreSQL, OpenFGA with `apps/api/openfga/model.fga`, and the API using the environment documented in `apps/api/README.md`, including `OPENFGA_API_TOKEN`; Vite proxies `/api` to `localhost:8080`. The API requires Go 1.26. Use **Export** to keep a portable JSON copy. Build the frontend with `pnpm build`.
+Set the Auth0 domain, SPA client ID, and API audience in `apps/frontend/.env.local`. Start PostgreSQL, OpenFGA with `apps/api/internal/authorization/model.fga`, and the API using the environment documented in `apps/api/README.md`, including `OPENFGA_API_TOKEN`; Vite proxies `/api` to `localhost:8080`. The API requires Go 1.26. Use **Export** to keep a portable JSON copy. Build the frontend with `pnpm build`.
 
 ## Infrastructure module
 

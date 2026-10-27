@@ -13,11 +13,11 @@ Use Auth0 for OAuth 2.0/OpenID Connect authentication and token issuance. The Go
 
 Use OpenFGA for relationship-based checks over users, organizations, memberships, and canvases. Check permissions in the backend on every protected operation. Keep OpenFGA private and reachable only from approved workloads. Editing a canvas does not grant infrastructure generation, approval, or execution permissions. Protected operations fail closed if authorization cannot be established.
 
-Deploy OpenFGA and its PostgreSQL datastore as self-hosted Kubernetes workloads using Helm. Auth0 and EKS are the managed-service exceptions. Authenticate API-to-OpenFGA requests with a pre-shared service token, and keep that token in the secret manager.
+Deploy OpenFGA in the identity cluster using its Helm chart, reconciled by Argo CD. Use private Amazon RDS PostgreSQL for its datastore, provisioned by Pulumi. Keep OpenFGA private behind `fga.internal.kloudlab.in` and authenticate API-to-OpenFGA requests with a pre-shared service token stored in Infisical.
 
 ## Consequences
 
-- Auth0 is the explicit managed authentication exception; its service terms and configuration require review.
+- Auth0 provides managed authentication; EKS and private RDS are AWS hosting/data services selected by the master architecture. Review their service terms and configuration separately.
 - The relationship model and tuple lifecycle need versioning and migration controls.
 - OpenFGA needs durable private PostgreSQL with encryption, backups, and tested recovery.
 - API tests must cover tenant isolation and authorization failures before multi-user release.

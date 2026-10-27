@@ -13,16 +13,18 @@ These items need evidence or an explicit decision before the related infrastruct
 | NAT and VPC endpoints | Development uses one shared NAT gateway per VPC; production validation requires one per AZ. S3 gateway endpoint is implemented; additional endpoints depend on egress and cost review. | Network preview |
 | DNS provider | Route 53 is proposed; registrar, hosted zone ownership, and current nameservers are unknown. | DNS changes |
 | Domain and certificates | `kloudlab.in` and proposed subdomains are unverified; ACM validation and TLS termination choice are open. | Gateway implementation |
-| Database placement | PostgreSQL is self-hosted in Kubernetes and deployed with Helm; per-cluster placement, sizing, encryption, backup destination, and recovery objectives remain to be decided. | Database implementation |
+| OpenFGA database configuration | Amazon RDS PostgreSQL is selected by the master specification. Instance sizing, Multi-AZ choice, encryption key, backup retention, and credential bootstrap through Infisical remain to be configured. | Identity database stack |
 | EKS/Kubernetes versions | Select supported versions and compatible add-on/Gateway API versions when implementation starts. | Cluster implementation |
 | kgateway integration | Verify kgateway release, Gateway API version, AWS load balancer controller design, and single ownership of each load balancer. | Gateway implementation |
+| Argo CD control plane | Select the hosting cluster and release version, register the app/identity/observability clusters, and ensure the version supports multi-source Helm values (2.6 or newer). | GitOps bootstrap |
 | Auth0 tenant settings | Tenant, issuer, audience, callback URLs, and token profile have not been configured. | Authentication implementation |
 | OpenFGA model | Initial relations and deployment permissions need a versioned model and tenant isolation review. | Authorization implementation |
+| OpenFGA private endpoint | Use a private authenticated endpoint from the app VPC to OpenFGA in the identity VPC; `fga.internal.kloudlab.in` is proposed. Select routing, TLS termination, and private DNS behavior before deployment. | Cross-cluster connectivity |
 | Infisical hosting and edition | Must remain independent of the identity cluster recovery boundary. Hosting mode, license, feature availability, backup target, and bootstrap path remain open. | Secrets implementation |
 | Observability sizing | Retention, ingestion, S3 lifecycle, encryption, and expected telemetry volume are not estimated. | Observability implementation |
 | Cost and capacity | No workload sizing, AWS budget, or per-cluster instance type is selected. Avoid large defaults. | Before any preview is approved |
 | Frontend/API persistence | React Flow and Go/PostgreSQL are proposed; API schemas, migration strategy, and application database ownership remain open. | Application implementation |
-| Dependency licenses | Verify each dependency's license, source-availability status, maintenance, and security posture. Auth0 is the explicit managed exception; other commercial services need documented approval. | Dependency adoption |
+| Dependency licenses | Verify each dependency's license, source-availability status, maintenance, and security posture. Auth0, EKS, and private RDS are the selected managed services; document any additional commercial dependency before adoption. | Dependency adoption |
 
 ## Assumptions for the initial foundation
 

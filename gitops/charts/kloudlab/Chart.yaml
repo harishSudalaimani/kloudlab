@@ -1,0 +1,5 @@
+apiVersion: v2
+name: kloudlab
+description: KloudLab-owned Kubernetes resources shared through Helm.
+type: application
+version: 0.1.0

@@ -1,5 +1,0 @@
-apiVersion: v2
-name: kloudlab-openfga-postgres
-description: CloudNativePG cluster resource for KloudLab's self-hosted OpenFGA datastore.
-type: application
-version: 0.1.0

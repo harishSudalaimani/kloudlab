@@ -1,0 +1,48 @@
+replicaCount: 3
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+
+playground:
+  enabled: false
+
+postgresql:
+  enabled: false
+mysql:
+  enabled: false
+
+authn:
+  method: preshared
+  preshared:
+    # Infisical syncs this secret with the `keys` key.
+    keysSecret: kloudlab-openfga-auth
+
+datastore:
+  engine: postgres
+  # Infisical syncs the private RDS connection URI into this secret.
+  uriSecret: kloudlab-openfga-datastore
+  applyMigrations: true
+  waitForMigrations: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 1
+    memory: 512Mi
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/instance: openfga
+
+log:
+  format: json
+  level: info

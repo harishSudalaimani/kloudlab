@@ -4,7 +4,7 @@ The API validates Auth0 access tokens, stores architecture JSON in PostgreSQL, a
 
 ## OpenFGA model
 
-Create an OpenFGA store and upload `openfga/model.fga`. Configure the API with the resulting store ID and authorization model ID. The API provisions a personal workspace owner tuple for each authenticated Auth0 subject on first create authorization. New architectures receive `owner` and `workspace` tuples. The model also supports `editor` and `viewer` grants; management of those grants will be added with the sharing UI. The API authenticates to OpenFGA with a pre-shared bearer token; the browser never receives this token.
+Create an OpenFGA store and upload `internal/authorization/model.fga`. Configure the API with the resulting store ID and authorization model ID. The API provisions a personal workspace owner tuple for each authenticated Auth0 subject on first create authorization. New architectures receive `owner` and `workspace` tuples. The model also supports `editor` and `viewer` grants; management of those grants will be added with the sharing UI. The API authenticates to OpenFGA with a pre-shared bearer token; the browser never receives this token.
 
 ## Environment
 
@@ -27,6 +27,6 @@ cd apps/api
 go run ./cmd/api
 ```
 
-The API creates its initial `architectures` table at startup. For Kubernetes deployments, KloudLab workloads are installed with Helm charts. The OpenFGA chart uses the official OpenFGA Helm chart and a self-hosted PostgreSQL cluster managed by CloudNativePG; the bundled legacy Bitnami datastore chart is disabled. See [`docs/runbooks/openfga-helm.md`](../../docs/runbooks/openfga-helm.md) for the deployment layout and prerequisites. OpenFGA remains private and must not be exposed to browsers.
+The API creates its initial `architectures` table at startup. The target deployment has Argo CD reconciling the OpenFGA Helm release in the identity cluster and Pulumi provisioning its private Amazon RDS PostgreSQL database; those deployments are not implemented yet. The bundled legacy Bitnami datastore chart is disabled. See [`docs/runbooks/openfga-helm.md`](../../docs/runbooks/openfga-helm.md) for the deployment layout and prerequisites. OpenFGA remains private and must not be exposed to browsers.
 
 In the Auth0 dashboard, register `http://localhost:5173/` as an allowed callback URL, logout URL, and web origin. Create an API whose identifier matches `AUTH0_AUDIENCE`; use that audience in the frontend's `VITE_AUTH0_AUDIENCE`. Configure the API issuer with the tenant domain and trailing slash. The SPA uses Authorization Code with PKCE and keeps access tokens in memory.

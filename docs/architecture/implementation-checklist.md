@@ -64,10 +64,11 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 - [x] Add Auth0 Authorization Code with PKCE to the frontend; tenant setup remains deployment configuration.
 - [x] Validate access token signature, issuer, audience, expiry, and required claims in the API.
-- [x] Add Helm release configuration for private OpenFGA and self-hosted CloudNativePG PostgreSQL; keep deployment unchecked until an approved cluster is available.
+- [x] Add a Helm chart wrapper for private OpenFGA using the official chart; its PostgreSQL dependency is external.
 - [x] Authenticate API-to-OpenFGA calls with a pre-shared bearer token.
-- [ ] Configure private cross-cluster routing and TLS between the app and identity clusters.
-- [ ] Deploy OpenFGA and its durable PostgreSQL datastore with Helm; configure backups and verify restore.
+- [ ] Implement the private RDS PostgreSQL identity database stack in Pulumi and configure Infisical credential delivery.
+- [ ] Configure `fga.internal.kloudlab.in` (or approved equivalent), private cross-cluster routing, and TLS between the app and identity clusters.
+- [ ] Reconcile the OpenFGA Helm release through Argo CD in the identity cluster; configure datastore, backups, and verify restore.
 - [x] Define workspace ownership and architecture owner/editor/viewer relations in OpenFGA.
 - [x] Enforce authorization on every protected architecture API operation and fail closed on OpenFGA errors.
 - [ ] Keep deployment approval distinct from architecture editing.

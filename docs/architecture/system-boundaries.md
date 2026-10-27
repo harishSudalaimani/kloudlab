@@ -12,7 +12,7 @@ flowchart LR
     Edge --> API[App cluster: Go API and canvas services]
     API -->|validate JWT| Auth0[Auth0 managed identity]
     API -->|relationship checks, private authenticated traffic| FGA[Identity cluster: OpenFGA]
-    FGA --> FGA_DB[(Private PostgreSQL datastore)]
+    FGA --> FGA_DB[(Private Amazon RDS PostgreSQL)]
     API --> AppDB[(Application PostgreSQL, placement TBD)]
     API -->|scoped workload identity| Secrets[Infisical, independent recovery boundary]
     AppCluster[App cluster telemetry agents] -->|authenticated encrypted OTLP| OTel[Observability cluster: OTel gateway]
@@ -37,47 +37,9 @@ Auth0 is external and is not deployed in Kubernetes. Each cluster has a dedicate
 
 The public request path is DNS → AWS load balancer → kgateway/Gateway API → application service → backend token validation and authorization. Only intended application entry points are public. Database, OpenFGA administration, telemetry backends, and Grafana remain private or tightly restricted.
 
-## Proposed repository tree
+## Repository structure
 
-```text
-kloudlab/
-├── apps/
-│   ├── frontend/                 # React, TypeScript, React Flow
-│   └── api/                      # Go HTTP API and domain packages
-├── infra/
-│   ├── go.mod
-│   ├── components/
-│   │   ├── network/              # VPC, subnet, route and endpoint contracts
-│   │   ├── eks/                  # EKS and EC2 managed node group contracts
-│   │   ├── iam/                  # workload identity contracts
-│   │   ├── database/             # private PostgreSQL contracts
-│   │   ├── dns/                  # DNS and certificate contracts
-│   │   ├── secrets/              # Infisical support contracts; never secret values
-│   │   └── observability/        # storage and telemetry infrastructure contracts
-│   ├── config/                   # common config, names, and tags
-│   └── stacks/
-│       ├── bootstrap/
-│       ├── network-app/
-│       ├── network-identity/
-│       ├── network-observability/
-│       ├── cluster-app/
-│       ├── cluster-identity/
-│       ├── cluster-observability/
-│       ├── database-identity/
-│       └── shared-dns/
-├── gitops/
-│   ├── bootstrap/
-│   ├── clusters/{app,identity,observability}/
-│   └── applications/
-├── docs/
-│   ├── architecture/
-│   ├── adr/
-│   ├── security/
-│   └── runbooks/
-└── .github/workflows/
-```
-
-The tree is a target layout, not a claim that planned applications, stacks, or cluster configuration already exist. Add a directory when its first coherent implementation is ready.
+The canonical target tree and migration rules are maintained in [repository-structure.md](repository-structure.md). The tree is a target layout, not a claim that planned applications, stacks, or cluster configuration already exist.
 
 ## Phase 2 network foundation
 
