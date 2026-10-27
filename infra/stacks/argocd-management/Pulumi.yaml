@@ -1,0 +1,7 @@
+name: kloudlab-argocd-management
+runtime: go
+main: .
+description: Argo CD Helm release on the existing KloudLab management EKS cluster
+config:
+  kubernetes:context:
+    value: kloudlab-management

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-kgateway-crds
+description: KloudLab module for kgateway custom resource definitions
+type: application
+version: 0.1.0
+appVersion: "v2.4.3"
+dependencies:
+  - name: kgateway-crds
+    version: v2.4.3
+    repository: oci://cr.kgateway.dev/kgateway-dev/charts

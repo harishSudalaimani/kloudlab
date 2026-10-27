@@ -1,15 +1,16 @@
-# Cilium replaces kube-proxy service routing while AWS VPC CNI continues to
-# allocate pod ENIs/IPs.
-cni:
-  chainingMode: aws-cni
-  exclusive: false
+cilium:
+  # Cilium replaces kube-proxy service routing while AWS VPC CNI continues to
+  # allocate pod ENIs/IPs.
+  cni:
+    chainingMode: aws-cni
+    exclusive: false
 
-kubeProxyReplacement: true
-k8sServiceHost: auto
-k8sServicePort: "443"
+  kubeProxyReplacement: true
+  k8sServiceHost: auto
+  k8sServicePort: "443"
 
-routingMode: native
-enableIPv4Masquerade: false
+  routingMode: native
+  enableIPv4Masquerade: false
 
-gatewayAPI:
-  enabled: false
+  gatewayAPI:
+    enabled: false

@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: cr.kgateway.dev/kgateway-dev/charts
-      chart: kgateway
-      targetRevision: v2.4.3
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/kgateway/controller
+      targetRevision: main
       helm:
         releaseName: kgateway
         valueFiles:

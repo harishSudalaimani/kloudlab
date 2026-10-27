@@ -1,16 +1,17 @@
-# The management cluster already has kube-proxy installed. Argo CD first
-# installs Cilium with replacement enabled; Pulumi then removes the EKS
-# kube-proxy add-on after Cilium is healthy.
-cni:
-  chainingMode: aws-cni
-  exclusive: false
+cilium:
+  # The management cluster already has kube-proxy installed. Argo CD first
+  # installs Cilium with replacement enabled; Pulumi then removes the EKS
+  # kube-proxy add-on after Cilium is healthy.
+  cni:
+    chainingMode: aws-cni
+    exclusive: false
 
-kubeProxyReplacement: true
-k8sServiceHost: auto
-k8sServicePort: "443"
+  kubeProxyReplacement: true
+  k8sServiceHost: auto
+  k8sServicePort: "443"
 
-routingMode: native
-enableIPv4Masquerade: false
+  routingMode: native
+  enableIPv4Masquerade: false
 
-gatewayAPI:
-  enabled: false
+  gatewayAPI:
+    enabled: false

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-argocd
+description: Argo CD bootstrap chart module for KloudLab management
+type: application
+version: 0.1.0
+appVersion: "3.5.6"
+dependencies:
+  - name: argo-cd
+    version: 10.11.6
+    repository: https://argoproj.github.io/argo-helm

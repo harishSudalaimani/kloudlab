@@ -1,0 +1,9 @@
+apiVersion: v2
+name: kloudlab-infisical-server
+description: KloudLab module for the official Infisical self-hosted server chart
+type: application
+version: 0.1.0
+dependencies:
+  - name: infisical-standalone
+    version: 1.11.1
+    repository: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/

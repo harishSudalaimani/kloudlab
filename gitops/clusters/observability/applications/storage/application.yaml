@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
-    path: gitops/charts/kloudlab-storage
+    path: charts/observability/storage
   destination:
     name: kloudlab-observability
     namespace: kube-system

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-prometheus
+description: KloudLab module for Prometheus Operator and Prometheus
+type: application
+version: 0.1.0
+appVersion: "92.7.0"
+dependencies:
+  - name: kube-prometheus-stack
+    version: 92.7.0
+    repository: https://prometheus-community.github.io/helm-charts

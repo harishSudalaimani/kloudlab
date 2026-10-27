@@ -1,142 +1,143 @@
-mode: deployment
-fullnameOverride: otel-cluster-collector
-replicaCount: 1
-image:
-  repository: otel/opentelemetry-collector-contrib
-  tag: 0.163.2
-command:
-  name: otelcol-contrib
-presets:
-  kubernetesAttributes:
-    enabled: true
-  clusterMetrics:
-    enabled: true
-  kubernetesEvents:
-    enabled: true
-clusterRole:
-  rules:
-    - nonResourceURLs:
-        - /metrics
-      verbs:
-        - get
-extraEnvs:
-  - name: OTEL_GATEWAY_ENDPOINT
-    valueFrom:
-      secretKeyRef:
-        name: kloudlab-otel-gateway-client
-        key: endpoint
-  - name: OTEL_GATEWAY_TOKEN
-    valueFrom:
-      secretKeyRef:
-        name: kloudlab-otel-gateway-client
-        key: token
-config:
-  receivers:
-    otlp: null
-    jaeger: null
-    zipkin: null
-    prometheus:
-      config:
-        scrape_configs:
-          - job_name: kloudlab-otel-cluster-collector
-            scrape_interval: 30s
-            static_configs:
-              - targets:
-                  - ${env:MY_POD_IP}:8888
-          - job_name: kubernetes-apiservers
-            scrape_interval: 30s
-            scheme: https
-            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-            tls_config:
-              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-            kubernetes_sd_configs:
-              - role: endpoints
-            relabel_configs:
-              - source_labels:
-                  - __meta_kubernetes_namespace
-                  - __meta_kubernetes_service_name
-                  - __meta_kubernetes_endpoint_port_name
-                action: keep
-                regex: default;kubernetes;https
-          - job_name: kubernetes-pods-annotated
-            scrape_interval: 30s
-            kubernetes_sd_configs:
-              - role: pod
-            relabel_configs:
-              - source_labels:
-                  - __meta_kubernetes_pod_annotation_prometheus_io_scrape
-                action: keep
-                regex: "true"
-              - source_labels:
-                  - __meta_kubernetes_pod_annotation_prometheus_io_path
-                action: replace
-                target_label: __metrics_path__
-                regex: (.+)
-              - source_labels:
-                  - __address__
-                  - __meta_kubernetes_pod_annotation_prometheus_io_port
-                action: replace
-                regex: ([^:]+)(?::\\d+)?;(\\d+)
-                replacement: $1:$2
-                target_label: __address__
-              - source_labels:
-                  - __meta_kubernetes_namespace
-                target_label: namespace
-              - source_labels:
-                  - __meta_kubernetes_pod_name
-                target_label: pod
-  exporters:
+opentelemetry-collector:
+  mode: deployment
+  fullnameOverride: otel-cluster-collector
+  replicaCount: 1
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: 0.163.2
+  command:
+    name: otelcol-contrib
+  presets:
+    kubernetesAttributes:
+      enabled: true
+    clusterMetrics:
+      enabled: true
+    kubernetesEvents:
+      enabled: true
+  clusterRole:
+    rules:
+      - nonResourceURLs:
+          - /metrics
+        verbs:
+          - get
+  extraEnvs:
+    - name: OTEL_GATEWAY_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: kloudlab-otel-gateway-client
+          key: endpoint
+    - name: OTEL_GATEWAY_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: kloudlab-otel-gateway-client
+          key: token
+  config:
+    receivers:
+      otlp: null
+      jaeger: null
+      zipkin: null
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: kloudlab-otel-cluster-collector
+              scrape_interval: 30s
+              static_configs:
+                - targets:
+                    - ${env:MY_POD_IP}:8888
+            - job_name: kubernetes-apiservers
+              scrape_interval: 30s
+              scheme: https
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              kubernetes_sd_configs:
+                - role: endpoints
+              relabel_configs:
+                - source_labels:
+                    - __meta_kubernetes_namespace
+                    - __meta_kubernetes_service_name
+                    - __meta_kubernetes_endpoint_port_name
+                  action: keep
+                  regex: default;kubernetes;https
+            - job_name: kubernetes-pods-annotated
+              scrape_interval: 30s
+              kubernetes_sd_configs:
+                - role: pod
+              relabel_configs:
+                - source_labels:
+                    - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+                  action: keep
+                  regex: "true"
+                - source_labels:
+                    - __meta_kubernetes_pod_annotation_prometheus_io_path
+                  action: replace
+                  target_label: __metrics_path__
+                  regex: (.+)
+                - source_labels:
+                    - __address__
+                    - __meta_kubernetes_pod_annotation_prometheus_io_port
+                  action: replace
+                  regex: ([^:]+)(?::\\d+)?;(\\d+)
+                  replacement: $1:$2
+                  target_label: __address__
+                - source_labels:
+                    - __meta_kubernetes_namespace
+                  target_label: namespace
+                - source_labels:
+                    - __meta_kubernetes_pod_name
+                  target_label: pod
+    exporters:
+      otlp:
+        endpoint: ${env:OTEL_GATEWAY_ENDPOINT}
+        headers:
+          authorization: Bearer ${env:OTEL_GATEWAY_TOKEN}
+        tls: {}
+    processors:
+      resource:
+        attributes:
+          - key: k8s.cluster.name
+            value: kloudlab-management
+            action: upsert
+    service:
+      pipelines:
+        logs:
+          receivers:
+            - k8s_objects
+          exporters:
+            - otlp
+          processors:
+            - memory_limiter
+            - k8s_attributes
+            - resource
+            - batch
+        metrics:
+          receivers:
+            - prometheus
+            - k8s_cluster
+          exporters:
+            - otlp
+          processors:
+            - memory_limiter
+            - k8s_attributes
+            - resource
+            - batch
+        traces: null
+  ports:
     otlp:
-      endpoint: ${env:OTEL_GATEWAY_ENDPOINT}
-      headers:
-        authorization: Bearer ${env:OTEL_GATEWAY_TOKEN}
-      tls: {}
-  processors:
-    resource:
-      attributes:
-        - key: k8s.cluster.name
-          value: kloudlab-management
-          action: upsert
-  service:
-    pipelines:
-      logs:
-        receivers:
-          - k8s_objects
-        exporters:
-          - otlp
-        processors:
-          - memory_limiter
-          - k8s_attributes
-          - resource
-          - batch
-      metrics:
-        receivers:
-          - prometheus
-          - k8s_cluster
-        exporters:
-          - otlp
-        processors:
-          - memory_limiter
-          - k8s_attributes
-          - resource
-          - batch
-      traces: null
-ports:
-  otlp:
-    enabled: false
-  otlp-http:
-    enabled: false
-  jaeger-compact:
-    enabled: false
-  jaeger-thrift:
-    enabled: false
-  jaeger-grpc:
-    enabled: false
-  zipkin:
-    enabled: false
-resources:
-  requests:
-    cpu: 100m
-    memory: 256Mi
-  limits:
-    memory: 512Mi
+      enabled: false
+    otlp-http:
+      enabled: false
+    jaeger-compact:
+      enabled: false
+    jaeger-thrift:
+      enabled: false
+    jaeger-grpc:
+      enabled: false
+    zipkin:
+      enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

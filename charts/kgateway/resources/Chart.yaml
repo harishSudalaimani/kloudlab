@@ -1,5 +1,5 @@
 apiVersion: v2
-name: kloudlab-kgateway
+name: kloudlab-kgateway-resources
 description: KloudLab Gateway API proxy and AWS NLB configuration
 type: application
 version: 0.1.0

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-opentelemetry-collector
+description: KloudLab module for the OpenTelemetry Collector chart
+type: application
+version: 0.1.0
+appVersion: "0.177.0"
+dependencies:
+  - name: opentelemetry-collector
+    version: 0.177.0
+    repository: https://open-telemetry.github.io/opentelemetry-helm-charts

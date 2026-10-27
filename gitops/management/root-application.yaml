@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
-    path: gitops/bootstrap/argocd/roots
+    path: gitops/management/roots
     directory:
       recurse: true
   destination:

@@ -1,6 +1,6 @@
 # ADR 0005: Infisical must have an independent recovery boundary
 
-- **Status:** Proposed; hosting decision open
+- **Status:** Proposed; placement and edition open
 - **Date:** 2026-10-26
 
 ## Context
@@ -9,9 +9,9 @@ Infisical will manage credentials needed by workloads, including identity and cl
 
 ## Decision
 
-Infisical may be self-hosted in `kloudlab-identity`, but its only control plane, persistent data, backup, or bootstrap credentials must not depend on that cluster being available. Before adopting it, choose whether to co-locate the workload and select an edition, narrowly scoped app workload identities, an encrypted backup target outside the normal retrieval failure domain, out-of-band bootstrap credentials, and a documented restore procedure. Back up configuration and the underlying state required by the chosen deployment model; test restoring it without the normal cluster path.
+KloudLab will use self-hosted Infisical for secrets management. Its only control plane, persistent data, backups, or bootstrap credentials must not depend on the cluster it helps secure. Choose its cluster placement and edition, use narrowly scoped workload identities, store encrypted backups outside the normal retrieval failure domain, keep out-of-band bootstrap credentials, and document a restore procedure. Back up configuration and the underlying state required by the chosen deployment model; test restoring it without the normal cluster path.
 
-No Infisical edition or hosting model is selected by this ADR. Verify the current license, distribution model, and required backup/rotation capabilities before relying on them. Do not silently substitute a proprietary secrets service.
+The self-hosted deployment and Kubernetes operator have separate Helm modules under `charts/infisical/`; Argo CD values belong in the relevant cluster overlays. Verify the selected edition's license and required backup/rotation capabilities before relying on them. Do not silently substitute a proprietary secrets service.
 
 ## Consequences
 

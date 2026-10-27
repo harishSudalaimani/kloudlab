@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-kgateway-controller
+description: KloudLab module for the upstream kgateway controller chart
+type: application
+version: 0.1.0
+appVersion: "v2.4.3"
+dependencies:
+  - name: kgateway
+    version: v2.4.3
+    repository: oci://cr.kgateway.dev/kgateway-dev/charts

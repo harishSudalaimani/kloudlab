@@ -8,11 +8,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/kubernetes-sigs/gateway-api.git
-    targetRevision: v1.6.1
-    path: config/crd/standard
-    directory:
-      recurse: true
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    targetRevision: main
+    path: charts/kgateway/gateway-api-crds
+    helm:
+      releaseName: gateway-api-crds
   destination:
     name: kloudlab-app
     namespace: kube-system
@@ -21,3 +21,5 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+      - Prune=false
+      - Delete=false

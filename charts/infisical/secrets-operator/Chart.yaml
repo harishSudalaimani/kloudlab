@@ -1,0 +1,9 @@
+apiVersion: v2
+name: kloudlab-infisical-secrets-operator
+description: KloudLab module for the official Infisical Kubernetes Secrets Operator chart
+type: application
+version: 0.1.0
+dependencies:
+  - name: secrets-operator
+    version: 0.11.13
+    repository: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/

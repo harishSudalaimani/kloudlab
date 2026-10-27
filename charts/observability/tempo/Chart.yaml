@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-tempo
+description: KloudLab module for the upstream Tempo distributed chart
+type: application
+version: 0.1.0
+appVersion: "3.17.0"
+dependencies:
+  - name: tempo-distributed
+    version: 3.17.0
+    repository: https://grafana-community.github.io/helm-charts

@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://grafana-community.github.io/helm-charts
-      chart: grafana
-      targetRevision: 14.1.0
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/observability/grafana
+      targetRevision: main
       helm:
         releaseName: grafana
         valueFiles:

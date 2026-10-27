@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-openfga
+description: KloudLab module for the upstream OpenFGA chart
+type: application
+version: 0.1.0
+appVersion: "0.3.16"
+dependencies:
+  - name: openfga
+    version: 0.3.16
+    repository: https://openfga.github.io/helm-charts

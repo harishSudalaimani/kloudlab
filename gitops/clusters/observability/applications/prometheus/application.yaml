@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://prometheus-community.github.io/helm-charts
-      chart: kube-prometheus-stack
-      targetRevision: 92.7.0
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/observability/prometheus
+      targetRevision: main
       helm:
         releaseName: kube-prometheus-stack
         valueFiles:

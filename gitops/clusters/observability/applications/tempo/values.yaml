@@ -1,40 +1,41 @@
-multitenancyEnabled: false
+tempo-distributed:
+  multitenancyEnabled: false
 
-storage:
-  trace:
-    backend: s3
-    s3:
-      bucket: kloudlab-observability-tempo
-      region: ap-south-1
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: kloudlab-observability-tempo
+        region: ap-south-1
 
-traces:
-  otlp:
-    grpc:
-      enabled: true
-    http:
-      enabled: true
-  jaeger:
-    thriftHttp:
+  traces:
+    otlp:
+      grpc:
+        enabled: true
+      http:
+        enabled: true
+    jaeger:
+      thriftHttp:
+        enabled: false
+    zipkin:
       enabled: false
-  zipkin:
+
+  distributor:
+    replicas: 2
+  ingester:
+    replicas: 1
+  querier:
+    replicas: 1
+  queryFrontend:
+    replicas: 1
+  compactor:
+    replicas: 1
+
+  tempo:
+    structuredConfig:
+      compactor:
+        compaction:
+          block_retention: 168h
+
+  minio:
     enabled: false
-
-distributor:
-  replicas: 2
-ingester:
-  replicas: 1
-querier:
-  replicas: 1
-queryFrontend:
-  replicas: 1
-compactor:
-  replicas: 1
-
-tempo:
-  structuredConfig:
-    compactor:
-      compaction:
-        block_retention: 168h
-
-minio:
-  enabled: false

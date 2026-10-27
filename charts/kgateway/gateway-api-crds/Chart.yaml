@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kloudlab-gateway-api-crds
+description: KloudLab Helm module for the Gateway API standard CRDs
+type: application
+version: 0.1.0
+appVersion: "v1.6.1"

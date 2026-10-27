@@ -1,10 +1,10 @@
 # OpenFGA Helm deployment
 
-OpenFGA runs in the `kloudlab-identity` EKS cluster. Argo CD is hosted centrally in the dedicated `kloudlab-management` cluster and reconciles the OpenFGA `Application` into identity. Pulumi owns its private Amazon RDS PostgreSQL database; Argo CD owns the OpenFGA Helm release. This follows the master architecture, including its RDS recommendation. The OpenFGA `Application` references the official chart directly and disables its bundled legacy Bitnami databases.
+OpenFGA runs in the `kloudlab-identity` EKS cluster. Argo CD is hosted centrally in the dedicated `kloudlab-management` cluster and reconciles the OpenFGA `Application` into identity. Pulumi owns its private Amazon RDS PostgreSQL database; Argo CD owns the OpenFGA Helm release. This follows the master architecture, including its RDS recommendation. The OpenFGA module at `charts/openfga` pins the official chart dependency, and the cluster values disable its bundled legacy Bitnami databases.
 
 ## Release layout
 
-- `gitops/clusters/identity/applications/openfga/application.yaml` references the official OpenFGA chart. Its adjacent `values.yaml` configures three replicas, disables the playground and ingress, enables pre-shared-key API authentication, and reads the RDS URI from a Kubernetes Secret.
+- `charts/openfga/Chart.yaml` pins the upstream OpenFGA chart version. `gitops/clusters/identity/applications/openfga/application.yaml` references this local module; its adjacent `values.yaml` configures three replicas, disables the playground and ingress, enables pre-shared-key API authentication, and reads the RDS URI from a Kubernetes Secret.
 - OpenFGA runs in a private namespace and uses a `ClusterIP` service. The intended API URL is `https://fga.internal.kloudlab.in`; private cross-cluster routing and endpoint termination remain infrastructure work, and the service is not exposed publicly.
 
 Infisical must sync `kloudlab-openfga-datastore` with a `uri` key containing the RDS connection URI, including `sslmode=verify-full`. It must also sync `kloudlab-openfga-auth` with a `keys` key for OpenFGA and a `token` key for the API. Keep `keys` and `token` identical during normal operation. Secret delivery is a prerequisite: the Phase 7 Infisical integration is not implemented yet. Do not commit credentials or put them in Helm values.
@@ -14,8 +14,8 @@ Infisical must sync `kloudlab-openfga-datastore` with a `uri` key containing the
 The planned Pulumi identity database stack will provision the RDS instance, subnet group, encryption, backups, and security groups in the identity VPC. The existing database package currently defines only its typed contract; it does not yet create RDS resources. The API and OpenFGA traffic must be allowed through explicit network rules. Store the RDS endpoint and credentials in Infisical; only the synced Secret reference belongs in Helm values.
 
 ```sh
-helm template openfga openfga \
-  --repo https://openfga.github.io/helm-charts --version 0.3.16 \
+helm dependency build charts/openfga
+helm template openfga charts/openfga \
   --values gitops/clusters/identity/applications/openfga/values.yaml \
   --namespace kloudlab-identity
 ```

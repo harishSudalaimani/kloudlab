@@ -75,7 +75,7 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 
 - [x] Add Auth0 Authorization Code with PKCE to the frontend; tenant setup remains deployment configuration.
 - [x] Validate access token signature, issuer, audience, expiry, and required claims in the API.
-- [x] Add a Helm chart wrapper for private OpenFGA using the official chart; its PostgreSQL dependency is external.
+- [x] Add a separately versioned OpenFGA Helm module that pins the official chart; its PostgreSQL dependency is external.
 - [x] Authenticate API-to-OpenFGA calls with a pre-shared bearer token.
 - [ ] Implement the private RDS PostgreSQL identity database stack in Pulumi and configure Infisical credential delivery.
 - [ ] Configure `fga.internal.kloudlab.in` (or approved equivalent), private cross-cluster routing, and TLS between the app and identity clusters.
@@ -88,7 +88,8 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 
 ## Phase 7 — Secrets management
 
-- [ ] Choose whether to self-host Infisical in `kloudlab-identity`; document edition, licensing, service persistence, recovery, and bootstrap access.
+- [x] Select self-hosted Infisical and add separate server and Kubernetes Secrets Operator Helm modules.
+- [ ] Choose Infisical's cluster placement and edition; document licensing, service persistence, recovery, and bootstrap access.
 - [ ] Create narrowly scoped identities and per-workload secret access policies.
 - [ ] Integrate app workloads with Infisical using machine identities or another supported authentication method, without committing secret material.
 - [ ] Back up configuration and required state outside the normal retrieval failure domain.

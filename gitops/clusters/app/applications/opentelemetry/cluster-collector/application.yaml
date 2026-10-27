@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
-      chart: opentelemetry-collector
-      targetRevision: 0.177.0
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/observability/opentelemetry-collector
+      targetRevision: main
       helm:
         releaseName: otel-cluster-collector
         valueFiles:

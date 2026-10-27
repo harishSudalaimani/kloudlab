@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-loki
+description: KloudLab module for the upstream Loki chart
+type: application
+version: 0.1.0
+appVersion: "20.0.1"
+dependencies:
+  - name: loki
+    version: 20.0.1
+    repository: https://grafana-community.github.io/helm-charts

@@ -28,7 +28,7 @@ Register the app cluster as `kloudlab-app` in management Argo CD, then apply the
 
 ```sh
 kubectl config current-context
-kubectl --context kloudlab-management -n argocd apply -f gitops/bootstrap/argocd/root-application.yaml
+kubectl --context kloudlab-management -n argocd apply -f gitops/management/root-application.yaml
 ```
 
 The management root creates a cluster-level app root; that root reconciles the child Applications from `gitops/clusters/app/applications/`. The actual kgateway installation and gateway resources are deployed to `kloudlab-app` by those Argo applications.

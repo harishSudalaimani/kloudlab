@@ -1,0 +1,8 @@
+argo-cd:
+  global:
+    networkPolicy:
+      # Enable reviewed Cilium policies after the management datapath is ready.
+      create: false
+  server:
+    service:
+      type: ClusterIP

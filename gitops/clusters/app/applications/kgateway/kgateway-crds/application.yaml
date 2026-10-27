@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: cr.kgateway.dev/kgateway-dev/charts
-    chart: kgateway-crds
-    targetRevision: v2.4.3
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    path: charts/kgateway/crds
+    targetRevision: main
     helm:
       skipCrds: false
   destination:

@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://openfga.github.io/helm-charts
-      chart: openfga
-      targetRevision: 0.3.16
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/openfga
+      targetRevision: main
       helm:
         releaseName: openfga
         valueFiles:

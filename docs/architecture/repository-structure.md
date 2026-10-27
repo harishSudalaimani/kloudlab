@@ -1,8 +1,8 @@
 # KloudLab repository structure
 
-This is the canonical target layout for the updated four-cluster architecture. Pulumi Go owns AWS resources, GitHub Actions validates and publishes artifacts, and Argo CD is hosted in `kloudlab-management` to reconcile Kubernetes releases across all four clusters, including management workloads. Its initial installation and recovery remain independently bootstrappable. Karpenter belongs only to `kloudlab-app`. Directories for unimplemented features are added with their first working slice; this tree is a reference, not a claim that every listed subsystem exists today.
+This is the canonical target layout for the updated four-cluster architecture. Pulumi Go owns AWS resources and installs the initial Argo CD Helm release; GitHub Actions validates and publishes artifacts; Argo CD is hosted in `kloudlab-management` to reconcile Kubernetes releases across all four clusters, including management workloads. The management root Application lives in `gitops/management/` and is applied after target clusters are registered. Karpenter belongs only to `kloudlab-app`. Directories for unimplemented features are added with their first working slice; this tree is a reference, not a claim that every listed subsystem exists today.
 
-Argo CD's bootstrap configuration lives under `gitops/bootstrap/argocd`; its workload configuration lives under `gitops/clusters/management/applications/argocd`. OpenFGA's `Application` and values live in the identity cluster path and reference the official chart. `gitops/clusters/identity/platform/infisical` is reserved for a self-hosted Infisical deployment if identity-cluster placement is selected; app-side secret integration belongs under `gitops/clusters/app/platform/infisical`. The shared `gitops/charts/kloudlab-app` chart is for KloudLab-owned templates. OpenFGA uses the selected private Amazon RDS PostgreSQL datastore. The management cluster must have a documented recovery path independent of Argo CD itself.
+Pulumi installs Argo CD from the local chart module at `charts/argocd`. The management root Application and its cluster roots live under `gitops/management/`; apply that root after all target clusters are registered. OpenFGA's `Application` and values live under the identity cluster path and reference the KloudLab chart module at `charts/openfga`. Infisical server and Kubernetes Secrets Operator chart modules live under `charts/infisical/`; cluster-specific values and Argo Applications live under `gitops/clusters/`. OpenFGA uses the selected private Amazon RDS PostgreSQL datastore. Infisical's control-plane placement, edition, and persistent datastore remain to be decided, with recovery independent of any cluster it helps secure.
 
 ```text
 kloudlab/
@@ -62,18 +62,38 @@ kloudlab/
 │   │   └── shared-dns/
 │   └── config/
 │
+├── charts/
+│   ├── argocd/
+│   ├── cert-manager/          # standalone upstream chart; do not make it a subchart
+│   ├── cilium/
+│   ├── external-dns/
+│   ├── infisical/
+│   │   ├── server/
+│   │   └── secrets-operator/
+│   ├── kgateway/
+│   │   ├── controller/
+│   │   ├── crds/
+│   │   ├── gateway-api-crds/
+│   │   └── resources/
+│   ├── kloudlab-app/
+│   ├── observability/
+│   │   ├── grafana/
+│   │   ├── loki/
+│   │   ├── opentelemetry-collector/
+│   │   ├── prometheus/
+│   │   ├── storage/
+│   │   └── tempo/
+│   └── openfga/
+│
 ├── gitops/
-│   ├── bootstrap/
-│   │   └── argocd/
-│   │       ├── root-application.yaml
-│   │       ├── application.yaml
-│   │       ├── values.yaml
-│   │       └── roots/
-│   │           ├── app.yaml
-│   │           ├── identity.yaml
-│   │           ├── observability.yaml
-│   │           └── management.yaml
-│   ├── clusters/
+│   ├── management/
+│   │   ├── root-application.yaml
+│   │   └── roots/
+│   │       ├── app.yaml
+│   │       ├── identity.yaml
+│   │       ├── observability.yaml
+│   │       └── management.yaml
+│   └── clusters/
 │   │   ├── app/
 │   │   │   ├── values/
 │   │   │   │   ├── cilium.yaml
@@ -112,17 +132,6 @@ kloudlab/
 │   │   │       └── grafana/
 │   │   └── management/
 │   │       └── applications/argocd/
-│   └── charts/
-│       ├── kloudlab-app/
-│       │   ├── Chart.yaml
-│       │   ├── values.yaml
-│       │   ├── values.schema.json
-│       │   └── templates/
-│       └── kloudlab-kgateway/
-│           ├── Chart.yaml
-│           ├── values.yaml
-│           └── templates/
-│
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml

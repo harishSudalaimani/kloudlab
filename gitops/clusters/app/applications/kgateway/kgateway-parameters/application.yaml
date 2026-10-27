@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
-    path: gitops/charts/kloudlab-kgateway
+    path: charts/kgateway/resources
     helm:
       releaseName: kgateway-parameters
       values: |
