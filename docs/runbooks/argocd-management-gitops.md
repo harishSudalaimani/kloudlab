@@ -18,6 +18,12 @@ Application definitions from Git. Those leaf Applications have manual sync
 policies, so their workloads remain stopped until infrastructure prerequisites
 are ready and each Application is deliberately synced.
 
+The workload deployer IAM roles trust the management controller role through an
+account principal constrained by `aws:PrincipalArn`. This avoids a stale IAM
+principal ID if the management controller role is deleted and recreated. If
+that role is recreated, update each workload cluster stack so the deployer
+trust policies are reconciled before retrying Argo cluster connections.
+
 ## Onboard a cluster
 
 For the next cluster only:

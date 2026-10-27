@@ -139,7 +139,11 @@ func createArgoDeployerRole(ctx *pulumi.Context, workload, clusterName string, t
 		return nil, fmt.Errorf("get AWS account for Argo CD access role: %w", err)
 	}
 	controllerRoleArn := fmt.Sprintf("arn:aws:iam::%s:role/kloudlab-management-argocd-controller", caller.AccountId)
-	trustPolicy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":%q},"Action":["sts:AssumeRole","sts:TagSession"]}]}`, controllerRoleArn)
+	// Trust the account principal and constrain it by role ARN. IAM converts a
+	// role ARN in Principal to its immutable role ID; deleting and recreating the
+	// controller role would otherwise leave this trust policy pointing at the
+	// old ID. The aws:PrincipalArn condition remains stable across recreation.
+	trustPolicy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::%s:root"},"Action":["sts:AssumeRole","sts:TagSession"],"Condition":{"ArnEquals":{"aws:PrincipalArn":%q}}}]}`, caller.AccountId, controllerRoleArn)
 	roleName := fmt.Sprintf("kloudlab-%s-argocd-deployer", workload)
 	role, err := iam.NewRole(ctx, roleName, &iam.RoleArgs{
 		Name:             pulumi.String(roleName),
