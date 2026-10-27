@@ -64,7 +64,9 @@ kloudlab/
 │
 ├── charts/
 │   ├── argocd/
+│   ├── aws-load-balancer-controller/
 │   ├── cert-manager/          # standalone upstream chart; do not make it a subchart
+│   ├── cert-manager-resources/
 │   ├── cilium/
 │   ├── external-dns/
 │   ├── infisical/
@@ -92,7 +94,8 @@ kloudlab/
 │   │       ├── app.yaml
 │   │       ├── identity.yaml
 │   │       ├── observability.yaml
-│   │       └── management.yaml
+│   │       ├── management.yaml
+│   │       └── management-gateway.yaml
 │   └── clusters/
 │   │   ├── app/
 │   │   │   ├── values/
@@ -131,7 +134,14 @@ kloudlab/
 │   │   │       ├── tempo/
 │   │   │       └── grafana/
 │   │   └── management/
-│   │       └── applications/argocd/
+│   │       ├── values/
+│   │       │   ├── aws-load-balancer-controller.yaml
+│   │       │   ├── cert-manager-resources.yaml
+│   │       │   ├── kgateway-argocd-gateway.yaml
+│   │       │   └── kgateway.yaml
+│   │       └── applications/
+│   │           ├── argocd/
+│   │           └── kgateway/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml
@@ -148,6 +158,7 @@ kloudlab/
 │   ├── disaster-recovery/
 │   └── runbooks/
 │       ├── argocd-management-gitops.md
+│       ├── argocd-management-gateway.md
 │       ├── cilium-multicluster.md
 │       └── kgateway-helm-argocd.md
 │

@@ -3,6 +3,8 @@ runtime: go
 main: .
 description: Argo CD Helm release on the existing KloudLab management EKS cluster
 config:
+  aws:region:
+    value: ap-south-1
   kubernetes:context:
     value: kloudlab-management
   bootstrapManagementRoot:
@@ -11,3 +13,6 @@ config:
   bootstrapRootApplication:
     default: false
     description: Create the multi-cluster GitOps root after all workload clusters are registered in Argo CD.
+  bootstrapManagementGateway:
+    default: false
+    description: Create the management Gateway API stack, AWS Load Balancer Controller Pod Identity, and encrypted Cloudflare DNS API token Secret.

@@ -1,0 +1,13 @@
+aws-load-balancer-controller:
+  image:
+    tag: v3.6.1
+  clusterName: kloudlab-management
+  region: ap-south-1
+  vpcId: vpc-01208dd3533893d2e
+  serviceAccount:
+    create: true
+    name: aws-load-balancer-controller
+  replicaCount: 2
+  podDisruptionBudget:
+    maxUnavailable: 1
+  enableServiceMutatorWebhook: true

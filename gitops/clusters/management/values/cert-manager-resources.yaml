@@ -1,0 +1,8 @@
+acme:
+  server: https://acme-v02.api.letsencrypt.org/directory
+  issuerName: kloudlab-letsencrypt
+
+gatewayCertificate:
+  namespace: kgateway-system
+  name: argocd-kgateway-tls
+  dnsName: argocd.kloudlab.in

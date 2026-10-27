@@ -1,6 +1,7 @@
 gatewayParameters:
   enabled: true
   name: public-aws-nlb
+  proxyReplicas: 2
   service:
     extraAnnotations:
       service.beta.kubernetes.io/aws-load-balancer-type: external
@@ -15,6 +16,27 @@ gateway:
     name: http
     protocol: HTTP
     port: 80
+    hostname: ""
+    tls:
+      enabled: false
+      certificateRef: ""
     routeNamespaceLabel:
       key: kloudlab.dev/gateway-access
       value: public
+
+httpRoute:
+  enabled: false
+  name: ""
+  namespace: ""
+  hostname: ""
+  parentGateway: public
+  backend:
+    name: ""
+    namespace: ""
+    port: 80
+  referenceGrant:
+    enabled: false
+
+namespaceLabels:
+  enabled: false
+  kloudlab.dev/gateway-access: public

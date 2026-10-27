@@ -28,6 +28,8 @@ Current modules:
 - `kgateway/controller` and `kgateway/crds`: kgateway upstream charts.
 - `kgateway/gateway-api-crds`: pinned Gateway API standard CRD bundle.
 - `kgateway/resources`: KloudLab Gateway API resources.
+- `aws-load-balancer-controller`: upstream EKS controller wrapper for Gateway NLBs.
+- `cert-manager-resources`: KloudLab Cloudflare DNS-01 issuer and Gateway certificate.
 - `openfga`: OpenFGA upstream chart.
 - `infisical/{server,secrets-operator}`: Infisical self-hosted server and
   Kubernetes Secrets Operator upstream charts.

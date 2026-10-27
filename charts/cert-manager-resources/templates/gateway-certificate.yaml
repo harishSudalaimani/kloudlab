@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.gatewayCertificate.name }}
+  namespace: {{ .Values.gatewayCertificate.namespace }}
+spec:
+  secretName: {{ .Values.gatewayCertificate.name }}
+  issuerRef:
+    name: {{ .Values.acme.issuerName }}
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - {{ .Values.gatewayCertificate.dnsName | quote }}

@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: management-aws-load-balancer-controller
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  project: default
+  sources:
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/aws-load-balancer-controller
+      targetRevision: main
+      helm:
+        releaseName: aws-load-balancer-controller
+        valueFiles:
+          - $values/gitops/clusters/management/values/aws-load-balancer-controller.yaml
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      ref: values
+  destination:
+    name: in-cluster
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

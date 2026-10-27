@@ -1,0 +1,16 @@
+{{- if and .Values.httpRoute.enabled .Values.httpRoute.referenceGrant.enabled }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: {{ .Values.httpRoute.name }}-backend
+  namespace: {{ .Values.httpRoute.backend.namespace }}
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: {{ .Values.httpRoute.namespace | default .Release.Namespace }}
+  to:
+    - group: ""
+      kind: Service
+      name: {{ .Values.httpRoute.backend.name }}
+{{- end }}

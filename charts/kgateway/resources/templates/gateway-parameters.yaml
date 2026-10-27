@@ -6,6 +6,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   kube:
+    deployment:
+      replicas: {{ .Values.gatewayParameters.proxyReplicas }}
     service:
       extraAnnotations:
         {{- toYaml .Values.gatewayParameters.service.extraAnnotations | nindent 8 }}

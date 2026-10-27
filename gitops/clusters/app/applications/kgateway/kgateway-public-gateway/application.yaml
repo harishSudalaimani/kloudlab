@@ -16,6 +16,9 @@ spec:
       values: |
         gatewayParameters:
           enabled: false
+        namespaceLabels:
+          enabled: true
+          kloudlab.dev/gateway-access: public
   destination:
     name: kloudlab-app
     namespace: kgateway-system

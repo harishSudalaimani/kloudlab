@@ -10,6 +10,16 @@ spec:
     - name: {{ .Values.gateway.listener.name }}
       protocol: {{ .Values.gateway.listener.protocol }}
       port: {{ .Values.gateway.listener.port }}
+      {{- with .Values.gateway.listener.hostname }}
+      hostname: {{ . | quote }}
+      {{- end }}
+      {{- if .Values.gateway.listener.tls.enabled }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ .Values.gateway.listener.tls.certificateRef }}
+      {{- end }}
       allowedRoutes:
         namespaces:
           from: Selector

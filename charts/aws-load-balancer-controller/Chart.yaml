@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kloudlab-aws-load-balancer-controller
+description: KloudLab Helm module for the upstream AWS Load Balancer Controller
+type: application
+version: 0.1.0
+appVersion: "v3.6.1"
+dependencies:
+  - name: aws-load-balancer-controller
+    version: 3.6.0
+    repository: https://aws.github.io/eks-charts

@@ -1,0 +1,8 @@
+{{- if .Values.namespaceLabels.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    {{- omit .Values.namespaceLabels "enabled" | toYaml | nindent 4 }}
+{{- end }}

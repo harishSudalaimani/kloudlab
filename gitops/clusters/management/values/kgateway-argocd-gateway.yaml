@@ -1,0 +1,35 @@
+gatewayParameters:
+  enabled: false
+
+gateway:
+  enabled: true
+  name: argocd
+  className: kgateway
+  listener:
+    name: https
+    protocol: HTTPS
+    port: 443
+    hostname: argocd.kloudlab.in
+    tls:
+      enabled: true
+      certificateRef: argocd-kgateway-tls
+    routeNamespaceLabel:
+      key: kloudlab.dev/gateway-access
+      value: public
+
+httpRoute:
+  enabled: true
+  name: argocd
+  namespace: kgateway-system
+  hostname: argocd.kloudlab.in
+  parentGateway: argocd
+  backend:
+    name: argocd-server
+    namespace: argocd
+    port: 80
+  referenceGrant:
+    enabled: true
+
+namespaceLabels:
+  enabled: true
+  kloudlab.dev/gateway-access: public

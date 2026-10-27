@@ -6,3 +6,8 @@ argo-cd:
   server:
     service:
       type: ClusterIP
+  configs:
+    params:
+      server.insecure: "true"
+    cm:
+      url: https://argocd.kloudlab.in

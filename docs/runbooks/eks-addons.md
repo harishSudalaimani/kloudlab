@@ -25,7 +25,7 @@ kube-proxy and hold ordinary workloads until Cilium is ready.
 
 | Component | Install method | When KloudLab needs it |
 | --- | --- | --- |
-| AWS Load Balancer Controller | Helm via Argo CD; AWS role/Pod Identity association via Pulumi | App cluster, to provision the NLB used by kgateway. |
+| AWS Load Balancer Controller | Helm via Argo CD; per-cluster IAM role/Pod Identity association via Pulumi | App cluster for application ingress and management cluster for the Argo CD Gateway NLB. |
 | Karpenter | Helm via Argo CD; controller role, node role, SQS interruption queue and discovery tags via Pulumi | App cluster, when replacing or extending the baseline managed node group with autoscaled capacity. |
 | cert-manager | Helm via Argo CD | When KloudLab automates certificate issuance in Kubernetes. |
 | Metrics Server | Helm via Argo CD | Only if HPA or `kubectl top` needs the resource metrics API. OTel and Prometheus do not require it. |
