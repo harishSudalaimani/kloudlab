@@ -1,0 +1,5 @@
+encryptionsalt: v1:O974JgXOmjI=:v1:tI+GFqtADIV3/E80:6YX29Zgk7s+Z5+7EcGfcYpwXBj18Yg==
+config:
+  aws:region: ap-south-1
+  kloudlab-state:environment: dev
+  kloudlab-state:bucketName: kloudlab-pulumi-state
