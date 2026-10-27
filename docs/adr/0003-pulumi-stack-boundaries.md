@@ -9,7 +9,7 @@ Networking, clusters, databases, and shared DNS have different ownership and rep
 
 ## Decision
 
-Use a shared Pulumi Go module with typed component packages and separate stack entry points. Current stacks include state bootstrap, GitHub OIDC, three network stacks, and network connectivity; cluster, database, and DNS stacks remain future work. Pass dependencies explicitly through stack references for VPC IDs, subnet IDs, cluster outputs, and service endpoints. Keep secret outputs out of normal stack exports. Protect important resources and document reverse dependency/destroy order.
+Use a shared Pulumi Go module with typed component packages and separate stack entry points. Current stacks include state bootstrap, GitHub OIDC, four network stacks (app, identity, observability, and management), and network connectivity. Cluster, ECR, database, and DNS stacks remain future work. Pass dependencies explicitly through stack references for VPC IDs, subnet IDs, cluster outputs, and service endpoints. Keep secret outputs out of normal stack exports. Protect important resources and document reverse dependency/destroy order.
 
 Use a versioned S3 DIY backend with TLS-only bucket access, KMS encryption, and protected state resources. Bootstrap it from local state, then migrate it to S3 before normal stacks are initialized. Document manual access, backup, restore, and locking responsibilities. Do not put unrelated resources in shared state or manage the same resource from two stacks.
 

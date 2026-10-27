@@ -26,6 +26,8 @@ jobs:
             work-dir: infra/stacks/network-identity
           - stack: observability
             work-dir: infra/stacks/network-observability
+          - stack: management
+            work-dir: infra/stacks/network-management
           - stack: connectivity
             work-dir: infra/stacks/network-connectivity
     steps:

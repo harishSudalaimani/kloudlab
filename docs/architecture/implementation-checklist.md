@@ -23,6 +23,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 - [ ] Check proposed CIDRs against all connected VPC, VPN, and on-premises ranges.
 - [x] Implement reusable VPC, subnet, route, endpoint, and explicit security-group rule components.
 - [x] Add separate app, identity, and observability network stacks, connectivity stack, and explicit stack outputs.
+- [x] Add the management VPC stack and include it in the four-VPC, six-peering connectivity mesh.
 - [ ] Establish DNS ownership and validate domain nameserver configuration before any DNS changes.
 - [ ] Review and preview every stack after account, role, CIDR, AZ, and backend config are available; request deployment approval only after review.
 
@@ -30,19 +31,22 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 ## Phase 3 — EKS and cluster foundations
 
-- [ ] Implement three EKS clusters with private worker nodes and EC2 managed node groups.
-- [ ] Select instance types and scaling limits from workload sizing.
+- [ ] Implement four EKS clusters with private worker nodes and EC2 managed node groups; management hosts Argo CD and remains management-only.
+- [ ] Start with two `t3.medium` managed nodes per cluster as a sizing hypothesis; validate workload requests, burst credits, pod density, subnet capacity, and cost before fixing production capacity.
+- [ ] Configure Karpenter only in `kloudlab-app`; keep stable managed baseline nodes for system services and its controller.
 - [ ] Configure multi-AZ placement, cluster API restrictions, EKS workload identity, and add-ons.
 - [ ] Set resource requests/limits, health probes, disruption budgets, quotas, and pod security controls.
 - [ ] Verify VPC CNI pod IP capacity, routes, and security policies.
-- [ ] Document cluster access and recovery.
+- [ ] Document cluster access and recovery, including an independent procedure to rebuild the management cluster and restore Argo CD from Git.
 
-**Deliverable:** three documented clusters with tested lifecycle and security boundaries.
+**Deliverable:** four documented clusters with tested lifecycle and security boundaries.
 
 ## Phase 4 — GitOps
 
-- [ ] Bootstrap Argo CD with a single declared owner for its installation.
-- [ ] Add separate reviewed GitOps roots for each cluster.
+- [ ] Bootstrap Argo CD in `kloudlab-management` with a single declared owner for its installation.
+- [ ] Configure least-privilege Argo CD access to all four clusters, including its management cluster, and define a separately bootstrappable management root.
+- [ ] Add reviewed GitOps roots for the managed clusters and management-only recovery documentation.
+- [ ] Reconcile Karpenter and its `NodePool`/`EC2NodeClass` resources only in `kloudlab-app`.
 - [ ] Restrict sync sources and production promotion.
 - [ ] Define health checks, rollback, and drift handling.
 - [ ] Verify ownership does not overlap with Pulumi-managed resources.
@@ -68,7 +72,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 - [x] Authenticate API-to-OpenFGA calls with a pre-shared bearer token.
 - [ ] Implement the private RDS PostgreSQL identity database stack in Pulumi and configure Infisical credential delivery.
 - [ ] Configure `fga.internal.kloudlab.in` (or approved equivalent), private cross-cluster routing, and TLS between the app and identity clusters.
-- [ ] Reconcile the OpenFGA Helm release through Argo CD in the identity cluster; configure datastore, backups, and verify restore.
+- [ ] Reconcile the OpenFGA Helm release from the management-hosted Argo CD into the identity cluster; configure datastore, backups, and verify restore.
 - [x] Define workspace ownership and architecture owner/editor/viewer relations in OpenFGA.
 - [x] Enforce authorization on every protected architecture API operation and fail closed on OpenFGA errors.
 - [ ] Keep deployment approval distinct from architecture editing.
@@ -77,9 +81,9 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 ## Phase 7 — Secrets management
 
-- [ ] Choose and document Infisical hosting, edition, licensing, recovery, and bootstrap access.
+- [ ] Choose whether to self-host Infisical in `kloudlab-identity`; document edition, licensing, service persistence, recovery, and bootstrap access.
 - [ ] Create narrowly scoped identities and per-workload secret access policies.
-- [ ] Integrate Kubernetes workloads without committing secret material.
+- [ ] Integrate app workloads with Infisical using machine identities or another supported authentication method, without committing secret material.
 - [ ] Back up configuration and required state outside the normal retrieval failure domain.
 - [ ] Exercise restore and break-glass procedures.
 
@@ -93,6 +97,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 - [ ] Configure S3 storage, encryption, retention, and lifecycle policies where supported.
 - [ ] Add service, Kubernetes, database, OpenFGA, secret retrieval, ingestion, and deployment dashboards/alerts.
 - [ ] Add independent AWS-level alarms for observability cluster failures.
+- [ ] Forward management-cluster telemetry to the observability cluster.
 - [ ] Verify sensitive values are excluded from telemetry.
 
 **Deliverable:** correlated telemetry with documented retention and alerts.

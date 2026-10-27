@@ -15,7 +15,7 @@ type PeerNetwork struct {
 	PrivateRouteTableIDs []pulumi.StringInput
 }
 
-// ConnectivityArgs defines the three VPCs joined by the initial non-transitive
+// ConnectivityArgs defines the four VPCs joined by the initial non-transitive
 // peering mesh.
 type ConnectivityArgs struct {
 	Networks           []PeerNetwork
@@ -23,13 +23,16 @@ type ConnectivityArgs struct {
 	Tags               map[string]string
 }
 
-// Connectivity represents the direct peering mesh between the three VPCs.
+// Connectivity represents the direct peering mesh between the four VPCs.
 type Connectivity struct {
 	pulumi.ResourceState
 
-	appIdentityPeeringID          pulumi.IDOutput
-	appObservabilityPeeringID     pulumi.IDOutput
-	identityObservabilityPeeringID pulumi.IDOutput
+	appIdentityPeeringID              pulumi.IDOutput
+	appObservabilityPeeringID         pulumi.IDOutput
+	appManagementPeeringID            pulumi.IDOutput
+	identityObservabilityPeeringID    pulumi.IDOutput
+	identityManagementPeeringID       pulumi.IDOutput
+	observabilityManagementPeeringID  pulumi.IDOutput
 }
 
 // AppIdentityPeeringID returns the application/identity peering ID.
@@ -42,13 +45,28 @@ func (c *Connectivity) AppObservabilityPeeringID() pulumi.IDOutput {
 	return c.appObservabilityPeeringID
 }
 
+// AppManagementPeeringID returns the application/management peering ID.
+func (c *Connectivity) AppManagementPeeringID() pulumi.IDOutput {
+	return c.appManagementPeeringID
+}
+
 // IdentityObservabilityPeeringID returns the identity/observability peering ID.
 func (c *Connectivity) IdentityObservabilityPeeringID() pulumi.IDOutput {
 	return c.identityObservabilityPeeringID
 }
 
+// IdentityManagementPeeringID returns the identity/management peering ID.
+func (c *Connectivity) IdentityManagementPeeringID() pulumi.IDOutput {
+	return c.identityManagementPeeringID
+}
+
+// ObservabilityManagementPeeringID returns the observability/management peering ID.
+func (c *Connectivity) ObservabilityManagementPeeringID() pulumi.IDOutput {
+	return c.observabilityManagementPeeringID
+}
+
 // NewConnectivity creates pairwise peering connections and routes in every
-// private subnet route table. It expects three VPCs in the same AWS account
+// private subnet route table. It expects four VPCs in the same AWS account
 // and region; VPC peering does not provide transitive routing.
 func NewConnectivity(ctx *pulumi.Context, name string, args *ConnectivityArgs, opts ...pulumi.ResourceOption) (*Connectivity, error) {
 	networks, err := validateConnectivityArgs(args)
@@ -68,18 +86,36 @@ func NewConnectivity(ctx *pulumi.Context, name string, args *ConnectivityArgs, o
 	if err != nil {
 		return nil, err
 	}
+	appManagement, err := createPeering(ctx, component, name, "app-management", networks["app"], networks["management"], args)
+	if err != nil {
+		return nil, err
+	}
 	identityObservability, err := createPeering(ctx, component, name, "identity-observability", networks["identity"], networks["observability"], args)
+	if err != nil {
+		return nil, err
+	}
+	identityManagement, err := createPeering(ctx, component, name, "identity-management", networks["identity"], networks["management"], args)
+	if err != nil {
+		return nil, err
+	}
+	observabilityManagement, err := createPeering(ctx, component, name, "observability-management", networks["observability"], networks["management"], args)
 	if err != nil {
 		return nil, err
 	}
 
 	component.appIdentityPeeringID = appIdentity.ID()
 	component.appObservabilityPeeringID = appObservability.ID()
+	component.appManagementPeeringID = appManagement.ID()
 	component.identityObservabilityPeeringID = identityObservability.ID()
+	component.identityManagementPeeringID = identityManagement.ID()
+	component.observabilityManagementPeeringID = observabilityManagement.ID()
 	component.RegisterOutputs(pulumi.Map{
-		"appIdentityPeeringId":           component.appIdentityPeeringID,
-		"appObservabilityPeeringId":      component.appObservabilityPeeringID,
-		"identityObservabilityPeeringId": component.identityObservabilityPeeringID,
+		"appIdentityPeeringId":             component.appIdentityPeeringID,
+		"appObservabilityPeeringId":        component.appObservabilityPeeringID,
+		"appManagementPeeringId":           component.appManagementPeeringID,
+		"identityObservabilityPeeringId":  component.identityObservabilityPeeringID,
+		"identityManagementPeeringId":     component.identityManagementPeeringID,
+		"observabilityManagementPeeringId": component.observabilityManagementPeeringID,
 	})
 	return component, nil
 }
@@ -88,12 +124,12 @@ func validateConnectivityArgs(args *ConnectivityArgs) (map[string]PeerNetwork, e
 	if args == nil {
 		return nil, fmt.Errorf("connectivity arguments are required")
 	}
-	if len(args.Networks) != 3 {
-		return nil, fmt.Errorf("connectivity requires app, identity, and observability VPCs")
+	if len(args.Networks) != 4 {
+		return nil, fmt.Errorf("connectivity requires app, identity, observability, and management VPCs")
 	}
 	networks := make(map[string]PeerNetwork, len(args.Networks))
 	for _, network := range args.Networks {
-		if network.Name != "app" && network.Name != "identity" && network.Name != "observability" {
+		if network.Name != "app" && network.Name != "identity" && network.Name != "observability" && network.Name != "management" {
 			return nil, fmt.Errorf("unknown VPC name %q", network.Name)
 		}
 		if _, exists := networks[network.Name]; exists {

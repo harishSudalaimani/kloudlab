@@ -15,6 +15,7 @@ config:
     default:
       - 10.10.0.0/16
       - 10.30.0.0/16
+      - 10.40.0.0/16
   kloudlab-network:connectedCIDRs:
     default: []
   kloudlab-network:availabilityZones:

@@ -9,7 +9,7 @@ Infisical will manage credentials needed by workloads, including identity and cl
 
 ## Decision
 
-Do not make Infisical's only control plane, persistent data, backup, or bootstrap credentials depend on `kloudlab-identity`. Before adopting it, choose a hosting location and edition, narrowly scoped workload identities, an encrypted backup target outside the normal retrieval failure domain, out-of-band bootstrap credentials, and a documented restore procedure. Back up configuration and the underlying state required by the chosen deployment model; test restoring it without the normal cluster path.
+Infisical may be self-hosted in `kloudlab-identity`, but its only control plane, persistent data, backup, or bootstrap credentials must not depend on that cluster being available. Before adopting it, choose whether to co-locate the workload and select an edition, narrowly scoped app workload identities, an encrypted backup target outside the normal retrieval failure domain, out-of-band bootstrap credentials, and a documented restore procedure. Back up configuration and the underlying state required by the chosen deployment model; test restoring it without the normal cluster path.
 
 No Infisical edition or hosting model is selected by this ADR. Verify the current license, distribution model, and required backup/rotation capabilities before relying on them. Do not silently substitute a proprietary secrets service.
 

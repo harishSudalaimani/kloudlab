@@ -9,7 +9,7 @@ import (
 	"github.com/harishsudalaimani/kloudlab/infra/config"
 )
 
-// Run builds one of the app, identity, or observability VPC stacks.
+// Run builds one of the app, identity, observability, or management VPC stacks.
 func Run(ctx *pulumi.Context, workload string) error {
 	stackConfig := pulumi.NewConfig(ctx, "kloudlab-network")
 	awsConfig := pulumi.NewConfig(ctx, "aws")

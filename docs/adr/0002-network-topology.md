@@ -9,7 +9,7 @@ Each EKS cluster needs isolated routing and sufficient subnet capacity for nodes
 
 ## Decision
 
-Start with one VPC per cluster, using the proposed ranges `10.10.0.0/16` (app), `10.20.0.0/16` (identity), and `10.30.0.0/16` (observability). Each VPC stack creates three public and three private /20 subnets across configured AZs, explicit public and private route tables, NAT egress, and an S3 gateway endpoint. Use one NAT gateway per VPC in development and require one per AZ in production. Use a separate connectivity stack for direct peering between all three VPCs and routes in private route tables. Add narrow security-group rules as consumers and ports are defined; routes alone never authorize traffic.
+Start with one VPC per cluster, using proposed ranges `10.10.0.0/16` (app), `10.20.0.0/16` (identity), `10.30.0.0/16` (observability), and `10.40.0.0/16` (management). Each VPC stack creates three public and three private /20 subnets across configured AZs, explicit public and private route tables, NAT egress, and an S3 gateway endpoint. Use one NAT gateway per VPC in development and require one per AZ in production. Use a separate connectivity stack for direct pairwise peering among all four VPCs (six peerings) and routes in private route tables. Add narrow security-group rules as consumers and ports are defined; routes alone never authorize traffic. Management-to-cluster API access must also be limited by target-cluster authorization policy.
 
 ## Consequences
 

@@ -12,17 +12,19 @@ CIDR, cost, and deployment approval; no command here has been run against AWS.
 - `github-oidc` creates GitHub's OIDC provider and an IAM role restricted to
   exact `owner/repo` branch subjects. The permissions policy is required input
   so the role cannot silently inherit broad administrator access.
-- `network-app`, `network-identity`, and `network-observability` create DNS-
-  enabled VPCs, three public and three private subnets, explicit route tables,
-  configurable NAT, and a private-subnet S3 gateway endpoint.
-- `network-connectivity` creates the three direct same-account VPC peerings and
+- `network-app`, `network-identity`, `network-observability`, and
+  `network-management` create DNS-enabled VPCs, three public and three private
+  subnets, explicit route tables, configurable NAT, and a private-subnet S3
+  gateway endpoint.
+- `network-connectivity` creates six direct same-account VPC peerings and
   routes between private route tables. Peering does not enable transitive
   routing and does not grant traffic by itself.
 - The reusable security-group helper creates explicit, separately managed
   IPv4 rules. No service traffic rules are guessed before the EKS and workload
   ports are selected.
 
-The sample VPC CIDRs are `10.10.0.0/16`, `10.20.0.0/16`, and `10.30.0.0/16`.
+The sample VPC CIDRs are `10.10.0.0/16` (app), `10.20.0.0/16` (identity),
+`10.30.0.0/16` (observability), and `10.40.0.0/16` (management).
 Each network stack checks its CIDR against the configured peer and connected
 CIDRs and rejects overlap. These values remain proposals until checked against
 all VPCs, VPNs, and on-premises ranges that may be connected later. The /16 is
@@ -48,7 +50,7 @@ unknown; this phase makes no DNS changes.
 
 Each network stack defaults `cidrInventoryReviewed` to `false`, which blocks
 the program until the operator confirms the connected-range inventory. Set it
-to `true` in all three stack configs only after the ranges have been checked.
+to `true` in all four stack configs only after the ranges have been checked.
 
 The state bucket stack must be bootstrapped first from a protected local state
 directory. Keep that directory private and backed up until migration completes.
@@ -111,8 +113,8 @@ approved repository branch. Set a GitHub Actions environment or repository
 variable `AWS_NETWORK_PREVIEW_ROLE_ARN` to the resulting role ARN, and set
 `PULUMI_BACKEND_URL` to `s3://<globally-unique-bucket-name>`. The
 `network-preview.yml` workflow is manually dispatched from `main`, uses only
-the preview command, and targets the three network stacks plus connectivity.
-It requires all four stacks to be initialized in the DIY backend first.
+the preview command, and targets the four network stacks plus connectivity.
+Initialize all five stacks in the DIY backend before dispatching the workflow.
 
 ## Network stack order
 
@@ -122,11 +124,13 @@ review and preview in this order:
 1. `kloudlab-network-app/dev`
 2. `kloudlab-network-identity/dev`
 3. `kloudlab-network-observability/dev`
-4. `kloudlab-network-connectivity/dev`
+4. `kloudlab-network-management/dev`
+5. `kloudlab-network-connectivity/dev`
 
 The network stacks export VPC ID and CIDR, AZ order, public/private subnet IDs,
 route table IDs, and S3 endpoint ID. Connectivity consumes VPC IDs, CIDRs, and
-private route tables from the three network stacks. Update each
+private route tables from the four network stacks. It creates all six direct
+peerings; routes do not authorize traffic or make peering transitive. Update each
 `peerCIDRs`/`connectedCIDRs` list consistently when actual topology changes.
 Use `natGatewayMode: per-az` for production. Review every plan for replacements,
 public routes, NAT count, and deletion protection before requesting deployment

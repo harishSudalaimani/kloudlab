@@ -13,6 +13,8 @@ config:
     default: kloudlab-network-identity/dev
   kloudlab-connectivity:observabilityNetworkStack:
     default: kloudlab-network-observability/dev
+  kloudlab-connectivity:managementNetworkStack:
+    default: kloudlab-network-management/dev
   kloudlab-connectivity:privateRouteTableCount:
     default: 3
   kloudlab-connectivity:protectConnections:

@@ -1,12 +1,12 @@
 # KloudLab
 
-KloudLab is an architecture design platform in its infrastructure foundation phase. The product is intended to let users compose, validate, save, and later generate cloud-native architectures. The React frontend now provides a local architecture editor with browser drafts and JSON import/export. Phase 2 contains Pulumi implementations for protected state bootstrap, GitHub OIDC trust, and three VPCs with private connectivity. The infrastructure code is not deployed and no AWS resources have been provisioned.
+KloudLab is an architecture design platform in its infrastructure foundation phase. The product is intended to let users compose, validate, save, and later generate cloud-native architectures. The React frontend now provides a local architecture editor with browser drafts and JSON import/export. Phase 2 contains Pulumi implementations for protected state bootstrap, GitHub OIDC trust, and four dedicated VPCs with private connectivity. The infrastructure code is not deployed and no AWS resources have been provisioned. The target architecture has four EKS clusters; centralized Argo CD runs in the dedicated management cluster, and Karpenter is limited to the application cluster.
 
 ## Repository layout
 
 See the [canonical target repository structure](docs/architecture/repository-structure.md). It records the intended app, Pulumi, GitOps, workflow, and documentation boundaries, with migration rules for areas that are not implemented yet.
 
-The app, identity, and observability network stacks are configured with proposed CIDRs. Review connected networks and account settings before preview. VPC peering creates routes only; service security rules and workload traffic will be designed alongside EKS and its consumers.
+The app, identity, observability, and management network stacks are configured with proposed CIDRs. Review connected networks and account settings before preview. VPC peering creates routes only; service security rules and workload traffic will be designed alongside EKS and its consumers.
 
 ## Architecture decisions and plan
 
@@ -41,7 +41,7 @@ The Pulumi Go module is in `infra/`; the AWS provider is pinned in `infra/go.mod
 
 Use Go 1.26 or newer and the Pulumi CLI. CI runs formatting, linting, and Go tests. No local Go toolchain is available in the current environment, so those checks have not been run for the Phase 2 code. See the [Phase 2 bootstrap and network runbook](docs/operations/phase-2-bootstrap.md) before setting up AWS state or credentials.
 
-The [network preview workflow](.github/workflows/network-preview.yml) runs only when manually dispatched from `main` and assumes a branch-restricted GitHub OIDC role. It previews the three network stacks and connectivity stack; it has no `up` command. Configure the AWS role and Pulumi S3 backend variables only after reviewing the account policy. Do not run `pulumi up` until a stack preview is reviewed and deployment is explicitly approved.
+The [network preview workflow](.github/workflows/network-preview.yml) runs only when manually dispatched from `main` and assumes a branch-restricted GitHub OIDC role. It previews the four network stacks and connectivity stack; it has no `up` command. Configure the AWS role and Pulumi S3 backend variables only after reviewing the account policy. Do not run `pulumi up` until a stack preview is reviewed and deployment is explicitly approved.
 
 ## Technology and licensing notes
 

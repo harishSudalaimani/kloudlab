@@ -1,6 +1,6 @@
 # OpenFGA Helm deployment
 
-OpenFGA runs in the `kloudlab-identity` EKS cluster. Pulumi owns its private Amazon RDS PostgreSQL database; Argo CD owns the OpenFGA Helm release. This follows the master architecture, including its RDS recommendation. The OpenFGA `Application` references the official chart directly and disables its bundled legacy Bitnami databases.
+OpenFGA runs in the `kloudlab-identity` EKS cluster. Argo CD is hosted centrally in the dedicated `kloudlab-management` cluster and reconciles the OpenFGA `Application` into identity. Pulumi owns its private Amazon RDS PostgreSQL database; Argo CD owns the OpenFGA Helm release. This follows the master architecture, including its RDS recommendation. The OpenFGA `Application` references the official chart directly and disables its bundled legacy Bitnami databases.
 
 ## Release layout
 
@@ -20,7 +20,7 @@ helm template openfga openfga \
   --namespace kloudlab-identity
 ```
 
-Argo CD will reconcile this Application after its identity-cluster bootstrap. The values file is supplied through Argo CD's multi-source Helm values feature, which requires Argo CD 2.6 or newer ([multi-source Helm values](https://argo-cd.readthedocs.io/en/latest/user-guide/multiple_sources/)). Helm is used to render the chart; Argo CD owns synchronization and lifecycle ([Argo CD Helm integration](https://argo-cd.readthedocs.io/en/latest/user-guide/helm/)). Do not run `helm upgrade` against a managed cluster. No AWS database or Kubernetes release has been deployed.
+The management-hosted Argo CD will reconcile this Application into identity after the target cluster is registered. The values file is supplied through Argo CD's multi-source Helm values feature, which requires Argo CD 2.6 or newer ([multi-source Helm values](https://argo-cd.readthedocs.io/en/latest/user-guide/multiple_sources/)). Helm is used to render the chart; Argo CD owns synchronization and lifecycle ([Argo CD Helm integration](https://argo-cd.readthedocs.io/en/latest/user-guide/helm/)). Do not run `helm upgrade` against a managed cluster. No AWS database or Kubernetes release has been deployed.
 
 ## Store and model bootstrap
 

@@ -1,8 +1,8 @@
 # KloudLab repository structure
 
-This is the canonical target layout for future work. Pulumi provisions AWS resources, GitHub Actions validates and publishes artifacts, and Argo CD reconciles Kubernetes releases from Git. Karpenter belongs only to the application cluster. Directories for unimplemented features are added when their first working slice is ready; this tree is a reference, not a claim that every listed subsystem exists today.
+This is the canonical target layout for the updated four-cluster architecture. Pulumi Go owns AWS resources, GitHub Actions validates and publishes artifacts, and Argo CD is hosted in `kloudlab-management` to reconcile Kubernetes releases across all four clusters, including management workloads. Its initial installation and recovery remain independently bootstrappable. Karpenter belongs only to `kloudlab-app`. Directories for unimplemented features are added with their first working slice; this tree is a reference, not a claim that every listed subsystem exists today.
 
-The OpenFGA Argo CD `Application` and cluster-specific values are placed under the identity cluster's GitOps application path. Argo CD references the official OpenFGA chart; the shared `gitops/charts/kloudlab` chart is reserved for KloudLab-owned templates. Its RDS database belongs to the Pulumi database stack. The API's current authorization and HTTP handlers are still in the initial `apps/api/cmd/api` implementation and can be separated into `internal/` packages incrementally.
+Argo CD's bootstrap configuration lives under `gitops/bootstrap/argocd`; its workload configuration lives under `gitops/clusters/management/applications/argocd`. OpenFGA's `Application` and values live in the identity cluster path and reference the official chart. `gitops/clusters/identity/platform/infisical` is reserved for a self-hosted Infisical deployment if identity-cluster placement is selected; app-side secret integration belongs under `gitops/clusters/app/platform/infisical`. The shared `gitops/charts/kloudlab-app` chart is for KloudLab-owned templates. OpenFGA uses the selected private Amazon RDS PostgreSQL datastore. The management cluster must have a documented recovery path independent of Argo CD itself.
 
 ```text
 kloudlab/
@@ -14,13 +14,10 @@ kloudlab/
 │   │   ├── Dockerfile
 │   │   └── package.json
 │   └── api/
-│       ├── cmd/
-│       │   └── api/
-│       │       └── main.go
+│       ├── cmd/api/main.go
 │       ├── internal/
 │       │   ├── auth/
-│       │   ├── authorization/
-│       │   │   └── model.fga
+│       │   ├── authorization/model.fga
 │       │   ├── organizations/
 │       │   ├── projects/
 │       │   ├── canvas/
@@ -41,146 +38,86 @@ kloudlab/
 │   ├── go.sum
 │   ├── components/
 │   │   ├── network/
-│   │   │   ├── component.go
-│   │   │   ├── vpc.go
-│   │   │   ├── subnets.go
-│   │   │   ├── routing.go
-│   │   │   ├── endpoints.go
-│   │   │   └── outputs.go
 │   │   ├── eks/
-│   │   │   ├── component.go
-│   │   │   ├── cluster.go
-│   │   │   ├── nodegroups.go
-│   │   │   ├── access.go
-│   │   │   ├── addons.go
-│   │   │   └── outputs.go
-│   │   ├── karpenter/
-│   │   │   ├── component.go
-│   │   │   ├── controller_iam.go
-│   │   │   ├── node_role.go
-│   │   │   ├── interruption_queue.go
-│   │   │   ├── discovery.go
-│   │   │   └── outputs.go
+│   │   ├── karpenter/          # instantiated only by cluster-app
 │   │   ├── iam/
-│   │   │   ├── github_oidc.go
-│   │   │   ├── workload_identity.go
-│   │   │   └── policies.go
-│   │   ├── database/
-│   │   │   ├── postgres.go
-│   │   │   ├── networking.go
-│   │   │   ├── backups.go
-│   │   │   └── outputs.go
-│   │   ├── registry/
-│   │   │   ├── ecr.go
-│   │   │   ├── lifecycle.go
-│   │   │   └── outputs.go
+│   │   ├── ecr/
 │   │   ├── dns/
-│   │   │   ├── route53.go
-│   │   │   ├── certificates.go
-│   │   │   └── outputs.go
+│   │   ├── database/
 │   │   ├── secrets/
-│   │   │   ├── infisical_support.go
-│   │   │   ├── encryption.go
-│   │   │   └── outputs.go
 │   │   └── observability/
-│   │       ├── storage.go
-│   │       ├── buckets.go
-│   │       └── outputs.go
-│   │
 │   ├── stacks/
 │   │   ├── bootstrap/
-│   │   │   ├── main.go
-│   │   │   └── Pulumi.yaml
 │   │   ├── network-app/
-│   │   │   ├── main.go
-│   │   │   └── Pulumi.yaml
 │   │   ├── network-identity/
-│   │   │   ├── main.go
-│   │   │   └── Pulumi.yaml
 │   │   ├── network-observability/
-│   │   │   ├── main.go
-│   │   │   └── Pulumi.yaml
+│   │   ├── network-management/
+│   │   ├── network-connectivity/
 │   │   ├── cluster-app/
-│   │   │   ├── main.go
-│   │   │   ├── config.go
-│   │   │   └── Pulumi.yaml
 │   │   ├── cluster-identity/
-│   │   │   ├── main.go
-│   │   │   ├── config.go
-│   │   │   └── Pulumi.yaml
 │   │   ├── cluster-observability/
-│   │   │   ├── main.go
-│   │   │   ├── config.go
-│   │   │   └── Pulumi.yaml
+│   │   ├── cluster-management/
 │   │   ├── database/
-│   │   │   ├── main.go
-│   │   │   └── Pulumi.yaml
-│   │   ├── registry/
-│   │   │   ├── main.go
-│   │   │   └── Pulumi.yaml
+│   │   ├── ecr/
 │   │   └── shared-dns/
-│   │       ├── main.go
-│   │       └── Pulumi.yaml
-│   │
 │   └── config/
-│       ├── common.go
-│       ├── naming.go
-│       ├── tags.go
-│       └── validation.go
 │
 ├── gitops/
 │   ├── bootstrap/
-│   │   ├── argocd/
-│   │   │   ├── values.yaml
-│   │   │   └── application.yaml
+│   │   └── argocd/
+│   │       ├── application.yaml
+│   │       └── values.yaml
 │   ├── clusters/
 │   │   ├── app/
 │   │   │   ├── applications/
 │   │   │   │   ├── karpenter/
 │   │   │   │   │   ├── application.yaml
-│   │   │   │   │   └── values.yaml
+│   │   │   │   │   ├── values.yaml
+│   │   │   │   │   └── resources/
+│   │   │   │   │       ├── ec2-node-class.yaml
+│   │   │   │   │       └── node-pool.yaml
 │   │   │   │   ├── kgateway/
-│   │   │   │   │   ├── application.yaml
-│   │   │   │   │   └── values.yaml
+│   │   │   │   ├── cert-manager/
 │   │   │   │   ├── frontend/
-│   │   │   │   │   └── application.yaml
 │   │   │   │   └── api/
-│   │   │   │       └── application.yaml
 │   │   │   └── platform/
-│   │   │       ├── cert-manager/
+│   │   │       ├── infisical/
 │   │   │       └── policies/
 │   │   ├── identity/
+│   │   │   ├── applications/openfga/
+│   │   │   └── platform/
+│   │   │       ├── infisical/
+│   │   │       └── policies/
+│   │   ├── observability/
 │   │   │   └── applications/
-│   │   │       └── openfga/
-│   │   │           ├── application.yaml
-│   │   │           └── values.yaml
-│   │   └── observability/
-│   │       └── applications/
-│   │           ├── opentelemetry/
-│   │           ├── prometheus/
-│   │           ├── loki/
-│   │           ├── tempo/
-│   │           └── grafana/
+│   │   │       ├── opentelemetry/
+│   │   │       ├── prometheus/
+│   │   │       ├── loki/
+│   │   │       ├── tempo/
+│   │   │       └── grafana/
+│   │   └── management/
+│   │       └── applications/argocd/
 │   └── charts/
-│       └── kloudlab/
+│       └── kloudlab-app/
 │           ├── Chart.yaml
 │           ├── values.yaml
+│           ├── values.schema.json
 │           └── templates/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci-frontend.yaml
-│       ├── ci-api.yaml
-│       ├── pulumi-preview.yaml
-│       ├── pulumi-deploy.yaml
-│       ├── build-push-ecr.yaml
-│       └── security-scan.yaml
+│       ├── ci.yml
+│       ├── infrastructure-preview.yml
+│       ├── infrastructure-deploy.yml
+│       ├── app-build-publish.yml
+│       └── gitops-promotion.yml
 │
 ├── docs/
 │   ├── architecture/
 │   ├── adr/
 │   ├── security/
 │   ├── operations/
+│   ├── disaster-recovery/
 │   └── runbooks/
 │
 ├── scripts/
@@ -190,10 +127,14 @@ kloudlab/
 └── README.md
 ```
 
-## Migration rules
+## Architecture and migration rules
 
+- The four clusters are `kloudlab-app`, `kloudlab-identity`, `kloudlab-observability`, and `kloudlab-management`, each with a dedicated VPC. The management cluster hosts Argo CD and remains dedicated to management workloads.
+- Argo CD has least-privilege access to all four cluster APIs and a bootstrap/recovery procedure that does not depend on the hosted Argo CD instance.
+- Karpenter's controller, IAM, queue, Helm release, `NodePool`, and `EC2NodeClass` resources belong only to `kloudlab-app`. The other clusters use managed node groups only.
+- Initial managed capacity is a sizing hypothesis of two `t3.medium` nodes per cluster, to be validated against workload demands, burst behavior, subnet capacity, and cost.
+- Pulumi owns AWS resources such as EKS, VPCs, ECR, and RDS. Argo CD owns ongoing Kubernetes releases. Never let both systems own the same live object.
 - Keep `apps/api/cmd/api` as the executable entry point; move domain and integration code into `apps/api/internal/` packages as those boundaries are implemented.
-- Keep each Pulumi component small and typed. Add Karpenter code only to the application cluster path and never instantiate it for identity or observability.
-- Keep Pulumi ownership for AWS resources such as RDS, ECR, networking, and EKS. Argo CD owns Kubernetes releases. Cluster application directories hold `application.yaml` manifests and their Helm values files.
 - Add tests, Dockerfiles, workflows, and platform directories with their first functioning implementation rather than creating empty files.
+- Four clusters in one AWS region improve responsibility and lifecycle separation but do not provide regional disaster recovery.
 - Migrate existing stacks and workflows only with their references and documentation updated in the same change.

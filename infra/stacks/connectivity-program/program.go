@@ -9,7 +9,7 @@ import (
 	"github.com/harishsudalaimani/kloudlab/infra/config"
 )
 
-// Run connects the app, identity, and observability network stacks.
+// Run connects the app, identity, observability, and management network stacks.
 func Run(ctx *pulumi.Context) error {
 	stackConfig := pulumi.NewConfig(ctx, "kloudlab-connectivity")
 	awsConfig := pulumi.NewConfig(ctx, "aws")
@@ -30,8 +30,9 @@ func Run(ctx *pulumi.Context) error {
 	if privateRouteTableCount < 3 {
 		return fmt.Errorf("privateRouteTableCount must be at least three")
 	}
-	networks := make([]network.PeerNetwork, 0, 3)
-	for _, name := range []string{"app", "identity", "observability"} {
+	networkNames := []string{"app", "identity", "observability", "management"}
+	networks := make([]network.PeerNetwork, 0, len(networkNames))
+	for _, name := range networkNames {
 		referenceName := stackConfig.Require(name + "NetworkStack")
 		reference, err := pulumi.NewStackReference(ctx, name+"-network-reference", &pulumi.StackReferenceArgs{
 			Name: pulumi.String(referenceName),
@@ -66,6 +67,9 @@ func Run(ctx *pulumi.Context) error {
 	}
 	ctx.Export("appIdentityPeeringId", mesh.AppIdentityPeeringID())
 	ctx.Export("appObservabilityPeeringId", mesh.AppObservabilityPeeringID())
+	ctx.Export("appManagementPeeringId", mesh.AppManagementPeeringID())
 	ctx.Export("identityObservabilityPeeringId", mesh.IdentityObservabilityPeeringID())
+	ctx.Export("identityManagementPeeringId", mesh.IdentityManagementPeeringID())
+	ctx.Export("observabilityManagementPeeringId", mesh.ObservabilityManagementPeeringID())
 	return nil
 }

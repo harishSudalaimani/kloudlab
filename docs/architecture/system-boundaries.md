@@ -14,9 +14,14 @@ flowchart LR
     API -->|relationship checks, private authenticated traffic| FGA[Identity cluster: OpenFGA]
     FGA --> FGA_DB[(Private Amazon RDS PostgreSQL)]
     API --> AppDB[(Application PostgreSQL, placement TBD)]
-    API -->|scoped workload identity| Secrets[Infisical, independent recovery boundary]
+    AppWorkloads[App workloads] -->|machine identity or supported auth| Secrets[Infisical, optional identity-cluster workload]
+    Secrets --> InfisicalDB[(Infisical persistent datastore, if required)]
     AppCluster[App cluster telemetry agents] -->|authenticated encrypted OTLP| OTel[Observability cluster: OTel gateway]
     FGACluster[Identity cluster telemetry agents] -->|authenticated encrypted OTLP| OTel
+    ManagementCluster[Management cluster: Argo CD] -->|restricted authenticated Kubernetes API| AppCluster
+    ManagementCluster -->|restricted authenticated Kubernetes API| FGACluster
+    ManagementCluster -->|restricted authenticated Kubernetes API| OTelCluster[Observability cluster]
+    ManagementCluster -->|authenticated encrypted OTLP| OTel
     OTel --> Metrics[Prometheus]
     OTel --> Logs[Loki]
     OTel --> Traces[Tempo]
@@ -25,15 +30,16 @@ flowchart LR
     Traces --> Grafana
 ```
 
-The initial platform has three independent EKS control planes in one AWS region:
+The initial platform has four independent EKS control planes in one AWS region:
 
 | Cluster | Owns | Main boundary |
 | --- | --- | --- |
 | `kloudlab-app` | Frontend, API, application workloads, kgateway and application telemetry agents | Public application entry point; private calls to OpenFGA and telemetry gateway |
-| `kloudlab-identity` | OpenFGA, identity support workloads and telemetry agents | Private authorization endpoint and durable PostgreSQL datastore |
+| `kloudlab-identity` | OpenFGA, optional self-hosted Infisical control plane, identity support workloads and telemetry agents | Private authorization endpoint; persistent service data and independent recovery path |
 | `kloudlab-observability` | Central OpenTelemetry gateway, Prometheus, Loki, Tempo and Grafana | Restricted operational access and durable telemetry storage |
+| `kloudlab-management` | Central Argo CD control plane and management workloads | Reconciles GitOps workloads across all four clusters; restricted cluster API access and independent rebuild/recovery path |
 
-Auth0 is external and is not deployed in Kubernetes. Each cluster has a dedicated VPC as a starting point. Cluster separation creates lifecycle and security boundaries, but three clusters in one region do not provide regional disaster recovery.
+Auth0 is external and is not deployed in Kubernetes. Each cluster has a dedicated VPC. The proposed ranges are `10.10.0.0/16` (app), `10.20.0.0/16` (identity), `10.30.0.0/16` (observability), and `10.40.0.0/16` (management); validate them against connected networks before provisioning. App workloads retrieve secrets from Infisical using securely provisioned machine identities or another supported authentication method. Infisical may be hosted in the identity cluster, but its backup, bootstrap credentials, and restore path must remain usable during an identity-cluster outage. Use persistent PostgreSQL storage where required by each service. Cluster separation creates lifecycle and security boundaries, but four clusters in one region do not provide regional disaster recovery. Keep the management cluster dedicated to Argo CD and management functions.
 
 The public request path is DNS → AWS load balancer → kgateway/Gateway API → application service → backend token validation and authorization. Only intended application entry points are public. Database, OpenFGA administration, telemetry backends, and Grafana remain private or tightly restricted.
 
@@ -46,7 +52,7 @@ The canonical target tree and migration rules are maintained in [repository-stru
 The `infra/components/network` package implements VPCs, subnet allocation,
 explicit routing, NAT profiles, an S3 gateway endpoint, direct VPC peering,
 and reusable security-group rule resources. Separate Pulumi projects own the
-three networks, connectivity, S3/KMS state bootstrap, and GitHub OIDC role.
+four networks, six pairwise VPC peerings, S3/KMS state bootstrap, and GitHub OIDC role.
 They are implemented but not deployed. Proposed CIDRs and AWS access settings
 remain account-level checks before preview or provisioning.
 
@@ -62,7 +68,7 @@ The initial catalog candidates are EKS, Kubernetes workloads, gateways, database
 
 ## Ownership split
 
-- **Pulumi Go:** AWS networking, EKS, foundational IAM, databases, DNS/certificates, and infrastructure prerequisites.
+- **Pulumi Go:** AWS networking, EKS, foundational IAM, ECR, databases, DNS/certificates, and infrastructure prerequisites.
 - **Argo CD:** ongoing Kubernetes applications and Helm releases, including kgateway, OpenFGA, Infisical integrations, OTel collectors, and application workloads.
 - **Auth0:** user authentication and token issuance.
 - **OpenFGA:** relationship-based application authorization, checked by the backend on every protected action.
