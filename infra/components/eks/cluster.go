@@ -92,6 +92,11 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 	if _, err := createAddon(ctx, component, name, cluster.Name, "coredns", args.Tags, addonDependencies); err != nil {
 		return nil, err
 	}
+	if args.EnableMetricsServer {
+		if _, err := createAddon(ctx, component, name, cluster.Name, "metrics-server", args.Tags, addonDependencies); err != nil {
+			return nil, err
+		}
+	}
 	if args.ManageKubeProxy {
 		if _, err := createAddon(ctx, component, name, cluster.Name, "kube-proxy", args.Tags, addonDependencies); err != nil {
 			return nil, err

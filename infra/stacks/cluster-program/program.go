@@ -103,6 +103,7 @@ func Run(ctx *pulumi.Context, workload string) error {
 		DiskSizeGiB:            stackConfig.RequireInt("diskSizeGiB"),
 		ManageKubeProxy:        stackConfig.GetBool("manageKubeProxy"),
 		HoldNodesForCilium:     stackConfig.GetBool("holdNodesForCilium"),
+		EnableMetricsServer:    stackConfig.GetBool("enableMetricsServer"),
 		EnablePodIdentityAgent: stackConfig.GetBool("enablePodIdentityAgent"),
 		EnableEBSCSIDriver:     stackConfig.GetBool("enableEBSCSIDriver"),
 		ProtectCluster:         stackConfig.GetBool("protectCluster"),

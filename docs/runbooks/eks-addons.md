@@ -12,14 +12,17 @@ when a workload needs them.
 | Amazon VPC CNI (`vpc-cni`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; assigns VPC pod IPs. Cilium chains to it. |
 | CoreDNS (`coredns`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; cluster DNS. |
 | kube-proxy | No after Cilium is healthy | No after Cilium is healthy | No after Cilium is healthy | No after Cilium is healthy | EKS add-on only during management bootstrap; Cilium replaces service routing. |
+| Metrics Server (`metrics-server`) | Yes | Yes | Yes | Yes | EKS community add-on via Pulumi; serves the resource Metrics API for `kubectl top` and HPA/VPA. |
 | EKS Pod Identity Agent (`eks-pod-identity-agent`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; lets explicitly associated service accounts receive AWS credentials. |
-| EBS CSI (`aws-ebs-csi-driver`) | No for current workloads | No for current workloads | Yes | No for current workloads | EKS add-on via Pulumi; encrypted gp3 PVCs for Prometheus and Loki. |
+| EBS CSI (`aws-ebs-csi-driver`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi with a per-cluster Pod Identity role; provisions EBS volumes only when a PVC requests them. |
 | gp3 StorageClass | No | No | Yes | No | Local Helm chart through Argo CD; encrypted, expandable EBS volumes. |
 
 VPC CNI and CoreDNS are present in the Pulumi EKS component. Management keeps
 kube-proxy only until Argo CD has installed Cilium and Cilium is ready on every
-node. The app, identity, and observability clusters are created without
-kube-proxy and hold ordinary workloads until Cilium is ready.
+node. Metrics Server, EKS Pod Identity Agent, and EBS CSI are enabled in all
+four cluster Pulumi projects. EBS CSI does not create billable volumes by
+itself; the observability cluster currently requests EBS-backed Prometheus and
+Alertmanager volumes.
 
 ## Optional components, installed only when needed
 
@@ -28,7 +31,6 @@ kube-proxy and hold ordinary workloads until Cilium is ready.
 | AWS Load Balancer Controller | Helm via Argo CD; per-cluster IAM role/Pod Identity association via Pulumi | App cluster for application ingress and management cluster for the Argo CD Gateway NLB. |
 | Karpenter | Helm via Argo CD; controller role, node role, SQS interruption queue and discovery tags via Pulumi | App cluster, when replacing or extending the baseline managed node group with autoscaled capacity. |
 | cert-manager | Helm via Argo CD | When KloudLab automates certificate issuance in Kubernetes. |
-| Metrics Server | Helm via Argo CD | Only if HPA or `kubectl top` needs the resource metrics API. OTel and Prometheus do not require it. |
 | EFS/FSx/S3 CSI drivers and CSI snapshot controller | EKS add-on or Helm, selected per driver | Only if a workload needs shared file storage, filesystem/object mounts, or CSI volume snapshots. Current architecture does not need them. |
 
 OpenTelemetry Collector, Cilium, kgateway, Argo CD, OpenFGA, Prometheus, Loki,
@@ -79,57 +81,33 @@ AWS state. Once Cilium is healthy on management, set
 `kloudlab-cluster:manageKubeProxy` to `false` and review that the preview only
 removes the kube-proxy add-on.
 
-## Install Pod Identity and storage in stages
+## Enable the baseline add-ons in each cluster
 
-The nodes are private, so the EKS Auth PrivateLink endpoint must exist in each
-cluster VPC before enabling Pod Identity. The network component now creates
-`com.amazonaws.<region>.eks-auth` in private subnets. Update each network stack
-through Pulumi before enabling the agent:
+Pod Identity requires the nodes to reach the EKS Auth API. The clusters can
+reach it through their NAT route or through the EKS Auth interface endpoint
+(`com.amazonaws.<region>.eks-auth`) if configured. The endpoint is optional
+when NAT egress is available and adds cost when deployed in private subnets.
+Each EBS CSI controller receives its own Pod Identity role and association.
 
-```sh
-for stack in management app identity observability; do
-  (
-    cd "infra/stacks/network-$stack"
-    pulumi stack select dev
-    pulumi preview
-    pulumi up
-  )
-done
-```
-
-Review each preview for the EKS Auth interface endpoint and its security group.
-It adds a billable interface endpoint in each private subnet/AZ. The management
-node role already includes `AmazonEKSWorkerNodePolicy`, which supplies the
-agent's EKS Auth permission.
-
-First install Cilium and verify every node is ready using the
-[Cilium runbook](cilium-multicluster.md). Then enable Pod Identity in each EKS
-stack. Run one stack at a time and review every preview:
+Run one cluster stack at a time. These settings enable Metrics Server, the EKS
+Pod Identity Agent, and EBS CSI. Leave kube-proxy unchanged during these
+updates; remove it separately only after Cilium is healthy.
 
 ```sh
-for stack in management app identity observability; do
-  (
-    cd "infra/stacks/cluster-$stack"
-    pulumi stack select dev
-    pulumi config set kloudlab-cluster:enablePodIdentityAgent true
-    if [ "$stack" = management ]; then
-      pulumi config set kloudlab-cluster:manageKubeProxy false
-    fi
-    if [ "$stack" = observability ]; then
-      pulumi config set kloudlab-cluster:enableEBSCSIDriver true
-    fi
-    pulumi preview
-    pulumi up
-  )
-done
+cd infra/stacks/cluster-management
+pulumi stack select dev
+pulumi config set kloudlab-cluster:enableMetricsServer true
+pulumi config set kloudlab-cluster:enablePodIdentityAgent true
+pulumi config set kloudlab-cluster:enableEBSCSIDriver true
+pulumi preview
+pulumi up
 ```
 
-The app, identity, and observability clusters must already exist before their
-commands run. In each preview, check that Pod Identity Agent is added; check
-that EBS CSI and its dedicated controller role are added only for observability;
-and check that management kube-proxy is removed only after Cilium is healthy.
-If Cilium is not yet healthy in management, omit the `manageKubeProxy` change
-until it is.
+Repeat the same commands from `infra/stacks/cluster-app`,
+`infra/stacks/cluster-identity`, and `infra/stacks/cluster-observability`, one
+stack at a time. In each preview, expect Metrics Server, Pod Identity Agent,
+EBS CSI, and that cluster's EBS CSI role/association. Do not accept an
+unrelated kube-proxy change in these previews.
 
 After the observability add-on is `ACTIVE`, sync the Argo application for the
 `gp3` StorageClass, then Prometheus and Loki. The StorageClass uses the EBS CSI
@@ -138,13 +116,14 @@ provisioner, encryption, `WaitForFirstConsumer`, volume expansion, and a
 AWS Load Balancer Controller) still needs its own narrowly scoped IAM role and
 Pod Identity association; installing the agent alone grants no AWS permissions.
 
-Verify the agents and storage driver:
+Verify the add-ons in each cluster:
 
 ```sh
-aws eks list-addons --cluster-name kloudlab-observability --region "$AWS_REGION" --output table
-kubectl --context kloudlab-management -n kube-system get ds eks-pod-identity-agent
-kubectl --context kloudlab-observability -n kube-system get ds eks-pod-identity-agent
-kubectl --context kloudlab-observability -n kube-system get pods | rg 'ebs-csi'
+aws eks list-addons --cluster-name kloudlab-management --region "$AWS_REGION" --output table
+kubectl --context kloudlab-management -n kube-system get pods | rg 'metrics-server|eks-pod-identity-agent|ebs-csi'
+kubectl --context kloudlab-app -n kube-system get pods | rg 'metrics-server|eks-pod-identity-agent|ebs-csi'
+kubectl --context kloudlab-identity -n kube-system get pods | rg 'metrics-server|eks-pod-identity-agent|ebs-csi'
+kubectl --context kloudlab-observability -n kube-system get pods | rg 'metrics-server|eks-pod-identity-agent|ebs-csi'
 kubectl --context kloudlab-observability get storageclass gp3
 ```
 

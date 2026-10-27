@@ -28,6 +28,7 @@ type ClusterArgs struct {
 	DiskSizeGiB            int
 	ManageKubeProxy        bool
 	HoldNodesForCilium     bool
+	EnableMetricsServer    bool
 	EnablePodIdentityAgent bool
 	EnableEBSCSIDriver     bool
 	ProtectCluster         bool
