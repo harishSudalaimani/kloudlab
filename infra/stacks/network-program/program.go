@@ -27,19 +27,19 @@ func Run(ctx *pulumi.Context, workload string) error {
 
 	cidrBlock := stackConfig.Require("cidrBlock")
 	if !stackConfig.GetBool("cidrInventoryReviewed") {
-		return fmt.Errorf("set cidrInventoryReviewed=true only after checking all connected VPC, VPN, and on-premises CIDRs")
+		return fmt.Errorf("set cidrInventoryReviewed=true only after checking existing VPC, VPN, and on-premises CIDRs to avoid future overlap")
 	}
 	var availabilityZones []string
 	stackConfig.RequireObject("availabilityZones", &availabilityZones)
-	var peerCIDRs []string
-	if err := stackConfig.GetObject("peerCIDRs", &peerCIDRs); err != nil {
+	var reservedCIDRs []string
+	if err := stackConfig.GetObject("reservedCIDRs", &reservedCIDRs); err != nil {
 		return err
 	}
 	var connectedCIDRs []string
 	if err := stackConfig.GetObject("connectedCIDRs", &connectedCIDRs); err != nil {
 		return err
 	}
-	otherCIDRs := append(peerCIDRs, connectedCIDRs...)
+	otherCIDRs := append(reservedCIDRs, connectedCIDRs...)
 	allCIDRs := append([]string{cidrBlock}, otherCIDRs...)
 	if err := config.ValidateNonOverlappingCIDRs(allCIDRs); err != nil {
 		return err

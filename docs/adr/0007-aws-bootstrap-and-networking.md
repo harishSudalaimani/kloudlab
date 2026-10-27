@@ -13,13 +13,17 @@ permissions policy.
 
 Create four VPCs in `ap-south-1` with separate app, identity, observability,
 and management stacks. Proposed CIDRs are `10.10.0.0/16`, `10.20.0.0/16`,
-`10.30.0.0/16`, and `10.40.0.0/16`, respectively. Each VPC has public
-load-balancer subnets, private workload subnets,
-explicit public and per-AZ private route tables, NAT egress, and an S3 gateway
-endpoint. Development starts with a single NAT gateway per VPC; production
-configuration requires one per AZ. A separate stack owns the six pairwise VPC
-peerings and private routes. Security groups are built from separately managed
-explicit rules as workload requirements become known.
+`10.30.0.0/16`, and `10.40.0.0/16`, respectively. Start with two AZs and
+two public load-balancer subnets plus two private worker subnets per VPC.
+Create explicit public and per-AZ private route tables, an Internet Gateway,
+development NAT egress, and an S3 gateway endpoint. Production configuration
+requires one NAT per AZ. A separate Pulumi stack creates six direct VPC
+peerings and private routes across the four VPCs, including cross-peering DNS
+resolution. Do not provision Transit Gateway or Network Firewall initially.
+Service endpoints, TLS, and narrow security-group rules are configured with
+their consumers.
+Cloudflare owns DNS; Route 53 is excluded. Consider CloudFront later when the
+frontend delivery path is ready.
 
 ## Rationale
 
@@ -29,14 +33,14 @@ explicit rules as workload requirements become known.
 - An exact OIDC subject removes static AWS credentials from GitHub and avoids
   trust for pull-request refs. An explicit policy input keeps AWS permissions
   visible for review.
-- Separate network stacks let each VPC change independently. A connectivity
-  stack avoids cross-stack resource ownership and makes peering routes visible.
-- Per-AZ private route tables support AZ-local NAT in production and give later
-  peering routes a clear destination table.
+- Separate network stacks let each VPC change independently. Per-AZ private
+  route tables support AZ-local NAT in production and direct peering routes to
+  the other three VPCs.
 - One shared NAT gateway in development is a cost choice, not a production
   availability setting.
-- VPC peering is non-transitive and may be replaced by Transit Gateway or
-  PrivateLink if connectivity grows.
+- Peering establishes direct private routes only. API-to-OpenFGA, remote
+  telemetry export, and Argo CD cluster API access still require reachable
+  endpoints and explicit security rules.
 
 ## Consequences and unresolved checks
 
@@ -44,18 +48,19 @@ explicit rules as workload requirements become known.
   migrated after its bucket exists. Pulumi DIY backends rely on file-based
   locking and manual access/recovery procedures.
 - AWS account ID, AWS access method, state bucket name, GitHub repository and
-  branch, exact IAM permissions, OIDC provider existence, and connected CIDRs
-  are required before deployment.
+  branch, exact IAM permissions, OIDC provider existence, available AZs, and
+  existing CIDRs are required before deployment.
 - Proposed CIDRs `10.10.0.0/16`, `10.20.0.0/16`, `10.30.0.0/16`, and
-  `10.40.0.0/16` have not been checked against account networks, VPNs, or
-  on-premises routes.
+  `10.40.0.0/16` have not been checked against existing VPCs, VPNs, or
+  on-premises ranges. Avoiding overlap now preserves future private routing.
 - The `/20` subnets have ample initial address space, but EKS node/pod sizing
   must be checked against VPC CNI allocation before cluster creation.
-- Peering establishes routes only. Security groups, private DNS, service
-  authentication, app-to-identity traffic, telemetry forwarding, and
-  management-to-cluster API access still need explicit designs in later phases.
-- `kloudlab.in` nameservers and Route 53 ownership are unknown; DNS changes are
-  excluded until verified.
+- The peering stack creates cross-VPC routes in this phase. Service security
+  groups, internal endpoints, DNS names, TLS, and authentication still need
+  explicit configuration in later phases.
+- The owner uses Cloudflare for DNS and GoDaddy as registrar. Verify registrar
+  nameserver delegation before making DNS changes; this networking phase makes
+  no DNS changes.
 
 ## References
 

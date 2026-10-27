@@ -28,8 +28,8 @@ func Run(ctx *pulumi.Context) error {
 	}
 
 	privateRouteTableCount := stackConfig.GetInt("privateRouteTableCount")
-	if privateRouteTableCount < 3 {
-		return fmt.Errorf("privateRouteTableCount must be at least three")
+	if privateRouteTableCount < 2 {
+		return fmt.Errorf("privateRouteTableCount must be at least two")
 	}
 	networkNames := []string{"app", "identity", "observability", "management"}
 	networks := make([]network.PeerNetwork, 0, len(networkNames))

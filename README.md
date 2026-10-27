@@ -6,7 +6,7 @@ KloudLab is an architecture design platform in its infrastructure foundation pha
 
 See the [canonical target repository structure](docs/architecture/repository-structure.md). It records the intended app, Pulumi, GitOps, workflow, and documentation boundaries, with migration rules for areas that are not implemented yet.
 
-The app, identity, observability, and management network stacks are configured with proposed CIDRs. Review connected networks and account settings before preview. VPC peering creates routes only; service security rules and workload traffic will be designed alongside EKS and its consumers.
+The app, identity, observability, and management network stacks each create one VPC across two Availability Zones, with public load-balancer subnets and private worker subnets. A separate Pulumi connectivity stack creates six direct VPC peerings and private route entries so the clusters can reach private services and EKS endpoints. Review existing network CIDRs and AWS account settings before preview. Transit Gateway and Network Firewall are not part of the initial rollout. Cloudflare remains the DNS provider; consider CloudFront when the frontend delivery path is ready. Peering provides routes only; service endpoints, DNS, TLS, and security rules must still be configured for OpenFGA, OTLP, and EKS API traffic.
 
 ## Architecture decisions and plan
 
@@ -41,7 +41,7 @@ The Pulumi Go module is in `infra/`; the AWS provider is pinned in `infra/go.mod
 
 Use Go 1.26 or newer and the Pulumi CLI. CI runs formatting, linting, and Go tests. No local Go toolchain is available in the current environment, so those checks have not been run for the Phase 2 code. See the [Phase 2 bootstrap and network runbook](docs/operations/phase-2-bootstrap.md) before setting up AWS state or credentials.
 
-The [network preview workflow](.github/workflows/network-preview.yml) runs only when manually dispatched from `main` and assumes a branch-restricted GitHub OIDC role. It previews the four network stacks and connectivity stack; it has no `up` command. Configure the AWS role and Pulumi S3 backend variables only after reviewing the account policy. Do not run `pulumi up` until a stack preview is reviewed and deployment is explicitly approved.
+The [network preview workflow](.github/workflows/network-preview.yml) runs only when manually dispatched from `main` and assumes a branch-restricted GitHub OIDC role. It previews the four VPC stacks first. Set `include_connectivity` only after those VPC stacks have been deployed and their outputs exist. The workflow has no `up` command. Configure the AWS role and Pulumi S3 backend variables only after reviewing the account policy. Review each preview before running `pulumi up`.
 
 ## Technology and licensing notes
 

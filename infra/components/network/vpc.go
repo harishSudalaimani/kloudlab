@@ -97,8 +97,8 @@ func validateArgs(name string, args *Args) error {
 	if err := config.ValidateNonOverlappingCIDRs(allCIDRs); err != nil {
 		return err
 	}
-	if len(args.AvailabilityZones) < 3 {
-		return fmt.Errorf("at least three Availability Zones are required, got %d", len(args.AvailabilityZones))
+	if len(args.AvailabilityZones) < 2 {
+		return fmt.Errorf("at least two Availability Zones are required, got %d", len(args.AvailabilityZones))
 	}
 	seenZones := make(map[string]struct{}, len(args.AvailabilityZones))
 	for _, zone := range args.AvailabilityZones {

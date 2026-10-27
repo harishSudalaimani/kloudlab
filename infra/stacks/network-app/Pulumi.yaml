@@ -1,7 +1,7 @@
 name: kloudlab-network-app
 runtime: go
 main: .
-description: App VPC for KloudLab in ap-south-1
+description: App VPC for KloudLab across two Availability Zones in ap-south-1
 config:
   aws:region:
     value: ap-south-1
@@ -11,7 +11,7 @@ config:
     value: 10.10.0.0/16
   kloudlab-network:cidrInventoryReviewed:
     value: false
-  kloudlab-network:peerCIDRs:
+  kloudlab-network:reservedCIDRs:
     value:
       - 10.20.0.0/16
       - 10.30.0.0/16
@@ -22,7 +22,6 @@ config:
     value:
       - ap-south-1a
       - ap-south-1b
-      - ap-south-1c
   kloudlab-network:subnetPrefixLength:
     value: 20
   kloudlab-network:natGatewayMode:

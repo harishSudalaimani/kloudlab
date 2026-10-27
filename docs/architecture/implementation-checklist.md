@@ -22,8 +22,10 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 - [x] Implement exact-branch GitHub OIDC trust and a required reviewed deployment permissions policy. Configure account/repo/branch/policy and provision after approval.
 - [ ] Check proposed CIDRs against all connected VPC, VPN, and on-premises ranges.
 - [x] Implement reusable VPC, subnet, route, endpoint, and explicit security-group rule components.
-- [x] Add separate app, identity, and observability network stacks, connectivity stack, and explicit stack outputs.
-- [x] Add the management VPC stack and include it in the four-VPC, six-peering connectivity mesh.
+- [x] Add separate app, identity, observability, and management VPC stacks with explicit stack outputs; each starts with two AZs.
+- [x] Implement six direct VPC peerings, DNS resolution, and private routes in a separate Pulumi stack; deployment and service-level security remain pending.
+- [ ] Configure internal endpoints and narrow security rules for API-to-OpenFGA and remote telemetry.
+- [ ] Configure management-cluster access to each EKS private API endpoint before cluster registration.
 - [ ] Establish DNS ownership and validate domain nameserver configuration before any DNS changes.
 - [ ] Review and preview every stack after account, role, CIDR, AZ, and backend config are available; request deployment approval only after review.
 

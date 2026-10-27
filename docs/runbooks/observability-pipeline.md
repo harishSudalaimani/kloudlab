@@ -53,6 +53,10 @@ navigation configured. Grafana has no public ingress.
 
 Telemetry application releases pin the OpenTelemetry Helm chart and Contrib
 image. The node and cluster collectors send OTLP over TLS with a gateway token.
+The connectivity Pulumi stack adds direct routes from app, identity, and
+management VPCs to observability. Remote collectors can use the central
+gateway after that stack is deployed and the gateway endpoint, DNS, TLS, and
+security-group rules are configured.
 The API and OpenFGA send telemetry only to the cluster-local Collector Service.
 
 ## Required infrastructure and secret prerequisites
@@ -61,16 +65,17 @@ Argo CD creates the child Applications, but sync must wait for these resources:
 
 1. Implement EKS clusters and the required API-server endpoint reachability.
    The EKS Pulumi component is currently only a contract.
-2. Provision an internal NLB path and private DNS for the OTel gateway.
-   The Helm values restrict the NLB to the four proposed VPC CIDRs; confirm
-   those ranges remain accurate before installation. The AWS Load Balancer
-   Controller must be installed in the observability cluster.
+2. Deploy the network-connectivity stack to add private routes from app,
+   identity, and management VPCs to observability. Provision an internal NLB
+   path and private DNS for the OTel gateway, then allow only required OTLP
+   ports from the peer VPCs. The AWS Load Balancer Controller must be installed
+   in the observability cluster.
 3. Sync kloudlab-otel-gateway-server-tls with tls.crt and tls.key, and
    kloudlab-otel-gateway-server with token in the observability namespace.
    Sync kloudlab-otel-gateway-client with endpoint and token in each
-   collector namespace. The endpoint must resolve privately and match the TLS
-   certificate. Use Infisical or another approved secret delivery mechanism;
-   never commit the values.
+   collector namespace. For remote clusters, the endpoint must resolve
+   privately and match the TLS certificate. Use Infisical or another approved
+   secret delivery mechanism; never commit the values.
 4. Create encrypted S3 buckets named kloudlab-observability-loki and
    kloudlab-observability-tempo, lifecycle/retention policies, and EKS
    workload identities scoped to those buckets. Replace the example bucket
@@ -110,7 +115,8 @@ imply AWS resources or live telemetry already exist.
 
 ## Rollout order
 
-1. Finish EKS, S3/EBS, internal networking, DNS, and certificates in Pulumi;
+1. Finish EKS, S3/EBS, the VPC peering routes, internal gateway endpoint, DNS,
+   and certificates in Pulumi;
    verify every dependency and permission.
 2. Bootstrap Argo CD and register the four workload clusters with restricted
    credentials.

@@ -15,24 +15,24 @@ type PeerNetwork struct {
 	PrivateRouteTableIDs []pulumi.StringInput
 }
 
-// ConnectivityArgs defines the four VPCs joined by the initial non-transitive
-// peering mesh.
+// ConnectivityArgs defines the four VPCs joined by a direct, non-transitive
+// peering mesh for private service and cluster-management traffic.
 type ConnectivityArgs struct {
 	Networks           []PeerNetwork
 	ProtectConnections bool
 	Tags               map[string]string
 }
 
-// Connectivity represents the direct peering mesh between the four VPCs.
+// Connectivity represents direct peering between the four VPCs.
 type Connectivity struct {
 	pulumi.ResourceState
 
-	appIdentityPeeringID              pulumi.IDOutput
-	appObservabilityPeeringID         pulumi.IDOutput
-	appManagementPeeringID            pulumi.IDOutput
-	identityObservabilityPeeringID    pulumi.IDOutput
-	identityManagementPeeringID       pulumi.IDOutput
-	observabilityManagementPeeringID  pulumi.IDOutput
+	appIdentityPeeringID             pulumi.IDOutput
+	appObservabilityPeeringID        pulumi.IDOutput
+	appManagementPeeringID           pulumi.IDOutput
+	identityObservabilityPeeringID   pulumi.IDOutput
+	identityManagementPeeringID      pulumi.IDOutput
+	observabilityManagementPeeringID pulumi.IDOutput
 }
 
 // AppIdentityPeeringID returns the application/identity peering ID.
@@ -67,7 +67,9 @@ func (c *Connectivity) ObservabilityManagementPeeringID() pulumi.IDOutput {
 
 // NewConnectivity creates pairwise peering connections and routes in every
 // private subnet route table. It expects four VPCs in the same AWS account
-// and region; VPC peering does not provide transitive routing.
+// and region; VPC peering does not provide transitive routing. Routes provide
+// network paths only; endpoint exposure and security rules are managed by the
+// consuming services.
 func NewConnectivity(ctx *pulumi.Context, name string, args *ConnectivityArgs, opts ...pulumi.ResourceOption) (*Connectivity, error) {
 	networks, err := validateConnectivityArgs(args)
 	if err != nil {
@@ -113,8 +115,8 @@ func NewConnectivity(ctx *pulumi.Context, name string, args *ConnectivityArgs, o
 		"appIdentityPeeringId":             component.appIdentityPeeringID,
 		"appObservabilityPeeringId":        component.appObservabilityPeeringID,
 		"appManagementPeeringId":           component.appManagementPeeringID,
-		"identityObservabilityPeeringId":  component.identityObservabilityPeeringID,
-		"identityManagementPeeringId":     component.identityManagementPeeringID,
+		"identityObservabilityPeeringId":   component.identityObservabilityPeeringID,
+		"identityManagementPeeringId":      component.identityManagementPeeringID,
 		"observabilityManagementPeeringId": component.observabilityManagementPeeringID,
 	}); err != nil {
 		return nil, err
@@ -140,8 +142,8 @@ func validateConnectivityArgs(args *ConnectivityArgs) (map[string]PeerNetwork, e
 		if network.VPCID == nil || network.CIDRBlock == nil {
 			return nil, fmt.Errorf("VPC %q must export its ID and CIDR block", network.Name)
 		}
-		if len(network.PrivateRouteTableIDs) < 3 {
-			return nil, fmt.Errorf("VPC %q must provide at least three private route tables", network.Name)
+		if len(network.PrivateRouteTableIDs) < 2 {
+			return nil, fmt.Errorf("VPC %q must provide at least two private route tables", network.Name)
 		}
 		networks[network.Name] = network
 	}
@@ -159,10 +161,16 @@ func createPeering(
 ) (*ec2.VpcPeeringConnection, error) {
 	peeringName := name + "-" + pair
 	peering, err := ec2.NewVpcPeeringConnection(ctx, peeringName, &ec2.VpcPeeringConnectionArgs{
-		VpcId:     requester.VPCID,
-		PeerVpcId: accepter.VPCID,
+		VpcId:      requester.VPCID,
+		PeerVpcId:  accepter.VPCID,
 		AutoAccept: pulumi.Bool(true),
-		Tags:      makeTags(args.Tags, peeringName),
+		Requester: &ec2.VpcPeeringConnectionRequesterArgs{
+			AllowRemoteVpcDnsResolution: pulumi.Bool(true),
+		},
+		Accepter: &ec2.VpcPeeringConnectionAccepterTypeArgs{
+			AllowRemoteVpcDnsResolution: pulumi.Bool(true),
+		},
+		Tags: makeTags(args.Tags, peeringName),
 	}, pulumi.Parent(parent), pulumi.Protect(args.ProtectConnections))
 	if err != nil {
 		return nil, err
@@ -189,8 +197,8 @@ func createPeeringRoutes(
 	for index, routeTableID := range local.PrivateRouteTableIDs {
 		routeName := fmt.Sprintf("%s-%s-%s-to-%s-route-%d", name, pair, local.Name, remote.Name, index+1)
 		_, err := ec2.NewRoute(ctx, routeName, &ec2.RouteArgs{
-			RouteTableId:            routeTableID,
-			DestinationCidrBlock:    remote.CIDRBlock,
+			RouteTableId:           routeTableID,
+			DestinationCidrBlock:   remote.CIDRBlock,
 			VpcPeeringConnectionId: peering.ID(),
 		}, pulumi.Parent(parent), pulumi.Protect(protect))
 		if err != nil {

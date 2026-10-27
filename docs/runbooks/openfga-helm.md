@@ -30,6 +30,6 @@ The model file is the source of truth. Treat model changes as versioned authoriz
 
 ## Connectivity and production gates
 
-The API and OpenFGA are in separate EKS clusters and VPCs. A `ClusterIP` is not routable across clusters, so the API's `OPENFGA_API_URL` should be `https://fga.internal.kloudlab.in` once private DNS, VPC peering or an approved PrivateLink design, TLS, and the identity-cluster private endpoint are implemented. Do not replace this with a public endpoint. The Helm baseline intentionally has no public ingress or `LoadBalancer` service.
+The API and OpenFGA are in separate EKS clusters. The connectivity Pulumi stack creates an app-to-identity VPC peering route, but a `ClusterIP` is still not routable across clusters. Before deploying the integration, expose OpenFGA through an internal endpoint in the identity VPC and configure private DNS, TLS, and narrow security-group rules. The proposed API URL is `https://fga.internal.kloudlab.in`. Do not replace this with a public endpoint. The Helm baseline intentionally has no public ingress or `LoadBalancer` service.
 
 This baseline is not production-ready until the private API-to-OpenFGA path, RDS sizing and Multi-AZ configuration, verified database TLS, backups and restore, secrets delivery, resource sizing, and monitoring have been configured and reviewed.
