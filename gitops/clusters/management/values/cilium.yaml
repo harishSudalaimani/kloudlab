@@ -7,7 +7,9 @@ cilium:
     exclusive: false
 
   kubeProxyReplacement: true
-  k8sServiceHost: auto
+  # EKS does not create kube-public/cluster-info. Use the control-plane
+  # endpoint directly so Cilium can reach the API after kube-proxy is removed.
+  k8sServiceHost: 8FE04912ADCCFE2C713475C37EAB88DA.gr7.ap-south-1.eks.amazonaws.com
   k8sServicePort: "443"
 
   routingMode: native

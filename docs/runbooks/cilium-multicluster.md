@@ -10,18 +10,19 @@ For app, identity, and observability, these settings are prerequisites for creat
 2. Explicitly install the Amazon VPC CNI and CoreDNS as EKS managed add-ons, and do not install the EKS `kube-proxy` add-on.
 3. Taint each managed node group with `node.cilium.io/agent-not-ready=true:NoExecute` so ordinary pods wait for Cilium.
 4. Register all three workload clusters in management Argo CD using their restricted cluster credentials.
-5. Confirm `kube-public/cluster-info` contains each Kubernetes API server address. The Cilium Helm values use `k8sServiceHost: auto`; if a ConfigMap is absent or lacks the endpoint, set that cluster's `k8sServiceHost` to its EKS API endpoint from the Pulumi output.
+5. Set each Cilium Helm values file's `k8sServiceHost` to that cluster's EKS API endpoint from its Pulumi output, without the `https://` prefix, and set `k8sServicePort` to `443`. EKS clusters might not have `kube-public/cluster-info`; do not depend on `k8sServiceHost: auto` for these clusters.
 
 The management cluster already exists with kube-proxy so it can bootstrap Argo CD. Keep kube-proxy enabled there until Argo CD is healthy and the management Cilium Application has synchronized and Cilium is ready on every node. The management Cilium Application enables kube-proxy replacement; after verifying it, remove the EKS-managed kube-proxy add-on from the management Pulumi stack:
 
 ```sh
 cd infra/stacks/cluster-management
 pulumi config set kloudlab-cluster:manageKubeProxy false
+pulumi config get kloudlab-cluster:manageKubeProxy
 pulumi preview
 pulumi up
 ```
 
-Review that the preview removes only the `kube-proxy` EKS add-on before applying it. Do not apply this Pulumi change before Cilium is healthy.
+Confirm the config command prints `false`. Review that the preview removes only the `kube-proxy` EKS add-on before applying it. Do not apply this Pulumi change before Cilium is healthy.
 
 AWS identifies the Amazon VPC CNI as the supported CNI for EC2-backed EKS nodes. Cilium documents chaining with AWS VPC CNI. Validate the exact EKS/Kubernetes/kernel/Cilium versions and support model before production rollout.
 
