@@ -3,6 +3,9 @@ package clusterprogram
 import (
 	"fmt"
 
+	"github.com/pulumi/pulumi-aws/sdk/v7/go/aws"
+	awsEks "github.com/pulumi/pulumi-aws/sdk/v7/go/aws/eks"
+	"github.com/pulumi/pulumi-aws/sdk/v7/go/aws/iam"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	pulumiconfig "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 
@@ -115,11 +118,58 @@ func Run(ctx *pulumi.Context, workload string) error {
 
 	ctx.Export("clusterName", cluster.ClusterName())
 	ctx.Export("clusterEndpoint", cluster.Endpoint())
+	ctx.Export("clusterCertificateAuthorityData", cluster.CertificateAuthorityData())
 	ctx.Export("oidcIssuerUrl", cluster.OIDCIssuerURL())
 	ctx.Export("clusterSecurityGroupId", cluster.ClusterSecurityGroupID())
 	ctx.Export("nodeRoleArn", cluster.NodeRoleARN())
 	ctx.Export("nodeGroupName", cluster.NodeGroupName())
 	ctx.Export("vpcId", networkOutputs.VPCID())
 	ctx.Export("privateSubnetIds", networkOutputs.PrivateSubnetIDs())
+	if workload != "management" {
+		role, err := createArgoDeployerRole(ctx, workload, clusterName, pulumiTags, cluster)
+		if err != nil {
+			return err
+		}
+		ctx.Export("argocdDeployerRoleArn", role.Arn)
+	}
 	return nil
+}
+
+func createArgoDeployerRole(ctx *pulumi.Context, workload, clusterName string, tags pulumi.StringMap, cluster pulumi.Resource) (*iam.Role, error) {
+	caller, err := aws.GetCallerIdentity(ctx, &aws.GetCallerIdentityArgs{})
+	if err != nil {
+		return nil, fmt.Errorf("get AWS account for Argo CD access role: %w", err)
+	}
+	controllerRoleArn := fmt.Sprintf("arn:aws:iam::%s:role/kloudlab-management-argocd-controller", caller.AccountId)
+	trustPolicy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":%q},"Action":"sts:AssumeRole"}]}`, controllerRoleArn)
+	roleName := fmt.Sprintf("kloudlab-%s-argocd-deployer", workload)
+	role, err := iam.NewRole(ctx, roleName, &iam.RoleArgs{
+		Name:             pulumi.String(roleName),
+		Description:      pulumi.String(fmt.Sprintf("Argo CD deployment role scoped to the kloudlab-%s EKS cluster", workload)),
+		AssumeRolePolicy: pulumi.String(trustPolicy),
+		Tags:             tags,
+	})
+	if err != nil {
+		return nil, err
+	}
+	accessEntry, err := awsEks.NewAccessEntry(ctx, roleName+"-access-entry", &awsEks.AccessEntryArgs{
+		ClusterName:  pulumi.String(clusterName),
+		PrincipalArn: role.Arn,
+		Type:         pulumi.String("STANDARD"),
+	}, pulumi.DependsOn([]pulumi.Resource{cluster, role}))
+	if err != nil {
+		return nil, err
+	}
+	_, err = awsEks.NewAccessPolicyAssociation(ctx, roleName+"-cluster-access", &awsEks.AccessPolicyAssociationArgs{
+		ClusterName:  pulumi.String(clusterName),
+		PrincipalArn: role.Arn,
+		PolicyArn:    pulumi.String("arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"),
+		AccessScope: &awsEks.AccessPolicyAssociationAccessScopeArgs{
+			Type: pulumi.String("cluster"),
+		},
+	}, pulumi.DependsOn([]pulumi.Resource{accessEntry}))
+	if err != nil {
+		return nil, err
+	}
+	return role, nil
 }

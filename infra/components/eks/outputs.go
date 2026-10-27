@@ -10,6 +10,10 @@ func (c *ClusterComponent) Endpoint() pulumi.StringOutput {
 	return c.endpoint
 }
 
+func (c *ClusterComponent) CertificateAuthorityData() pulumi.StringOutput {
+	return c.certificateAuthorityData
+}
+
 func (c *ClusterComponent) OIDCIssuerURL() pulumi.StringOutput {
 	return c.oidcIssuerURL
 }

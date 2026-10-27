@@ -1,8 +1,9 @@
 # Identity cluster GitOps onboarding
 
-This runbook deploys the identity cluster one step at a time through the
-management-cluster Argo CD. Pulumi owns EKS/AWS infrastructure; Argo CD owns
-Kubernetes charts and their lifecycle. The PostgreSQL database stack is still
+This runbook bootstraps Argo CD access to the workload clusters with Pulumi,
+then deploys their Kubernetes workloads through Argo CD. Pulumi owns EKS/AWS
+infrastructure and cluster registration credentials; Argo CD owns Helm releases
+and Kubernetes workload lifecycle. The PostgreSQL database stack is still
 pending and must be provisioned before the stateful services are synced.
 
 ## Bootstrap the restricted projects through Argo CD
@@ -27,26 +28,22 @@ that syncs the identity AppProject from Git:
 | Sync policy | Automated, self-heal on, prune off |
 
 The seed Application is the one-time trust root created through the Argo CD UI.
-Its two Git-managed resources are [bootstrap-project.yaml](../../gitops/management/project-bootstrap/bootstrap-project.yaml)
-and [identity-project.yaml](../../gitops/management/project-bootstrap/identity-project.yaml).
+It manages the bootstrap and workload AppProjects and the workload-root
+Applications under `gitops/management/project-bootstrap/`.
 
 Keep the local port-forward running. Confirm `kloudlab-project-bootstrap` and
-its child `kloudlab-identity-projects` are `Synced` and `Healthy`. In **Settings
-→ Projects**, confirm `kloudlab-bootstrap` and `kloudlab-identity` exist.
+its child project Applications are `Synced` and `Healthy`. In **Settings →
+Projects**, confirm `kloudlab-bootstrap`, `kloudlab-identity`, `kloudlab-app`,
+and `kloudlab-observability` exist.
 `kloudlab-bootstrap` can deploy only Argo CD `Application` and `AppProject`
 objects into the management cluster's `argocd` namespace. `kloudlab-identity`
 can deploy only to the identity cluster's approved namespaces.
 
-## Register the identity cluster
+## Prepare the Cilium endpoint
 
-The expected Argo CD destination name is `kloudlab-identity`. A local kubeconfig
-context does not register the cluster with Argo CD. Register it from Argo CD
-**Settings → Clusters** using the restricted EKS deploy role and access entry.
-Do not use the default `argocd cluster add` manager role for this setup.
-
-The management VPC has private connectivity to the workload VPCs. Use the
-identity cluster's private EKS API endpoint for Argo CD. Retrieve the endpoint
-hostname when preparing the Cilium values:
+The management VPC has private connectivity to the workload VPCs. Argo CD
+reaches the identity API through its private endpoint. Retrieve the endpoint
+hostname for Cilium's bootstrap configuration:
 
 ```sh
 AWS_PROFILE=kloudlab aws eks describe-cluster \
@@ -71,10 +68,44 @@ identity and telemetry namespaces.
 
 The existing `kloudlab-project-bootstrap` seed Application also creates
 `kloudlab-root` from
-`gitops/management/project-bootstrap/identity-root-application.yaml`. This root
-is deliberately limited to the identity root; app and observability roots are
-added later when those clusters are onboarded. Confirm `kloudlab-root` becomes
-Healthy and Synced in Argo CD.
+`gitops/management/project-bootstrap/identity-root-application.yaml`. That root
+creates the identity, app, and observability workload roots. The bootstrap
+project Applications also create the three cluster-specific AppProjects.
+
+## Pulumi cluster access and Argo registration
+
+The Argo CD UI only lists registered clusters. Pulumi creates the cluster
+credentials as Secrets in the management cluster's `argocd` namespace.
+
+1. In `infra/stacks/argocd-management`, preview and apply with
+   `kloudlab-argocd-management:enableCrossClusterAccess=true`. This creates an
+   EKS Pod Identity role for the Argo application controller. Its IAM policy can
+   assume only the three KloudLab workload deploy roles. The Pod Identity trust
+   is restricted to the `argocd-application-controller` service account in the
+   `argocd` namespace on `kloudlab-management`.
+2. Run `pulumi up` once in each workload stack: `cluster-identity`,
+   `cluster-app`, and `cluster-observability`. Each creates one EKS access role,
+   access entry, and access-policy association for its own cluster. The role
+   trusts only the management Argo role.
+3. After all three workload stacks have exported their role, API endpoint, and
+   CA data, set `kloudlab-argocd-management:registerWorkloadClusters=true` in
+   the Argo CD management stack and run `pulumi up` there again. It creates
+   project-scoped Argo cluster Secrets named `cluster-kloudlab-identity`,
+   `cluster-kloudlab-app`, and `cluster-kloudlab-observability`.
+4. Confirm those names appear in **Settings → Clusters** and show a successful
+   connection. The existing Applications use those exact destination names.
+
+Each workload role currently has the AWS `AmazonEKSClusterAdminPolicy` scoped
+to its own EKS cluster. Cilium requires cluster-scoped API access, so this lets
+Argo manage any resource within that one cluster. Argo's project-scoped cluster
+Secrets and AppProjects restrict which Git project can target each cluster, but
+they do not reduce the controller's Kubernetes API permissions. Review the
+Pulumi preview before applying these grants.
+
+The Argo Helm release is ordered after its Pod Identity association, and the
+values add `AWS_REGION` to the controller. This rolls the controller after the
+association exists so new pods receive the Pod Identity environment and token
+mount.
 
 The root creates `kloudlab-identity-applications`, which reads only
 `application.yaml` files under `gitops/clusters/identity/applications`. The

@@ -40,6 +40,7 @@ type Cluster interface {
 	pulumi.Resource
 	ClusterName() pulumi.StringOutput
 	Endpoint() pulumi.StringOutput
+	CertificateAuthorityData() pulumi.StringOutput
 	OIDCIssuerURL() pulumi.StringOutput
 	ClusterSecurityGroupID() pulumi.StringOutput
 	NodeRoleARN() pulumi.StringOutput
@@ -51,12 +52,13 @@ type Cluster interface {
 type ClusterComponent struct {
 	pulumi.ResourceState
 
-	clusterName            pulumi.StringOutput
-	endpoint               pulumi.StringOutput
-	oidcIssuerURL          pulumi.StringOutput
-	clusterSecurityGroupID pulumi.StringOutput
-	nodeRoleARN            pulumi.StringOutput
-	nodeGroupName          pulumi.StringOutput
+	clusterName              pulumi.StringOutput
+	endpoint                 pulumi.StringOutput
+	certificateAuthorityData pulumi.StringOutput
+	oidcIssuerURL            pulumi.StringOutput
+	clusterSecurityGroupID   pulumi.StringOutput
+	nodeRoleARN              pulumi.StringOutput
+	nodeGroupName            pulumi.StringOutput
 }
 
 // NodeGroup exposes the role used by workloads scheduled onto the group.

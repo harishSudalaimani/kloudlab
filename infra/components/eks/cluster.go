@@ -125,6 +125,7 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 
 	component.clusterName = cluster.Name
 	component.endpoint = cluster.Endpoint
+	component.certificateAuthorityData = cluster.CertificateAuthority.Data().Elem()
 	component.oidcIssuerURL = cluster.Identities.Index(pulumi.Int(0)).Oidcs().Index(pulumi.Int(0)).Issuer().ApplyT(func(issuer *string) (string, error) {
 		if issuer == nil || *issuer == "" {
 			return "", fmt.Errorf("EKS did not return an OIDC issuer URL")
@@ -136,12 +137,13 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 	component.nodeGroupName = nodeGroup.NodeGroupName
 
 	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
-		"clusterName":            component.clusterName,
-		"endpoint":               component.endpoint,
-		"oidcIssuerUrl":          component.oidcIssuerURL,
-		"clusterSecurityGroupId": component.clusterSecurityGroupID,
-		"nodeRoleArn":            component.nodeRoleARN,
-		"nodeGroupName":          component.nodeGroupName,
+		"clusterName":              component.clusterName,
+		"endpoint":                 component.endpoint,
+		"certificateAuthorityData": component.certificateAuthorityData,
+		"oidcIssuerUrl":            component.oidcIssuerURL,
+		"clusterSecurityGroupId":   component.clusterSecurityGroupID,
+		"nodeRoleArn":              component.nodeRoleARN,
+		"nodeGroupName":            component.nodeGroupName,
 	}); err != nil {
 		return nil, err
 	}

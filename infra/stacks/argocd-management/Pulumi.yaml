@@ -10,9 +10,12 @@ config:
   bootstrapManagementRoot:
     default: false
     description: Create the management-only Argo root so Argo CD can deploy management cluster applications.
-  bootstrapRootApplication:
-    default: false
-    description: Create the multi-cluster GitOps root after all workload clusters are registered in Argo CD.
   bootstrapManagementGateway:
     default: false
     description: Create the management Gateway API stack, AWS Load Balancer Controller Pod Identity, and encrypted Cloudflare DNS API token Secret.
+  kloudlab-argocd-management:enableCrossClusterAccess:
+    default: false
+    description: Create the Argo application-controller Pod Identity role and its restricted workload-role assume policy.
+  kloudlab-argocd-management:registerWorkloadClusters:
+    default: false
+    description: Register app, identity, and observability EKS clusters in Argo CD from their Pulumi stack outputs.

@@ -11,7 +11,7 @@ spec:
     path: gitops/management/workload-roots
     directory:
       recurse: false
-      include: identity.yaml
+      include: "*.yaml"
   destination:
     name: in-cluster
     namespace: argocd

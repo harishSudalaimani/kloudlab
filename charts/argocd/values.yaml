@@ -3,6 +3,11 @@ argo-cd:
     networkPolicy:
       # Enable reviewed Cilium policies after the management datapath is ready.
       create: false
+  controller:
+    # The EKS auth plugin uses the management cluster's Pod Identity role.
+    env:
+      - name: AWS_REGION
+        value: ap-south-1
   server:
     service:
       type: ClusterIP
