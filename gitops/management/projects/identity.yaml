@@ -3,6 +3,8 @@ kind: AppProject
 metadata:
   name: kloudlab-identity
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
 spec:
   description: Applications and platform services for the KloudLab identity cluster.
   sourceRepos:

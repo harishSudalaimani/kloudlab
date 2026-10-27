@@ -1,4 +1,8 @@
 loki:
+  serviceAccount:
+    create: true
+    name: kloudlab-loki
+
   deploymentMode: SingleBinary
 
   loki:

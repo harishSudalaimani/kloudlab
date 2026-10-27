@@ -11,6 +11,13 @@ its Applications are added. Individual cluster Application definitions remain
 under `gitops/clusters/<cluster>/applications/` for reviewed, one-at-a-time
 deployment.
 
+For identity onboarding, `gitops/management/bootstrap/identity.yaml` is the
+single seed Application. Apply it once after pushing the manifests to `main`.
+Argo CD then manages the `kloudlab-identity` AppProject and the identity
+Application definitions from Git. Those leaf Applications have manual sync
+policies, so their workloads remain stopped until infrastructure prerequisites
+are ready and each Application is deliberately synced.
+
 ## Onboard a cluster
 
 For the next cluster only:

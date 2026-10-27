@@ -1,4 +1,8 @@
 tempo-distributed:
+  serviceAccount:
+    create: true
+    name: kloudlab-tempo
+
   multitenancyEnabled: false
 
   storage:

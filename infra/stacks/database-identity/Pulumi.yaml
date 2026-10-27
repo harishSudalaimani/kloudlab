@@ -1,0 +1,29 @@
+name: kloudlab-database-identity
+runtime: go
+main: .
+description: Private PostgreSQL RDS infrastructure for KloudLab identity services
+config:
+  aws:region:
+    value: ap-south-1
+  kloudlab-database:environment:
+    value: dev
+  kloudlab-database:networkStack:
+    value: organization/kloudlab-network-identity/dev
+  kloudlab-database:clusterStack:
+    value: organization/kloudlab-cluster-identity/dev
+  kloudlab-database:masterUsername:
+    value: kloudlab_admin
+  kloudlab-database:databaseName:
+    value: kloudlab
+  kloudlab-database:engineVersion:
+    value: "17"
+  kloudlab-database:instanceClass:
+    value: db.t4g.medium
+  kloudlab-database:allocatedStorageGiB:
+    value: 30
+  kloudlab-database:backupRetentionDays:
+    value: 7
+  kloudlab-database:multiAZ:
+    value: false
+  kloudlab-database:deletionProtection:
+    value: true

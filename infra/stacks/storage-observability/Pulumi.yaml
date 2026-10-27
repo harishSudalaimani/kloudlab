@@ -1,0 +1,25 @@
+name: kloudlab-storage-observability
+runtime: go
+main: .
+description: Private S3 telemetry storage and scoped EKS Pod Identity roles
+config:
+  aws:region:
+    value: ap-south-1
+  kloudlab-storage:environment:
+    value: dev
+  kloudlab-storage:clusterStack:
+    value: organization/kloudlab-cluster-observability/dev
+  kloudlab-storage:namespace:
+    value: observability
+  kloudlab-storage:lokiServiceAccount:
+    value: kloudlab-loki
+  kloudlab-storage:tempoServiceAccount:
+    value: kloudlab-tempo
+  kloudlab-storage:logsBucketName:
+    value: kloudlab-observability-loki
+  kloudlab-storage:tracesBucketName:
+    value: kloudlab-observability-tempo
+  kloudlab-storage:logRetentionDays:
+    value: 30
+  kloudlab-storage:traceRetentionDays:
+    value: 7
