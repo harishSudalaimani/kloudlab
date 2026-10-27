@@ -45,8 +45,9 @@ provider already exists in that account, the globally unique state bucket
 name, connected network CIDRs, available AZs in `ap-south-1`, the exact GitHub
 repository and protected branch, and a reviewed least-privilege permissions
 policy. Update stack config where actual account topology differs from the
-sample values. The DNS provider and ownership of `kloudlab.in` are still
-unknown; this phase makes no DNS changes.
+sample values. The owner reports GoDaddy as registrar and Cloudflare as DNS
+provider; verify the nameserver delegation before adding records. This network
+phase makes no DNS changes.
 
 Each network stack defaults `cidrInventoryReviewed` to `false`, which blocks
 the program until the operator confirms the connected-range inventory. Set it

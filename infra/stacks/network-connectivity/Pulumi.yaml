@@ -4,18 +4,18 @@ main: .
 description: Direct VPC peerings and private route entries for KloudLab
 config:
   aws:region:
-    default: ap-south-1
+    value: ap-south-1
   kloudlab-connectivity:environment:
-    default: dev
+    value: dev
   kloudlab-connectivity:appNetworkStack:
-    default: kloudlab-network-app/dev
+    value: kloudlab-network-app/dev
   kloudlab-connectivity:identityNetworkStack:
-    default: kloudlab-network-identity/dev
+    value: kloudlab-network-identity/dev
   kloudlab-connectivity:observabilityNetworkStack:
-    default: kloudlab-network-observability/dev
+    value: kloudlab-network-observability/dev
   kloudlab-connectivity:managementNetworkStack:
-    default: kloudlab-network-management/dev
+    value: kloudlab-network-management/dev
   kloudlab-connectivity:privateRouteTableCount:
-    default: 3
+    value: 3
   kloudlab-connectivity:protectConnections:
-    default: true
+    value: true

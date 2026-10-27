@@ -4,8 +4,6 @@ main: .
 description: Protected S3 and KMS resources for the Pulumi DIY backend
 config:
   aws:region:
-    default: ap-south-1
+    value: ap-south-1
   kloudlab-state:environment:
-    default: dev
-  kloudlab-state:bucketName:
-    description: Globally unique, lowercase S3 bucket name for Pulumi state
+    value: dev

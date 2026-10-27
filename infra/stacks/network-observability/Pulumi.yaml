@@ -4,28 +4,28 @@ main: .
 description: Observability VPC for KloudLab in ap-south-1
 config:
   aws:region:
-    default: ap-south-1
+    value: ap-south-1
   kloudlab-network:environment:
-    default: dev
+    value: dev
   kloudlab-network:cidrBlock:
-    default: 10.30.0.0/16
+    value: 10.30.0.0/16
   kloudlab-network:cidrInventoryReviewed:
-    default: false
+    value: false
   kloudlab-network:peerCIDRs:
-    default:
+    value:
       - 10.10.0.0/16
       - 10.20.0.0/16
       - 10.40.0.0/16
   kloudlab-network:connectedCIDRs:
-    default: []
+    value: []
   kloudlab-network:availabilityZones:
-    default:
+    value:
       - ap-south-1a
       - ap-south-1b
       - ap-south-1c
   kloudlab-network:subnetPrefixLength:
-    default: 20
+    value: 20
   kloudlab-network:natGatewayMode:
-    default: single
+    value: single
   kloudlab-network:protectVpc:
-    default: true
+    value: true
