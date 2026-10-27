@@ -33,16 +33,18 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 ## Phase 3 — EKS and cluster foundations
 
-- [ ] Implement four EKS clusters with private worker nodes and EC2 managed node groups; management hosts Argo CD and remains management-only.
+- [x] Implement four EKS cluster stacks with private worker nodes, IAM roles, managed add-ons, and EC2 managed node groups; stack previews and deployment remain pending. Management is kept management-only.
 - [x] Record app-cluster Cilium kube-proxy replacement and add its Argo Helm release; EKS bootstrap, node tainting, and live validation remain pending.
-- [ ] Start with two `t3.medium` managed nodes per cluster as a sizing hypothesis; validate workload requests, burst credits, pod density, subnet capacity, and cost before fixing production capacity.
+- [x] Set two `t3.medium` managed nodes per cluster as the initial development sizing hypothesis; workload requests, burst credits, pod density, subnet capacity, and cost still need live validation before fixing production capacity.
 - [ ] Configure Karpenter only in `kloudlab-app`; keep stable managed baseline nodes for system services and its controller.
-- [ ] Configure multi-AZ placement, cluster API restrictions, EKS workload identity, and add-ons.
+- [x] Configure private-subnet multi-AZ node placement, restricted public API endpoints, and EKS managed add-ons in the stack code; cluster and workload identity plus live security validation remain pending.
 - [ ] Set resource requests/limits, health probes, disruption budgets, quotas, and pod security controls.
 - [ ] Verify VPC CNI pod IP capacity, routes, and security policies.
 - [ ] Document cluster access and recovery, including an independent procedure to rebuild the management cluster and restore Argo CD from Git.
 
 **Deliverable:** four documented clusters with tested lifecycle and security boundaries.
+
+See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for the ordered manual deployment commands. The four clusters are implemented in code but are not marked deployed until their Pulumi updates complete.
 
 ## Phase 4 — GitOps
 

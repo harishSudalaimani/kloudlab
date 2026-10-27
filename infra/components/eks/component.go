@@ -1,45 +1,59 @@
-// Package eks defines reusable EKS cluster and managed node group contracts.
+// Package eks creates EKS control planes, managed node groups, and their
+// required cluster add-ons.
 package eks
 
 import "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 
-// Network exposes the network outputs needed by an EKS cluster.
+// Network exposes the VPC outputs required by an EKS cluster.
 type Network interface {
 	VPCID() pulumi.StringOutput
 	PrivateSubnetIDs() pulumi.StringArrayOutput
 }
 
-// ClusterArgs describes control plane inputs. Defaults and validation belong
-// in an implementation, not in consumers of this contract.
+// ClusterArgs configures an EKS control plane and its baseline managed node
+// group. Public API access is restricted to the explicitly supplied CIDRs;
+// private API access remains enabled for peered cluster management.
 type ClusterArgs struct {
 	Name                  string
-	KubernetesVersion     pulumi.StringInput
+	KubernetesVersion     string
 	Network               Network
-	PublicEndpointAccess  pulumi.BoolInput
-	PrivateEndpointAccess pulumi.BoolInput
+	PublicEndpointAccess  bool
+	PrivateEndpointAccess bool
+	PublicAccessCIDRs     []string
+	ManagementCIDR        pulumi.StringInput
+	InstanceTypes         []string
+	MinSize               int
+	DesiredSize           int
+	MaxSize               int
+	DiskSizeGiB           int
+	ManageKubeProxy       bool
+	HoldNodesForCilium    bool
+	ProtectCluster        bool
 	Tags                  pulumi.StringMapInput
 }
 
-// Cluster exposes outputs required by node groups and workload identity.
+// Cluster exposes values used by GitOps bootstrap and workload identity.
 type Cluster interface {
 	pulumi.Resource
 	ClusterName() pulumi.StringOutput
 	Endpoint() pulumi.StringOutput
 	OIDCIssuerURL() pulumi.StringOutput
+	ClusterSecurityGroupID() pulumi.StringOutput
+	NodeRoleARN() pulumi.StringOutput
+	NodeGroupName() pulumi.StringOutput
 }
 
-// NodeGroupArgs describes an EC2 managed node group without selecting an
-// instance size or scaling policy on behalf of an environment.
-type NodeGroupArgs struct {
-	Name          string
-	ClusterName   pulumi.StringInput
-	SubnetIDs     pulumi.StringArrayInput
-	InstanceTypes pulumi.StringArrayInput
-	MinSize       pulumi.IntInput
-	DesiredSize   pulumi.IntInput
-	MaxSize       pulumi.IntInput
-	DiskSizeGiB   pulumi.IntInput
-	Tags          pulumi.StringMapInput
+// ClusterComponent owns the control plane, IAM roles, baseline node group,
+// and EKS-managed system add-ons for one cluster.
+type ClusterComponent struct {
+	pulumi.ResourceState
+
+	clusterName            pulumi.StringOutput
+	endpoint               pulumi.StringOutput
+	oidcIssuerURL          pulumi.StringOutput
+	clusterSecurityGroupID pulumi.StringOutput
+	nodeRoleARN            pulumi.StringOutput
+	nodeGroupName          pulumi.StringOutput
 }
 
 // NodeGroup exposes the role used by workloads scheduled onto the group.
