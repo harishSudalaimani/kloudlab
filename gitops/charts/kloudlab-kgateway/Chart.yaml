@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kloudlab-kgateway
+description: KloudLab Gateway API proxy and AWS NLB configuration
+type: application
+version: 0.1.0
+appVersion: "2.4.3"

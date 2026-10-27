@@ -32,6 +32,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 ## Phase 3 — EKS and cluster foundations
 
 - [ ] Implement four EKS clusters with private worker nodes and EC2 managed node groups; management hosts Argo CD and remains management-only.
+- [x] Record app-cluster Cilium kube-proxy replacement and add its Argo Helm release; EKS bootstrap, node tainting, and live validation remain pending.
 - [ ] Start with two `t3.medium` managed nodes per cluster as a sizing hypothesis; validate workload requests, burst credits, pod density, subnet capacity, and cost before fixing production capacity.
 - [ ] Configure Karpenter only in `kloudlab-app`; keep stable managed baseline nodes for system services and its controller.
 - [ ] Configure multi-AZ placement, cluster API restrictions, EKS workload identity, and add-ons.
@@ -55,6 +56,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 ## Phase 5 — Gateway and application foundation
 
+- [x] Add ordered Argo CD applications for Gateway API CRDs, kgateway Helm CRDs/control plane, GatewayParameters, and the app-cluster Envoy Gateway; actual rollout remains pending cluster and AWS prerequisites.
 - [ ] Verify supported kgateway, Gateway API, and AWS load balancer integration versions.
 - [ ] Configure TLS, DNS, timeouts, request limits, security headers, and health checks.
 - [x] Build the React/TypeScript React Flow editor with a component catalog, editable canvas, local validation, undo/redo, and browser-local drafts.

@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kgateway-parameters
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    targetRevision: main
+    path: gitops/charts/kloudlab-kgateway
+    helm:
+      releaseName: kgateway-parameters
+      values: |
+        gateway:
+          enabled: false
+  destination:
+    name: kloudlab-app
+    namespace: kgateway-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

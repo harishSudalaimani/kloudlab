@@ -1,0 +1,19 @@
+# Cilium replaces kube-proxy service routing while AWS VPC CNI continues to
+# allocate pod ENIs/IPs. This is intentionally scoped to kloudlab-app.
+cni:
+  chainingMode: aws-cni
+  exclusive: false
+
+kubeProxyReplacement: true
+
+# Cilium requires a direct API endpoint when kube-proxy is absent. `auto`
+# resolves the endpoint from the kube-public/cluster-info ConfigMap.
+k8sServiceHost: auto
+k8sServicePort: "443"
+
+routingMode: native
+enableIPv4Masquerade: false
+
+# kgateway owns the Gateway API controller role in this cluster.
+gatewayAPI:
+  enabled: false

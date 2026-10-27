@@ -1,0 +1,12 @@
+{{- if .Values.gatewayParameters.enabled }}
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayParameters
+metadata:
+  name: {{ .Values.gatewayParameters.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  kube:
+    service:
+      extraAnnotations:
+        {{- toYaml .Values.gatewayParameters.service.extraAnnotations | nindent 8 }}
+{{- end }}

@@ -15,7 +15,8 @@ These items need evidence or an explicit decision before the related infrastruct
 | Domain and certificates | `kloudlab.in` and proposed subdomains are unverified; ACM validation and TLS termination choice are open. | Gateway implementation |
 | OpenFGA database configuration | Amazon RDS PostgreSQL is selected by the master specification. Instance sizing, Multi-AZ choice, encryption key, backup retention, and credential bootstrap through Infisical remain to be configured. | Identity database stack |
 | EKS/Kubernetes versions | Select supported versions and compatible add-on/Gateway API versions when implementation starts. | Cluster implementation |
-| kgateway integration | Verify kgateway release, Gateway API version, AWS load balancer controller design, and single ownership of each load balancer. | Gateway implementation |
+| App-cluster service networking | Cilium `1.20.4` Helm release is configured for eBPF kube-proxy replacement with AWS VPC CNI chaining. Confirm EKS/Kubernetes/kernel compatibility and support model; app EKS bootstrap must omit kube-proxy and install VPC CNI/CoreDNS explicitly. | App EKS creation |
+| kgateway integration | Argo-managed baseline pins kgateway `v2.4.3` and Gateway API `v1.6.1`; the app EKS Kubernetes version must be confirmed compatible. Select AWS Load Balancer Controller with its IAM setup or EKS Auto Mode, and keep NLB ownership unambiguous. | App-cluster deployment and public endpoint |
 | Argo CD control plane | Hosting is decided: dedicated `kloudlab-management` cluster. Select the release version, bootstrap and independent recovery procedure, and configure least-privilege API access across all four clusters. Ensure the version supports multi-source Helm values (2.6 or newer). | GitOps bootstrap |
 | Auth0 tenant settings | Tenant, issuer, audience, callback URLs, and token profile have not been configured. | Authentication implementation |
 | OpenFGA model | Initial relations and deployment permissions need a versioned model and tenant isolation review. | Authorization implementation |
@@ -40,7 +41,7 @@ These items need evidence or an explicit decision before the related infrastruct
 
 ## Dependency review record
 
-The initial module pins the Pulumi Go SDK at `v3.272.0`, using the Go module path documented by Pulumi. The upstream Pulumi repository license is Apache-2.0. The frontend, gateway, controllers, operators, collectors, and storage integrations are not installed or selected here. Before adoption, record each dependency's upstream source, exact version, license, maintenance status, and compatibility evidence in the relevant ADR or dependency inventory. Generate and commit `infra/go.sum` when Go is available in the development environment.
+The initial module pins the Pulumi Go SDK at `v3.272.0`, using the Go module path documented by Pulumi. The upstream Pulumi repository license is Apache-2.0. Gateway dependencies are selected and pinned in GitOps (`kgateway` 2.4.3, Gateway API 1.6.1, and Cilium 1.20.4), but are not installed in a cluster. Other controllers, operators, collectors, and storage integrations still need upstream source, exact version, license, maintenance, and compatibility evidence recorded in the relevant ADR or dependency inventory. Generate and commit `infra/go.sum` when Go is available in the development environment.
 
 Upstream references used for the foundation:
 

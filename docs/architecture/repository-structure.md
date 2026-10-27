@@ -69,7 +69,12 @@ kloudlab/
 │   │       └── values.yaml
 │   ├── clusters/
 │   │   ├── app/
+│   │   │   ├── root-application.yaml
+│   │   │   ├── values/
+│   │   │   │   ├── cilium.yaml
+│   │   │   │   └── kgateway.yaml
 │   │   │   ├── applications/
+│   │   │   │   ├── cilium/application.yaml
 │   │   │   │   ├── karpenter/
 │   │   │   │   │   ├── application.yaml
 │   │   │   │   │   ├── values.yaml
@@ -77,6 +82,11 @@ kloudlab/
 │   │   │   │   │       ├── ec2-node-class.yaml
 │   │   │   │   │       └── node-pool.yaml
 │   │   │   │   ├── kgateway/
+│   │   │   │   │   ├── gateway-api-crds.yaml
+│   │   │   │   │   ├── kgateway-crds.yaml
+│   │   │   │   │   ├── kgateway-parameters.yaml
+│   │   │   │   │   ├── kgateway-controller.yaml
+│   │   │   │   │   └── kgateway-public-gateway.yaml
 │   │   │   │   ├── cert-manager/
 │   │   │   │   ├── frontend/
 │   │   │   │   └── api/
@@ -98,10 +108,14 @@ kloudlab/
 │   │   └── management/
 │   │       └── applications/argocd/
 │   └── charts/
-│       └── kloudlab-app/
+│       ├── kloudlab-app/
+│       │   ├── Chart.yaml
+│       │   ├── values.yaml
+│       │   ├── values.schema.json
+│       │   └── templates/
+│       └── kloudlab-kgateway/
 │           ├── Chart.yaml
 │           ├── values.yaml
-│           ├── values.schema.json
 │           └── templates/
 │
 ├── .github/
@@ -119,6 +133,8 @@ kloudlab/
 │   ├── operations/
 │   ├── disaster-recovery/
 │   └── runbooks/
+│       ├── cilium-app-cluster.md
+│       └── kgateway-helm-argocd.md
 │
 ├── scripts/
 ├── .gitignore
