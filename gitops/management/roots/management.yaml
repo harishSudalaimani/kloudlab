@@ -4,7 +4,7 @@ metadata:
   name: kloudlab-management-applications
   namespace: argocd
 spec:
-  project: kloudlab-bootstrap
+  project: kloudlab-management
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
@@ -18,4 +18,3 @@ spec:
     automated:
       prune: true
       selfHeal: true
-      allowEmpty: true

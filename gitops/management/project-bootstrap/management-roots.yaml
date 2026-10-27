@@ -4,18 +4,19 @@ metadata:
   name: kloudlab-management-roots
   namespace: argocd
 spec:
-  project: kloudlab-bootstrap
+  project: kloudlab-management
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
     path: gitops/management/roots
     directory:
       recurse: false
-      include: "*.yaml"
+      # Temporarily keep the Pulumi-owned Cilium root out of Argo's resource set.
+      include: "management-gateway.yaml"
   destination:
     name: in-cluster
     namespace: argocd
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true

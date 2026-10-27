@@ -6,38 +6,38 @@ infrastructure and cluster registration credentials; Argo CD owns Helm releases
 and Kubernetes workload lifecycle. The PostgreSQL database stack is still
 pending and must be provisioned before the stateful services are synced.
 
-## Bootstrap the restricted projects through Argo CD
+## Bootstrap the projects through Argo CD
 
 Push the project manifest and bootstrap Application manifest to the configured
 `main` branch. Argo CD reads Git at that revision.
 
-In the local Argo CD UI, create one seed Application with these settings. It
-installs the restricted bootstrap AppProject first, then an Argo CD Application
-that syncs the identity AppProject from Git:
+In the local Argo CD UI, create the seed Application defined at
+`gitops/management/bootstrap/projects-application.yaml`. It reads the four
+cluster AppProjects directly from Git; it does not create another bootstrap
+AppProject:
 
 | Setting | Value |
 | --- | --- |
-| Application name | `kloudlab-project-bootstrap` |
+| Application name | `kloudlab-management-projects` |
 | Project | `default` |
 | Repository URL | `https://github.com/harishSudalaimani/kloudlab.git` |
 | Revision | `main` |
-| Path | `gitops/management/project-bootstrap` |
+| Path | `gitops/management/projects` |
 | Directory recurse | Off |
 | Destination cluster | `in-cluster` |
 | Destination namespace | `argocd` |
 | Sync policy | Automated, self-heal on, prune off |
 
-The seed Application is the one-time trust root created through the Argo CD UI.
-It manages the bootstrap and workload AppProjects and the workload-root
-Applications under `gitops/management/project-bootstrap/`.
+The built-in `default` project is used only for this first Application because
+`kloudlab-management` does not exist yet. Once this seed is healthy, root
+Applications use `kloudlab-management`; each cluster's child Applications use
+that cluster's AppProject.
 
-Keep the local port-forward running. Confirm `kloudlab-project-bootstrap` and
-its child project Applications are `Synced` and `Healthy`. In **Settings →
-Projects**, confirm `kloudlab-bootstrap`, `kloudlab-identity`, `kloudlab-app`,
-and `kloudlab-observability` exist.
-`kloudlab-bootstrap` can deploy only Argo CD `Application` and `AppProject`
-objects into the management cluster's `argocd` namespace. `kloudlab-identity`
-can deploy only to the identity cluster's approved namespaces.
+Keep the local port-forward running. Confirm `kloudlab-management-projects` is
+`Synced` and `Healthy`. In **Settings → Projects**, confirm
+`kloudlab-management`, `kloudlab-identity`, `kloudlab-app`, and
+`kloudlab-observability` exist. Retire the old `kloudlab-bootstrap` project
+only after the old seed and wrapper Applications no longer reference it.
 
 ## Prepare the Cilium endpoint
 
@@ -64,13 +64,13 @@ cluster-scoped allowlist includes Cilium and Infisical CRDs and narrowly named
 controller roles. The Secrets Operator values restrict reconciliation to the
 identity and telemetry namespaces.
 
-## Identity root Application
+## Workload cluster root Applications
 
-The existing `kloudlab-project-bootstrap` seed Application also creates
-`kloudlab-root` from
-`gitops/management/project-bootstrap/identity-root-application.yaml`. That root
-creates the identity, app, and observability workload roots. The bootstrap
-project Applications also create the three cluster-specific AppProjects.
+The `kloudlab-root` Application reads the staged cluster-root declarations
+under `gitops/management/staged-roots/`. Each cluster root is manual sync, so
+the operator can start with identity, then app, then observability. Sync a
+cluster root only after its Argo cluster connection is successful and the
+previous cluster is healthy.
 
 ## Pulumi cluster access and Argo registration
 

@@ -49,8 +49,9 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 ## Phase 4 — GitOps
 
 - [ ] Bootstrap Argo CD in `kloudlab-management` with a single declared owner for its installation.
-- [ ] Configure least-privilege Argo CD access to all four clusters, including its management cluster, and define a separately bootstrappable management root.
-- [x] Add a management root Application that creates cluster-level Applications for app, identity, observability, and management; cluster registration and least-privilege credentials remain pending.
+- [x] Configure Argo CD cluster access from the management cluster to all four clusters.
+- [ ] Apply the single `kloudlab-management` AppProject for the control plane and one AppProject per workload cluster; use Argo CD's built-in `default` project only to seed these projects.
+- [ ] Roll out cluster roots in order with manual sync: management, identity, app, observability.
 - [ ] Add reviewed GitOps policies for the managed clusters and management-only recovery documentation.
 - [ ] Reconcile Karpenter and its `NodePool`/`EC2NodeClass` resources only in `kloudlab-app`.
 - [ ] Restrict sync sources and production promotion.

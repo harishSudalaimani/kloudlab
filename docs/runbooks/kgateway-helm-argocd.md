@@ -24,16 +24,11 @@ The Gateway accepts routes only from namespaces labeled `kloudlab.dev/gateway-ac
 
 ## Bootstrap through management Argo CD
 
-Register the app cluster as `kloudlab-app` in management Argo CD. After all workload clusters are registered, enable root Application creation through the Pulumi management stack:
-
-```sh
-cd infra/stacks/argocd-management
-pulumi config set kloudlab-argocd-management:bootstrapRootApplication true
-pulumi preview
-pulumi up
-```
-
-Pulumi owns the root Application resource. The management root creates a cluster-level app root; that root reconciles the child Applications from `gitops/clusters/app/applications/`. The actual kgateway installation and gateway resources are deployed to `kloudlab-app` by those Argo applications.
+Register the app cluster as `kloudlab-app` in management Argo CD. Follow the
+[one-cluster-at-a-time rollout](argocd-rollout-sequence.md): sync identity
+first, then the app root when its turn comes. The app root reconciles child
+Applications from `gitops/clusters/app/applications/`; those Argo Applications
+deploy the kgateway stack to `kloudlab-app`.
 
 ## Check status
 

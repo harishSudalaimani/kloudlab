@@ -67,7 +67,7 @@ func main() {
 		if stackConfig.GetBool("bootstrapManagementRoot") {
 			_, err = k8syaml.NewConfigFile(ctx, "argocd-management-root", &k8syaml.ConfigFileArgs{
 				File: "../../../gitops/management/roots/management.yaml",
-			}, dependsOnArgoCD)
+			}, dependsOnArgoCD, pulumi.RetainOnDelete(true))
 			if err != nil {
 				return err
 			}

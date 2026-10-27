@@ -1,19 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kloudlab-identity-projects
+  name: kloudlab-management-projects
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
-  project: kloudlab-bootstrap
+  # Argo CD's built-in project is the one-time seed. There is no separate
+  # kloudlab-bootstrap AppProject.
+  project: default
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
     path: gitops/management/projects
     directory:
       recurse: false
-      include: identity.yaml
   destination:
     name: in-cluster
     namespace: argocd
@@ -22,3 +21,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+

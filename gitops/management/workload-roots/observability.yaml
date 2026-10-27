@@ -4,7 +4,7 @@ metadata:
   name: kloudlab-observability-applications
   namespace: argocd
 spec:
-  project: kloudlab-bootstrap
+  project: kloudlab-management
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
@@ -15,8 +15,3 @@ spec:
   destination:
     name: in-cluster
     namespace: argocd
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-      allowEmpty: true

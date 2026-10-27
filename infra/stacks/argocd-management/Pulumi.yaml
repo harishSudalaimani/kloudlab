@@ -9,7 +9,7 @@ config:
     value: kloudlab-management
   bootstrapManagementRoot:
     default: false
-    description: Create the management-only Argo root so Argo CD can deploy management cluster applications.
+    description: Temporarily create the management root with retain-on-delete so Argo CD can safely take ownership; disable after Argo reconciles it.
   bootstrapManagementGateway:
     default: false
     description: Create the management Gateway API stack, AWS Load Balancer Controller Pod Identity, and encrypted Cloudflare DNS API token Secret.

@@ -57,16 +57,7 @@ Pulumi owns the EKS clusters and AWS infrastructure. Argo CD runs only in `kloud
    or the approved secret manager; never commit bearer tokens or certificate
    data to Git.
 
-4. Push the root Application, root definitions, cluster Applications, and chart modules to the configured Git revision. After all workload clusters are registered in Argo CD, enable root Application creation through the Pulumi stack:
-
-   ```sh
-   cd infra/stacks/argocd-management
-   pulumi config set kloudlab-argocd-management:bootstrapRootApplication true
-   pulumi preview
-   pulumi up
-   ```
-
-Pulumi owns the root Application resource; Argo CD owns the child Applications and workload releases. The root reads only `gitops/management/roots/` and creates a cluster-level Application for each cluster. Those Applications load only `**/application.yaml` files from their respective cluster paths, so Helm `values.yaml` files are not treated as Kubernetes manifests. Each cluster-level Application owns that cluster's child Application objects; each child then deploys to its designated cluster. Leave `bootstrapRootApplication` enabled after turning it on so Pulumi continues to track the root resource.
+4. Follow the [one-cluster-at-a-time Argo CD rollout](argocd-rollout-sequence.md) to create the project seed from Argo CD's built-in `default` project, then manage roots with `kloudlab-management`. Sync management first, followed by identity, app, and observability. Pulumi remains responsible for AWS/EKS infrastructure, the initial Argo CD installation, and registered cluster credentials; Argo CD manages Kubernetes Applications and releases.
 
 ## Verify
 
@@ -79,4 +70,4 @@ argocd app get kloudlab-management-applications
 argocd cluster list
 ```
 
-Check that each cluster is connected and the corresponding cluster-level Application is healthy before relying on its child Applications. Argo CD deploys Cilium from the management cluster's GitOps Application; keep kube-proxy enabled until Cilium is ready on both nodes and reports `KubeProxyReplacement: True`. Additional applications can be enabled as their infrastructure and prerequisites are ready.
+Check that each cluster is connected and the corresponding cluster root is healthy before syncing it. Argo CD deploys Cilium from the management cluster's GitOps Application; keep kube-proxy enabled until Cilium is ready on both nodes and reports `KubeProxyReplacement: True`. Additional applications can be enabled as their infrastructure and prerequisites are ready.
