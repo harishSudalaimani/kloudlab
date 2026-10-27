@@ -75,7 +75,8 @@ func splitCIDRs(cidr string, subnetPrefixLength, count int) ([]string, error) {
 		return nil, fmt.Errorf("VPC CIDR %q has room for %d /%d subnets, but %d are required", cidr, capacity, subnetPrefixLength, count)
 	}
 
-	base := binary.BigEndian.Uint32(vpcPrefix.Addr().As4())
+	addressBytes := vpcPrefix.Addr().As4()
+	base := binary.BigEndian.Uint32(addressBytes[:])
 	blockSize := uint32(1) << uint(32-subnetPrefixLength)
 	result := make([]string, 0, count)
 	for index := 0; index < count; index++ {
