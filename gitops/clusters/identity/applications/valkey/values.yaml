@@ -1,0 +1,24 @@
+valkey:
+  fullnameOverride: kloudlab-valkey
+
+  auth:
+    enabled: true
+    usersExistingSecret: kloudlab-valkey-auth
+    aclUsers:
+      default:
+        permissions: "~* &* +@all"
+        passwordKey: default
+
+  persistence:
+    enabled: true
+    size: 8Gi
+    storageClass: gp3
+    keepOnUninstall: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-identity-database-bootstrap
+  namespace: argocd
+spec:
+  project: kloudlab-identity
+  sources:
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/identity-database-bootstrap
+      targetRevision: main
+      helm:
+        releaseName: identity-database-bootstrap
+        valueFiles:
+          - $values/gitops/clusters/identity/applications/database-bootstrap/values.yaml
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      ref: values
+  destination:
+    name: kloudlab-identity
+    namespace: kloudlab-identity
+  # Sync only after the one-time admin/app-credential Secret exists.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

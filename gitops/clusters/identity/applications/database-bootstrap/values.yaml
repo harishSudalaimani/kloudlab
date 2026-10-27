@@ -1,0 +1,21 @@
+bootstrap:
+  secretName: kloudlab-identity-db-bootstrap
+  postgresImage: postgres:17.11-alpine
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 86400
+  databases:
+    infisical:
+      name: infisical
+      role: infisical
+    openfga:
+      name: openfga
+      role: openfga
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi

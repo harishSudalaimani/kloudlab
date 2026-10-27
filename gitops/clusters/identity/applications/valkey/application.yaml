@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-valkey
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: kloudlab-identity
+  sources:
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      path: charts/valkey
+      targetRevision: main
+      helm:
+        releaseName: valkey
+        valueFiles:
+          - $values/gitops/clusters/identity/applications/valkey/values.yaml
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      ref: values
+  destination:
+    name: kloudlab-identity
+    namespace: kloudlab-identity
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

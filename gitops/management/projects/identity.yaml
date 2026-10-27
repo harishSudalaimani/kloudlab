@@ -51,6 +51,8 @@ spec:
       kind: DaemonSet
     - group: apps
       kind: Deployment
+    - group: apps
+      kind: StatefulSet
     - group: batch
       kind: Job
     - group: coordination.k8s.io
@@ -67,3 +69,5 @@ spec:
       kind: InfisicalAuth
     - group: secrets.infisical.com
       kind: InfisicalStaticSecret
+    - group: ""
+      kind: PersistentVolumeClaim
