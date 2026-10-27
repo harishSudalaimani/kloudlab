@@ -190,7 +190,9 @@ func createArgoControllerAccess(ctx *pulumi.Context, region string) (pulumi.Stri
 		"Statement": []any{
 			map[string]any{
 				"Effect":   "Allow",
-				"Action":   []string{"sts:AssumeRole"},
+				// Pod Identity credentials carry session tags. Allow Argo's
+				// role chain to pass those tags when it assumes a workload role.
+				"Action":   []string{"sts:AssumeRole", "sts:TagSession"},
 				"Resource": roleResources,
 			},
 			map[string]any{

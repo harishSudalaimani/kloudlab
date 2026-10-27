@@ -141,7 +141,7 @@ func createArgoDeployerRole(ctx *pulumi.Context, workload, clusterName string, t
 		return nil, fmt.Errorf("get AWS account for Argo CD access role: %w", err)
 	}
 	controllerRoleArn := fmt.Sprintf("arn:aws:iam::%s:role/kloudlab-management-argocd-controller", caller.AccountId)
-	trustPolicy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":%q},"Action":"sts:AssumeRole"}]}`, controllerRoleArn)
+	trustPolicy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":%q},"Action":["sts:AssumeRole","sts:TagSession"]}]}`, controllerRoleArn)
 	roleName := fmt.Sprintf("kloudlab-%s-argocd-deployer", workload)
 	role, err := iam.NewRole(ctx, roleName, &iam.RoleArgs{
 		Name:             pulumi.String(roleName),
