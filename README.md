@@ -8,7 +8,7 @@ KloudLab is an architecture design platform in its infrastructure foundation pha
 .
 ├── apps/
 │   ├── frontend/                 # React + TypeScript architecture editor
-│   └── api/                      # Go API (planned)
+│   └── api/                      # Go API, Auth0 validation, PostgreSQL, OpenFGA checks
 ├── infra/
 │   ├── go.mod                    # Shared Pulumi Go module
 │   ├── components/               # Reusable AWS resources and component contracts
@@ -48,17 +48,18 @@ The `infra/config` package validates project/environment/region labels, CIDR ove
 
 ## Frontend
 
-The local-first editor is in `apps/frontend`. It includes a component catalog, drag-and-drop canvas, typed connections, configuration inspector, browser-side validation, undo/redo, a browser-local architecture library, and versioned JSON import/export. It does not require AWS credentials.
+The editor is in `apps/frontend`. It includes a component catalog, drag-and-drop canvas, typed connections, configuration inspector, browser-side validation, undo/redo, Auth0 sign-in, and versioned JSON import/export. Canvas drafts are stored in browser storage per Auth0 subject. Saving is enabled after validation errors are resolved. Explicit save, create, open, and delete operations go through the Go API and OpenFGA. The backend validates access tokens and checks resource permissions on each operation.
 
 KloudLab's canvas is built with the open-source React Flow library. The design approach treats architectures as components connected by explicit relationships, drawing inspiration from [Meshery's design model](https://docs.meshery.io/concepts/logical/designs/). Cloud infrastructure and Kubernetes are hosting options; the catalog marks hosting platforms separately from open-source components. Auth0 remains the project's existing managed identity integration.
 
 ```sh
+cp apps/frontend/.env.example apps/frontend/.env.local
 cd apps/frontend
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Use Node.js 20.19 or newer and pnpm 12.14. Open the local URL printed by Vite. Drafts are saved in the current browser's local storage; use **Export** to keep a portable JSON copy. The Go API and shared server-side persistence are not implemented yet, so drafts do not sync across browsers or users. Build the frontend with `pnpm build`.
+Set the Auth0 domain, SPA client ID, and API audience in `apps/frontend/.env.local`. Start PostgreSQL, OpenFGA with `apps/api/openfga/model.fga`, and the API using the environment documented in `apps/api/README.md`; Vite proxies `/api` to `localhost:8080`. The API requires Go 1.26. Use **Export** to keep a portable JSON copy. Build the frontend with `pnpm build`.
 
 ## Infrastructure module
 

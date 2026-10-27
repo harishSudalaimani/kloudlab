@@ -54,7 +54,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 - [ ] Verify supported kgateway, Gateway API, and AWS load balancer integration versions.
 - [ ] Configure TLS, DNS, timeouts, request limits, security headers, and health checks.
 - [x] Build the React/TypeScript React Flow editor with a component catalog, editable canvas, local validation, undo/redo, and browser-local drafts.
-- [ ] Build the Go API and shared server-side persistence for versioned canvas documents.
+- [x] Build the Go API and PostgreSQL persistence for versioned canvas documents.
 - [x] Implement browser-side config and connection checks against the v1 canvas and component contracts.
 - [x] Add JSON import/export and a browser-local architecture library.
 
@@ -62,11 +62,11 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 ## Phase 6 — Authentication and authorization
 
-- [ ] Configure Auth0 application, issuer, audience, and claim handling.
-- [ ] Validate access token signature, issuer, audience, expiry, and required claims in the API.
+- [x] Add Auth0 Authorization Code with PKCE to the frontend; tenant setup remains deployment configuration.
+- [x] Validate access token signature, issuer, audience, expiry, and required claims in the API.
 - [ ] Deploy private OpenFGA and its durable PostgreSQL datastore.
-- [ ] Define organization, membership, canvas, and optional folder relations.
-- [ ] Enforce authorization on every protected backend operation and fail safely on service errors.
+- [x] Define workspace ownership and architecture owner/editor/viewer relations in OpenFGA.
+- [x] Enforce authorization on every protected architecture API operation and fail closed on OpenFGA errors.
 - [ ] Keep deployment approval distinct from architecture editing.
 
 **Deliverable:** multi-user canvas access with tested tenant isolation.

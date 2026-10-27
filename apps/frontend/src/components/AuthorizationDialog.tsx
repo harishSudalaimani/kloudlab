@@ -69,13 +69,13 @@ export function AuthorizationDialog({ open, architectureName, model, openFgaOnCa
       <section className="authorization-dialog" role="dialog" aria-modal="true" aria-labelledby="authorization-title">
         <header className="authorization-header">
           <div className="authorization-brand-icon"><Icon name="shield" size={21} /></div>
-          <div><span className="eyebrow">RELATIONSHIP-BASED ACCESS</span><h2 id="authorization-title">Access model</h2><p>Shape who can view and change this architecture.</p></div>
+          <div><span className="eyebrow">RELATIONSHIP-BASED ACCESS</span><h2 id="authorization-title">Access model</h2><p>Model who can view and change the system you are designing.</p></div>
           <button className="icon-button" aria-label="Close access model" onClick={onClose}><Icon name="close" /></button>
         </header>
 
         <div className="authorization-status">
           <span className={`authorization-status-dot${openFgaOnCanvas ? ' connected' : ''}`} />
-          <span>{openFgaOnCanvas ? 'OpenFGA component is on this canvas' : 'OpenFGA component has not been added'}</span>
+          <span>{openFgaOnCanvas ? 'OpenFGA tool is included in this architecture' : 'OpenFGA tool has not been added to this architecture'}</span>
           {!openFgaOnCanvas && <button onClick={onAddOpenFga}><Icon name="plus" size={14} />Add OpenFGA</button>}
         </div>
 
@@ -144,7 +144,7 @@ export function AuthorizationDialog({ open, architectureName, model, openFgaOnCa
               const rules = model.rules.filter((rule) => rule.resourceType === resourceType)
               return [`type ${resourceType}`, '  relations', ...rules.map((rule) => `    define ${rule.relation}: ${rule.expression}`), ''].join('\n')
             }).join('\n')}</pre>
-            <div className="authorization-preview-note"><Icon name="info" size={14} /><span>This model is saved with the design. Runtime enforcement connects later.</span></div>
+            <div className="authorization-preview-note"><Icon name="info" size={14} /><span>This policy draft is saved with the canvas. KloudLab workspace access is enforced separately by the API.</span></div>
           </aside>
         </div>
 

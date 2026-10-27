@@ -25,6 +25,8 @@ import { SiteNavigation, type AppPage, type Theme } from './components/SiteNavig
 import { AboutPage } from './pages/AboutPage'
 import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
+import { useAuth } from './auth/AuthProvider'
+import { ApiError, apiRequest, type SavedArchitecture } from './auth/api'
 import { catalog, catalogById, categories, defaultConfig, type ComponentDefinition, type ComponentCategory } from './domain/catalog'
 import { checkConnection, type ConnectionCheck, type ExistingConnection } from './domain/connections'
 import { createDefaultAuthorizationModel, type AuthorizationModel } from './domain/authorization'
@@ -34,12 +36,10 @@ import {
   createStarterCanvas,
   isCanvasDocument,
   makeId,
-  STORAGE_KEY,
   validateCanvas,
   type CanvasDocument,
 } from './domain/canvas'
 
-type SavedArchitecture = { document: CanvasDocument; updatedAt: string }
 type SaveState = 'saved' | 'saving' | 'unsaved'
 
 const nodeTypes = { component: CanvasNode }
@@ -83,25 +83,15 @@ function fromDocument(document: CanvasDocument): { nodes: ComponentFlowNode[]; e
   }
 }
 
-function readDocument(): CanvasDocument {
+function readDocument(storageKey = ACTIVE_KEY): CanvasDocument {
   try {
-    const active = localStorage.getItem(ACTIVE_KEY)
+    const active = localStorage.getItem(storageKey)
     if (active) {
       const parsed: unknown = JSON.parse(active)
       if (isCanvasDocument(parsed)) return parsed
     }
   } catch { /* Storage may be disabled; use the example document. */ }
   return createStarterCanvas()
-}
-
-function readLibrary(): SavedArchitecture[] {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-    if (!Array.isArray(value)) return []
-    return value.filter((item): item is SavedArchitecture =>
-      Boolean(item && typeof item === 'object' && isCanvasDocument((item as SavedArchitecture).document) && typeof (item as SavedArchitecture).updatedAt === 'string'),
-    )
-  } catch { return [] }
 }
 
 function documentFromFlow(
@@ -153,17 +143,25 @@ function checkFlowConnection(connection: Connection, nodes: ComponentFlowNode[],
 
 interface AppContentProps {
   theme: Theme
+  accessToken: string
+  apiConfigured: boolean
+  subject: string
+  accountName?: string
   onToggleTheme: () => void
   onNavigate: (page: AppPage) => void
+  onLogout: () => void
 }
 
-function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
-  const initialDocument = useMemo(readDocument, [])
+function AppContent({ theme, accessToken, apiConfigured, subject, accountName, onToggleTheme, onNavigate, onLogout }: AppContentProps) {
+  const apiReady = apiConfigured && Boolean(accessToken)
+  const activeDraftKey = `${ACTIVE_KEY}.${encodeURIComponent(subject)}`
+  const initialDocument = useMemo(() => readDocument(activeDraftKey), [activeDraftKey])
   const initialFlow = useMemo(() => fromDocument(initialDocument), [initialDocument])
   const [document, setDocument] = useState(initialDocument)
   const [nodes, setNodes] = useState<ComponentFlowNode[]>(initialFlow.nodes)
   const [edges, setEdges] = useState<Edge[]>(initialFlow.edges)
-  const [library, setLibrary] = useState<SavedArchitecture[]>(readLibrary)
+  const [library, setLibrary] = useState<SavedArchitecture[]>([])
+  const [remoteIds, setRemoteIds] = useState<Set<string>>(() => new Set())
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<ComponentCategory | 'All'>('All')
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('properties')
@@ -253,6 +251,23 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
     toastTimer.current = window.setTimeout(() => setToast(''), 2600)
   }, [])
 
+  const refreshLibrary = useCallback(async () => {
+    if (!apiReady) {
+      setLibrary([])
+      setRemoteIds(new Set())
+      return
+    }
+    try {
+      const nextLibrary = await apiRequest<SavedArchitecture[]>(accessToken, '/architectures')
+      setLibrary(nextLibrary)
+      setRemoteIds(new Set(nextLibrary.map((entry) => entry.document.id)))
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not load your saved architectures.')
+    }
+  }, [accessToken, apiReady, notify])
+
+  useEffect(() => { void refreshLibrary() }, [refreshLibrary])
+
   const toggleCanvasFullscreen = useCallback(async () => {
     const canvasWindow = canvasWindowRef.current
     if (!canvasWindow) return
@@ -286,10 +301,10 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
 
   const navigateFromCanvas = useCallback((page: AppPage) => {
     try {
-      localStorage.setItem(ACTIVE_KEY, JSON.stringify(documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)))
+      localStorage.setItem(activeDraftKey, JSON.stringify(documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)))
     } catch { /* Keep navigation available if local saving is disabled. */ }
     onNavigate(page)
-  }, [onNavigate])
+  }, [activeDraftKey, onNavigate])
 
   const checkpoint = useCallback(() => {
     historyRef.current = [...historyRef.current.slice(-49), documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)]
@@ -316,28 +331,51 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
     setSaveState('saving')
     const timeout = window.setTimeout(() => {
       try {
-        localStorage.setItem(ACTIVE_KEY, JSON.stringify(currentDocument))
+        localStorage.setItem(activeDraftKey, JSON.stringify(currentDocument))
         setSaveState('saved')
       } catch {
         setSaveState('unsaved')
       }
     }, 500)
     return () => window.clearTimeout(timeout)
-  }, [currentDocument])
+  }, [activeDraftKey, currentDocument])
 
-  const saveArchitecture = useCallback((quiet = false) => {
-    const next = documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)
-    const nextLibrary = [{ document: next, updatedAt: new Date().toISOString() }, ...readLibrary().filter((entry) => entry.document.id !== next.id)]
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLibrary))
-      localStorage.setItem(ACTIVE_KEY, JSON.stringify(next))
-      setLibrary(nextLibrary)
-      setSaveState('saved')
-      if (!quiet) notify('Architecture saved on this device')
-    } catch {
-      notify('Could not save on this device. Export a copy instead.')
+  const saveArchitecture = useCallback(async (quiet = false) => {
+    if (!apiReady) {
+      notify('Workspace saves are unavailable right now. Your draft is still saved on this device.')
+      return
     }
-  }, [notify])
+    if (errors > 0) {
+      notify(`Resolve the ${errors} validation error${errors === 1 ? '' : 's'} before saving this architecture.`)
+      return
+    }
+    const next = documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)
+    setSaveState('saving')
+    try {
+      let saved: SavedArchitecture
+      const body = JSON.stringify(next)
+      if (remoteIds.has(next.id)) {
+        saved = await apiRequest<SavedArchitecture>(accessToken, `/architectures/${encodeURIComponent(next.id)}`, { method: 'PUT', body })
+      } else {
+        try {
+          saved = await apiRequest<SavedArchitecture>(accessToken, '/architectures', { method: 'POST', body })
+        } catch (error) {
+          if (!(error instanceof ApiError) || error.status !== 409) throw error
+          const current = await apiRequest<SavedArchitecture[]>(accessToken, '/architectures')
+          if (!current.some((item) => item.document.id === next.id)) throw error
+          saved = await apiRequest<SavedArchitecture>(accessToken, `/architectures/${encodeURIComponent(next.id)}`, { method: 'PUT', body })
+        }
+      }
+      localStorage.setItem(activeDraftKey, JSON.stringify(next))
+      setLibrary((current) => [saved, ...current.filter((entry) => entry.document.id !== next.id)])
+      setRemoteIds((current) => new Set(current).add(next.id))
+      setSaveState('saved')
+      if (!quiet) notify('Architecture saved to your workspace')
+    } catch (error) {
+      setSaveState('unsaved')
+      notify(error instanceof Error ? error.message : 'Could not save this architecture.')
+    }
+  }, [accessToken, activeDraftKey, apiConfigured, apiReady, errors, notify, remoteIds])
 
   const addComponent = useCallback((component: ComponentDefinition, position?: { x: number; y: number }) => {
     checkpoint()
@@ -574,12 +612,22 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
     reader.readAsText(file)
   }, [notify, replaceDocument])
 
-  const newArchitecture = useCallback(() => {
+  const newArchitecture = useCallback(async () => {
+    if (!apiReady) {
+      notify('Creating workspace designs is unavailable right now. Please try again later.')
+      return
+    }
+    try {
+      await apiRequest<{ allowed: boolean }>(accessToken, '/workspaces/self/authorize-create', { method: 'POST', body: '{}' })
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'You do not have permission to create an architecture.')
+      return
+    }
     const next = createEmptyCanvas()
     replaceDocument(next)
     setLibraryOpen(false)
     notify('New architecture created')
-  }, [notify, replaceDocument])
+  }, [accessToken, apiConfigured, apiReady, notify, replaceDocument])
 
   const onCatalogDragStart = (event: DragEvent<HTMLButtonElement>, component: ComponentDefinition) => {
     event.dataTransfer.setData('application/kloudlab-component', component.typeId)
@@ -634,12 +682,13 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
         <div className="topbar-divider" />
         <div className="project-title-wrap">
           <input aria-label="Architecture name" className="project-title" value={document.name} onFocus={checkpoint} onChange={(event) => { setDocument((current) => ({ ...current, name: event.target.value })); setSaveState('unsaved') }} />
-          <span className="save-indicator"><i className={`save-dot ${saveState}`} />{saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved on this device' : 'Unsaved changes'}</span>
+          <span className="save-indicator"><i className={`save-dot ${saveState}`} />{saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Draft saved locally' : 'Unsaved changes'}</span>
         </div>
         <div className="topbar-spacer" />
-        <button className="button button-quiet library-trigger" onClick={() => setLibraryOpen(true)}><Icon name="folder" size={16} /><span>My architectures</span></button>
+        <button className="button button-quiet library-trigger" onClick={() => { setLibraryOpen(true); void refreshLibrary() }}><Icon name="folder" size={16} /><span>My architectures</span></button>
         <button className="button button-outline" onClick={exportDocument}><Icon name="download" size={15} /><span>Export</span></button>
-        <button className="button button-primary" onClick={() => saveArchitecture()}><Icon name="save" size={15} /><span>Save</span><kbd>⌘S</kbd></button>
+        <button className="button button-primary" disabled={!apiReady || errors > 0 || saveState === 'saving'} title={!apiReady ? 'Workspace saves are unavailable right now' : errors > 0 ? 'Resolve validation errors before saving' : 'Save this architecture'} onClick={() => void saveArchitecture()}><Icon name="save" size={15} /><span>Save</span><kbd>⌘S</kbd></button>
+        <button className="button button-quiet account-trigger" title="Sign out" onClick={onLogout}><Icon name="user" size={15} /><span>{accountName || 'Account'}</span><Icon name="logout" size={14} /></button>
         <button className="icon-button mobile-menu" aria-label="Open component catalog" onClick={() => setMobileCatalogOpen(!mobileCatalogOpen)}><Icon name="menu" /></button>
       </header>
 
@@ -738,7 +787,7 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
             </div>}
             {nodes.length === 0 && <div className="canvas-empty"><div className="empty-grid"><span /><span /><span /><span /></div><strong>Your canvas is ready</strong><p>Choose a component from the catalog or drag one here to get started.</p><button className="button button-primary" onClick={() => addComponent(catalog[0])}><Icon name="plus" size={15} />Add your first component</button></div>}
           </div>
-          <footer className="canvas-footer"><span><Icon name="layers" size={14} />{nodes.length} components</span><i /> <span>{edges.length} connections</span><span className="canvas-footer-spacer" /><span><Icon name="cloud" size={14} />Saved on this device</span></footer>
+          <footer className="canvas-footer"><span><Icon name="layers" size={14} />{nodes.length} components</span><i /> <span>{edges.length} connections</span><span className="canvas-footer-spacer" /><span><Icon name="cloud" size={14} />Local draft</span></footer>
         </main>
 
         {mobileInspectorOpen && <button className="inspector-backdrop" aria-label="Close panel" onClick={() => setMobileInspectorOpen(false)} />}
@@ -792,8 +841,8 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
       {libraryOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setLibraryOpen(false) }}>
         <section className="library-dialog" role="dialog" aria-modal="true" aria-labelledby="library-title">
           <div className="dialog-header"><div><span className="eyebrow">YOUR WORKSPACE</span><h2 id="library-title">My architectures</h2></div><button className="icon-button" aria-label="Close" onClick={() => setLibraryOpen(false)}><Icon name="close" /></button></div>
-          <p className="dialog-description">Your designs are saved on this device. Export a copy to share or move them to another device.</p>
-          <div className="library-toolbar"><span>{library.length} saved {library.length === 1 ? 'architecture' : 'architectures'}</span><button className="button button-primary" onClick={newArchitecture}><Icon name="plus" size={15} />New architecture</button></div>
+          <p className="dialog-description">{apiReady ? 'Your saved architectures are available in this workspace.' : 'Workspace saves are unavailable right now. Your canvas draft remains on this device.'}</p>
+          <div className="library-toolbar"><span>{library.length} saved {library.length === 1 ? 'architecture' : 'architectures'}</span><button className="button button-primary" onClick={() => void newArchitecture()}><Icon name="plus" size={15} />New architecture</button></div>
           <div className="library-list">
             {library.length ? library.map((entry) => (
               <article className={`library-card${entry.document.id === document.id ? ' current' : ''}`} key={entry.document.id}>
@@ -801,14 +850,16 @@ function AppContent({ theme, onToggleTheme, onNavigate }: AppContentProps) {
                 <div className="library-card-main"><strong>{entry.document.name || 'Untitled architecture'}</strong><span>{entry.document.nodes.length} components <i>·</i> {entry.document.edges.length} connections <i>·</i> Edited {new Date(entry.updatedAt).toLocaleDateString()}</span></div>
                 <button className="button button-outline library-open" onClick={() => { replaceDocument(entry.document); setLibraryOpen(false); notify('Architecture opened') }}>Open</button>
                 <button className="icon-button library-delete" aria-label={`Delete ${entry.document.name}`} onClick={() => {
-                  const next = library.filter((item) => item.document.id !== entry.document.id)
-                  setLibrary(next)
-                  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { notify('Could not update the browser architecture library') }
+                  void apiRequest<void>(accessToken, `/architectures/${encodeURIComponent(entry.document.id)}`, { method: 'DELETE' }).then(() => {
+                    setLibrary((current) => current.filter((item) => item.document.id !== entry.document.id))
+                    setRemoteIds((current) => { const next = new Set(current); next.delete(entry.document.id); return next })
+                    notify('Architecture deleted from your workspace')
+                  }).catch((error: unknown) => notify(error instanceof Error ? error.message : 'Could not delete this architecture.'))
                 }}><Icon name="trash" size={15} /></button>
               </article>
-            )) : <div className="library-empty"><span className="library-empty-icon"><Icon name="folder" size={21} /></span><strong>No saved architectures yet</strong><p>Save this canvas to keep it on this device, or create a new design.</p><button className="button button-primary" onClick={() => saveArchitecture()}><Icon name="save" size={15} />Save current architecture</button></div>}
+            )) : <div className="library-empty"><span className="library-empty-icon"><Icon name="folder" size={21} /></span><strong>{apiReady ? 'No saved architectures yet' : 'Workspace unavailable'}</strong><p>{!apiReady ? 'Your canvas drafts remain saved on this device. Try again later to access workspace designs.' : errors > 0 ? 'Resolve the validation errors before saving this canvas.' : 'Save the current canvas to your workspace, or create a new design.'}</p><button className="button button-primary" disabled={!apiReady || errors > 0 || saveState === 'saving'} onClick={() => void saveArchitecture()}><Icon name="save" size={15} />Save current architecture</button></div>}
           </div>
-          <div className="dialog-footer"><Icon name="shield" size={15} /><span>Saved designs stay on this device until you export them.</span><button className="button button-quiet" onClick={onImportClick}><Icon name="upload" size={15} />Import JSON</button></div>
+          <div className="dialog-footer"><Icon name="shield" size={15} /><span>{apiReady ? 'Workspace access is active.' : 'Your current draft is saved on this device.'}</span><button className="button button-quiet" onClick={onImportClick}><Icon name="upload" size={15} />Import JSON</button></div>
         </section>
       </div>}
     </div>
@@ -830,6 +881,11 @@ function storedTheme(): Theme {
 }
 
 export function App() {
+  return <AuthRoutes />
+}
+
+function AuthRoutes() {
+  const auth = useAuth()
   const [page, setPage] = useState<AppPage>(currentPage)
   const [theme, setTheme] = useState<Theme>(storedTheme)
 
@@ -845,23 +901,31 @@ export function App() {
   }, [])
 
   const navigate = useCallback((nextPage: AppPage) => {
-    const path = nextPage === 'home' ? '/' : `/${nextPage}`
-    if (window.location.pathname !== path) window.history.pushState({}, '', path)
+    const authPage = nextPage === 'login' || nextPage === 'signup'
+    const currentReturnTo = page === 'login' || page === 'signup'
+      ? new URLSearchParams(window.location.search).get('returnTo')
+      : null
+    const originPath = page === 'playground' ? '/playground' : page === 'about' ? '/about' : '/'
+    const returnTo = authPage ? `?returnTo=${encodeURIComponent(currentReturnTo ?? originPath)}` : ''
+    const path = (nextPage === 'home' ? '/' : `/${nextPage}`) + returnTo
+    if (`${window.location.pathname}${window.location.search}` !== path) window.history.pushState({}, '', path)
     setPage(nextPage)
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [])
+  }, [page])
   const toggleTheme = useCallback(() => setTheme((current) => current === 'dark' ? 'light' : 'dark'), [])
 
   if (page === 'playground') {
-    return <div className="site-root" data-theme={theme}><ReactFlowProvider><AppContent theme={theme} onToggleTheme={toggleTheme} onNavigate={navigate} /></ReactFlowProvider></div>
+    if (auth.loading) return <div className="site-root auth-loading" data-theme={theme}><span className="save-dot saving" />Checking your KloudLab session…</div>
+    if (!auth.user) return <div className="site-root" data-theme={theme}><AuthPage mode="login" theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} /></div>
+    return <div className="site-root" data-theme={theme}><ReactFlowProvider><AppContent theme={theme} accessToken={auth.accessToken ?? ''} apiConfigured={auth.apiConfigured} subject={auth.user?.sub ?? ''} accountName={auth.user?.name ?? auth.user?.email} onToggleTheme={toggleTheme} onNavigate={navigate} onLogout={auth.logout} /></ReactFlowProvider></div>
   }
   return (
     <div className="site-root" data-theme={theme}>
       {page === 'about'
-        ? <AboutPage theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} />
+        ? <AboutPage theme={theme} authenticated={Boolean(auth.user)} accountName={auth.user?.name ?? auth.user?.email} onNavigate={navigate} onToggleTheme={toggleTheme} onLogout={auth.logout} />
         : page === 'login' || page === 'signup'
           ? <AuthPage mode={page} theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} />
-          : <HomePage theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} />}
+          : <HomePage theme={theme} authenticated={Boolean(auth.user)} accountName={auth.user?.name ?? auth.user?.email} onNavigate={navigate} onToggleTheme={toggleTheme} onLogout={auth.logout} />}
     </div>
   )
 }

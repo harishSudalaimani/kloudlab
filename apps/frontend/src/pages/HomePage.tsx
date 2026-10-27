@@ -1,11 +1,15 @@
 import { Icon } from '../components/Icon'
 import { SiteNavigation, type AppPage, type Theme } from '../components/SiteNavigation'
+import { SiteFooter } from '../components/SiteFooter'
 import { catalog } from '../domain/catalog'
 
 interface HomePageProps {
   theme: Theme
+  authenticated: boolean
+  accountName?: string
   onNavigate: (page: AppPage) => void
   onToggleTheme: () => void
+  onLogout: () => void
 }
 
 const previewNodes = [
@@ -15,10 +19,10 @@ const previewNodes = [
   { name: 'OpenTelemetry', type: 'OBSERVABILITY', x: '68%', y: '37%', tone: 'orange' },
 ]
 
-export function HomePage({ theme, onNavigate, onToggleTheme }: HomePageProps) {
+export function HomePage({ theme, authenticated, accountName, onNavigate, onToggleTheme, onLogout }: HomePageProps) {
   return (
     <div className="marketing-page home-page">
-      <SiteNavigation page="home" theme={theme} onNavigate={onNavigate} onToggleTheme={onToggleTheme} />
+      <SiteNavigation page="home" theme={theme} authenticated={authenticated} accountName={accountName} onNavigate={onNavigate} onToggleTheme={onToggleTheme} onLogout={onLogout} />
       <main>
         <section className="home-hero">
           <div className="home-hero-copy">
@@ -26,7 +30,7 @@ export function HomePage({ theme, onNavigate, onToggleTheme }: HomePageProps) {
             <h1>Design cloud platforms<br /><em>your way.</em></h1>
             <p>Bring open-source infrastructure, data, identity, and observability together on one architecture canvas.</p>
             <div className="hero-actions">
-              <button className="button button-primary hero-primary" onClick={() => onNavigate('playground')}>Start designing<Icon name="arrow-up-right" size={17} /></button>
+              <button className="button button-primary hero-primary" onClick={() => onNavigate('playground')}>{authenticated ? 'Continue designing' : 'Start designing'}<Icon name="arrow-up-right" size={17} /></button>
               <button className="hero-secondary" onClick={() => onNavigate('about')}>Why KloudLab?<Icon name="chevron-right" size={15} /></button>
             </div>
             <div className="hero-proof"><span><Icon name="layers" size={15} />{catalog.length}+ catalog tools</span><i /><span><Icon name="shield" size={15} />Open-source first</span><i /><span>Cloud for hosting</span></div>
@@ -66,7 +70,7 @@ export function HomePage({ theme, onNavigate, onToggleTheme }: HomePageProps) {
           <button className="button button-primary hero-primary" onClick={() => onNavigate('playground')}>Open the playground<Icon name="arrow-up-right" size={17} /></button>
         </section>
       </main>
-      <footer className="site-footer"><span>kloudlab</span><span>Open source building blocks. Your choice of cloud.</span><button onClick={() => onNavigate('about')}>About KloudLab<Icon name="chevron-right" size={14} /></button></footer>
+      <SiteFooter onNavigate={onNavigate} />
     </div>
   )
 }

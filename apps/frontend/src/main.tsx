@@ -4,9 +4,10 @@ import '@xyflow/react/dist/style.css'
 import './styles.css'
 import { App } from './App'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
+import { AuthProvider } from './auth/AuthProvider'
 
 createRoot(document.getElementById('root')!).render(
   <AppErrorBoundary>
-    <React.StrictMode><App /></React.StrictMode>
+    <React.StrictMode><AuthProvider><App /></AuthProvider></React.StrictMode>
   </AppErrorBoundary>,
 )

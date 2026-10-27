@@ -4,7 +4,7 @@ export type IconName =
   | 'search' | 'plus' | 'chevron-down' | 'chevron-right' | 'folder' | 'save' | 'download'
   | 'upload' | 'undo' | 'redo' | 'sparkles' | 'layers' | 'sliders' | 'check' | 'alert'
   | 'x' | 'copy' | 'trash' | 'external' | 'command' | 'menu' | 'arrow-up-right' | 'close'
-  | 'file' | 'clock' | 'cloud' | 'dots' | 'cursor' | 'shield' | 'grid' | 'book' | 'link' | 'sun' | 'moon' | 'info' | 'mail' | 'arrow-left' | 'maximize' | 'minimize'
+  | 'file' | 'clock' | 'cloud' | 'dots' | 'cursor' | 'shield' | 'grid' | 'book' | 'link' | 'sun' | 'moon' | 'info' | 'mail' | 'arrow-left' | 'maximize' | 'minimize' | 'user' | 'logout' | 'github'
 
 const paths: Record<IconName, ReactNode> = {
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
@@ -46,6 +46,9 @@ const paths: Record<IconName, ReactNode> = {
   'arrow-left': <><path d="M19 12H5M12 19l-7-7 7-7" /></>,
   maximize: <><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" /></>,
   minimize: <><path d="M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></>,
+  logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" /></>,
+  github: <path fill="currentColor" stroke="none" d="M12 .9C5.8.9.8 5.9.8 12.1c0 4.9 3.2 9.1 7.6 10.6.6.1.8-.3.8-.6v-2.1c-3.1.7-3.8-1.3-3.8-1.3-.5-1.3-1.2-1.6-1.2-1.6-1-.7.1-.7.1-.7 1.1.1 1.6 1.2 1.6 1.2 1 .1.7 2.1.5 2.6-.3.2-.7.4-1.1.5 2.5.3 5.2-.2 5.2-.2-.4-1.2-.1-2.2.5-2.9-2-.2-4.1-1-4.1-4.4 0-1 .4-1.9 1.1-2.6-.1-.2-.5-1.2.1-2.5 0 0 .9-.3 2.7 1a9.4 9.4 0 0 1 4.9 0c1.8-1.2 2.7-1 2.7-1 .6 1.3.2 2.3.1 2.5.7.7 1.1 1.6 1.1 2.6 0 3.4-2.1 4.2-4.1 4.4.6.5 1.1 1.4 1.1 2.8v4.1c0 .3.2.7.8.6 4.4-1.5 7.6-5.7 7.6-10.6C23.2 5.9 18.2.9 12 .9Z" />,
 }
 
 export function Icon({ name, size = 16, strokeWidth = 1.8 }: { name: IconName; size?: number; strokeWidth?: number }) {

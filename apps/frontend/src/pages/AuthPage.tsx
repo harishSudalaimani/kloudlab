@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { SiteNavigation, type AppPage, type Theme } from '../components/SiteNavigation'
+import { SiteFooter } from '../components/SiteFooter'
+import { useAuth } from '../auth/AuthProvider'
 
 interface AuthPageProps {
   mode: 'login' | 'signup'
@@ -11,17 +13,19 @@ interface AuthPageProps {
 
 export function AuthPage({ mode, theme, onNavigate, onToggleTheme }: AuthPageProps) {
   const [email, setEmail] = useState('')
-  const [notice, setNotice] = useState('')
+  const auth = useAuth()
   const isSignup = mode === 'signup'
+  const requestedReturnTo = new URLSearchParams(window.location.search).get('returnTo')
+  const returnTo = requestedReturnTo ?? (window.location.pathname.replace(/\/+$/, '') === '/playground' ? '/playground' : '/')
 
-  const beginAuth0Flow = (event: FormEvent<HTMLFormElement>) => {
+  const beginSignIn = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setNotice('Auth0 tenant details are not configured yet. Connect the tenant to enable sign-in.')
+    void auth.login(mode, email, returnTo)
   }
 
   return (
     <div className="marketing-page auth-page">
-      <SiteNavigation page={mode} theme={theme} onNavigate={onNavigate} onToggleTheme={onToggleTheme} />
+      <SiteNavigation page={mode} theme={theme} authenticated={Boolean(auth.user)} accountName={auth.user?.name ?? auth.user?.email} onNavigate={onNavigate} onToggleTheme={onToggleTheme} onLogout={auth.logout} />
       <main className="auth-layout">
         <section className="auth-story">
           <span className="auth-story-kicker"><i />KLOUDLAB WORKSPACE</span>
@@ -37,22 +41,19 @@ export function AuthPage({ mode, theme, onNavigate, onToggleTheme }: AuthPagePro
         </section>
 
         <section className="auth-card" aria-labelledby="auth-title">
-          <div className="auth-card-brand"><span className="auth-brand-mark"><Icon name="shield" size={19} /></span><span>SECURE ACCESS <i /> AUTH0</span></div>
           <h2 id="auth-title">{isSignup ? 'Create your account' : 'Welcome back'}</h2>
-          <p className="auth-card-intro">{isSignup ? 'Start designing and saving your platform architectures.' : 'Enter your email to continue to your workspace.'}</p>
-          <form onSubmit={beginAuth0Flow}>
-            <label className="auth-email-label" htmlFor="auth-email">Work email</label>
+          <p className="auth-card-intro">{isSignup ? 'Create an account to start designing.' : 'Sign in to continue to your workspace.'}</p>
+          <form onSubmit={beginSignIn}>
+            <label className="auth-email-label" htmlFor="auth-email">Email</label>
             <div className="auth-email-field"><Icon name="mail" size={17} /><input id="auth-email" type="email" autoComplete="email" placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
-            <button className="button button-primary auth-submit" type="submit">{isSignup ? 'Create account with Auth0' : 'Continue with Auth0'}<Icon name="arrow-up-right" size={16} /></button>
+            <button className="button button-primary auth-submit" type="submit" disabled={!auth.configured || auth.loading}>{isSignup ? 'Create account' : 'Continue'}<Icon name="arrow-up-right" size={16} /></button>
           </form>
-          {notice && <div className="auth-notice" role="status"><Icon name="info" size={15} /><span>{notice}</span></div>}
-          <div className="auth-divider"><span>SECURE ACCOUNT ACCESS</span></div>
-          <p className="auth-provider-note"><Icon name="shield" size={15} />Auth0 will handle password entry and account security once the tenant is connected. KloudLab won’t store your credentials.</p>
+          {(auth.error || !auth.configured) && <div className="auth-notice" role="status"><Icon name="info" size={15} /><span>{auth.configured ? 'We couldn’t complete sign-in. Please try again.' : 'Sign-in is temporarily unavailable. Please try again later.'}</span></div>}
           <p className="auth-switch">{isSignup ? 'Already have an account?' : 'New to KloudLab?'} <button onClick={() => onNavigate(isSignup ? 'login' : 'signup')}>{isSignup ? 'Log in' : 'Sign up'}</button></p>
           <button className="auth-back-link" onClick={() => onNavigate('home')}><Icon name="arrow-left" size={14} />Back to home</button>
         </section>
       </main>
-      <footer className="auth-footer"><span>kloudlab</span><span>Open-source building blocks. Your choice of cloud.</span></footer>
+      <SiteFooter onNavigate={onNavigate} />
     </div>
   )
 }

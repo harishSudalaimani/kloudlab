@@ -1,0 +1,19 @@
+model
+  schema 1.1
+
+type user
+
+type workspace
+  relations
+    define owner: [user]
+    define can_create: owner
+
+type architecture
+  relations
+    define workspace: [workspace]
+    define owner: [user]
+    define editor: [user]
+    define viewer: [user]
+    define can_view: owner or editor or viewer or owner from workspace
+    define can_edit: owner or editor or owner from workspace
+    define can_delete: owner or owner from workspace
