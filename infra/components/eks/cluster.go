@@ -97,6 +97,26 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 			return nil, err
 		}
 	}
+	var podIdentityAgent *awsEks.Addon
+	if args.EnablePodIdentityAgent {
+		podIdentityAgent, err = createAddon(ctx, component, name, cluster.Name, "eks-pod-identity-agent", args.Tags, addonDependencies)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if args.EnableEBSCSIDriver {
+		if podIdentityAgent == nil {
+			return nil, fmt.Errorf("EBS CSI requires the EKS Pod Identity Agent add-on")
+		}
+		ebsRole, ebsPolicy, err := createEBSCSIRole(ctx, component, name, args.Tags)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := createEBSCSIDriverAddon(ctx, component, name, cluster.Name, ebsRole.Arn, args.Tags,
+			[]pulumi.Resource{cluster, nodeGroup, podIdentityAgent, ebsPolicy}); err != nil {
+			return nil, err
+		}
+	}
 
 	component.clusterName = cluster.Name
 	component.endpoint = cluster.Endpoint

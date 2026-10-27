@@ -59,3 +59,23 @@ func createNodeRole(ctx *pulumi.Context, parent pulumi.Resource, name string, ta
 	}
 	return role, attachments, nil
 }
+
+func createEBSCSIRole(ctx *pulumi.Context, parent pulumi.Resource, name string, tags pulumi.StringMapInput) (*iam.Role, *iam.RolePolicyAttachment, error) {
+	const assumeRolePolicy = `{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"pods.eks.amazonaws.com"},"Action":["sts:AssumeRole","sts:TagSession"]}]}`
+	role, err := iam.NewRole(ctx, name+"-ebs-csi-role", &iam.RoleArgs{
+		AssumeRolePolicy: pulumi.String(assumeRolePolicy),
+		Description:      pulumi.String("EKS Pod Identity role for the EBS CSI controller in " + name),
+		Tags:             tags,
+	}, pulumi.Parent(parent))
+	if err != nil {
+		return nil, nil, err
+	}
+	attachment, err := iam.NewRolePolicyAttachment(ctx, name+"-ebs-csi-policy", &iam.RolePolicyAttachmentArgs{
+		Role:      role.Name,
+		PolicyArn: pulumi.String("arn:aws:iam::aws:policy/AmazonEBSCSIDriverPolicyV2"),
+	}, pulumi.Parent(parent), pulumi.DependsOn([]pulumi.Resource{role}))
+	if err != nil {
+		return nil, nil, err
+	}
+	return role, attachment, nil
+}

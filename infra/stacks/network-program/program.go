@@ -84,5 +84,6 @@ func Run(ctx *pulumi.Context, workload string) error {
 	ctx.Export("publicRouteTableId", vpc.PublicRouteTableID())
 	ctx.Export("privateRouteTableIds", vpc.PrivateRouteTableIDs())
 	ctx.Export("s3GatewayEndpointId", vpc.S3GatewayEndpointID())
+	ctx.Export("eksAuthEndpointId", vpc.EKSAuthEndpointID())
 	return nil
 }

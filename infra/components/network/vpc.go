@@ -50,6 +50,10 @@ func NewVPC(ctx *pulumi.Context, name string, args *Args, opts ...pulumi.Resourc
 	if err != nil {
 		return nil, err
 	}
+	eksAuthEndpoint, err := createEKSAuthEndpoint(ctx, component, vpc, subnets, name, args)
+	if err != nil {
+		return nil, err
+	}
 
 	component.vpcID = vpc.ID().ToStringOutput()
 	component.cidrBlock = pulumi.String(args.CIDRBlock).ToStringOutput()
@@ -58,6 +62,7 @@ func NewVPC(ctx *pulumi.Context, name string, args *Args, opts ...pulumi.Resourc
 	component.publicRouteTableID = routes.publicRouteTable.ID().ToStringOutput()
 	component.privateRouteTableIDs = routeTableIDs(routes.privateRouteTables).ToStringArrayOutput()
 	component.s3GatewayEndpointID = routes.s3Endpoint.ID()
+	component.eksAuthEndpointID = eksAuthEndpoint.ID()
 
 	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"vpcId":                component.vpcID,
@@ -67,6 +72,7 @@ func NewVPC(ctx *pulumi.Context, name string, args *Args, opts ...pulumi.Resourc
 		"publicRouteTableId":   component.publicRouteTableID,
 		"privateRouteTableIds": component.privateRouteTableIDs,
 		"s3GatewayEndpointId":  component.s3GatewayEndpointID,
+		"eksAuthEndpointId":    component.eksAuthEndpointID,
 	}); err != nil {
 		return nil, err
 	}

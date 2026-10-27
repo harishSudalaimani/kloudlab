@@ -53,7 +53,7 @@ pulumi preview
 pulumi up
 ```
 
-The app stack omits the EKS `kube-proxy` add-on and applies the Cilium bootstrap taint. Install and verify Cilium through the documented Argo CD flow before scheduling application workloads; see [Cilium app-cluster runbook](cilium-app-cluster.md).
+The app, identity, and observability stacks omit the EKS `kube-proxy` add-on and apply the Cilium bootstrap taint. Management keeps kube-proxy during Argo CD bootstrap. Follow the [Cilium multi-cluster runbook](cilium-multicluster.md) to install Cilium in all four clusters and then remove management's kube-proxy add-on.
 
 ## 4. Create the identity cluster
 

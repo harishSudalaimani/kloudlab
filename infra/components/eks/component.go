@@ -14,22 +14,24 @@ type Network interface {
 // group. Public API access is restricted to the explicitly supplied CIDRs;
 // private API access remains enabled for peered cluster management.
 type ClusterArgs struct {
-	Name                  string
-	KubernetesVersion     string
-	Network               Network
-	PublicEndpointAccess  bool
-	PrivateEndpointAccess bool
-	PublicAccessCIDRs     []string
-	ManagementCIDR        pulumi.StringInput
-	InstanceTypes         []string
-	MinSize               int
-	DesiredSize           int
-	MaxSize               int
-	DiskSizeGiB           int
-	ManageKubeProxy       bool
-	HoldNodesForCilium    bool
-	ProtectCluster        bool
-	Tags                  pulumi.StringMapInput
+	Name                   string
+	KubernetesVersion      string
+	Network                Network
+	PublicEndpointAccess   bool
+	PrivateEndpointAccess  bool
+	PublicAccessCIDRs      []string
+	ManagementCIDR         pulumi.StringInput
+	InstanceTypes          []string
+	MinSize                int
+	DesiredSize            int
+	MaxSize                int
+	DiskSizeGiB            int
+	ManageKubeProxy        bool
+	HoldNodesForCilium     bool
+	EnablePodIdentityAgent bool
+	EnableEBSCSIDriver     bool
+	ProtectCluster         bool
+	Tags                   pulumi.StringMapInput
 }
 
 // Cluster exposes values used by GitOps bootstrap and workload identity.

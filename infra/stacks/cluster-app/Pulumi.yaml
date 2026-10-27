@@ -36,5 +36,9 @@ config:
     value: false
   kloudlab-cluster:holdNodesForCilium:
     value: true
+  kloudlab-cluster:enablePodIdentityAgent:
+    value: false
+  kloudlab-cluster:enableEBSCSIDriver:
+    value: false
   kloudlab-cluster:protectCluster:
     value: true

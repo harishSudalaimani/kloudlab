@@ -81,8 +81,9 @@ Argo CD creates the child Applications, but sync must wait for these resources:
    workload identities scoped to those buckets. Replace the example bucket
    names with the actual Pulumi outputs before syncing the charts. Loki keeps
    30 days of logs and Tempo keeps 7 days of traces in these chart values.
-5. Install the EBS CSI driver and encrypted gp3 storage for Prometheus and
-   Loki local state. Create kloudlab-grafana-admin with admin-user and
+5. Install the EKS-managed EBS CSI add-on through Pulumi, then sync the Argo
+   `kloudlab-storage` application for its encrypted gp3 StorageClass before
+   Prometheus and Loki. Create kloudlab-grafana-admin with admin-user and
    admin-password keys. Grafana remains ClusterIP-only.
 6. Configure the API workload with the in-cluster OTLP/HTTP endpoint,
    OTEL_SERVICE_NAME=kloudlab-api, OTEL_RESOURCE_ATTRIBUTES containing
@@ -90,9 +91,10 @@ Argo CD creates the child Applications, but sync must wait for these resources:
    the collector share the namespace DNS and network policy permits the
    collector Service.
 
-The current infra source has no EKS resources, NLB/DNS, S3 buckets, Pod
-Identity associations, or storage class yet. These Helm definitions do not
-imply AWS resources or live telemetry already exist.
+The EKS component and gp3 StorageClass chart are defined in the repository;
+EBS CSI, S3 buckets, workload identity associations, and telemetry services
+must still be provisioned and verified in AWS before they are usable. These
+Helm definitions do not imply that live telemetry is already flowing.
 
 ## Collection limits to validate
 

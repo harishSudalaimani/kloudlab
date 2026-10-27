@@ -1,5 +1,5 @@
 # Cilium replaces kube-proxy service routing while AWS VPC CNI continues to
-# allocate pod ENIs/IPs. This is intentionally scoped to kloudlab-app.
+# allocate pod ENIs/IPs. Apply these values to each KloudLab EKS cluster.
 cni:
   chainingMode: aws-cni
   exclusive: false

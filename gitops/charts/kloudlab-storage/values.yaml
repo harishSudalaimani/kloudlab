@@ -1,0 +1,4 @@
+storageClass:
+  name: gp3
+  enabled: true
+  reclaimPolicy: Retain

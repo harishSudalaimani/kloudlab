@@ -15,15 +15,15 @@ const (
 
 // Args describes a VPC without embedding account-specific CIDRs or AZ names.
 type Args struct {
-	Environment         string
-	Region              string
-	CIDRBlock           string
-	OtherCIDRs          []string
-	AvailabilityZones   []string
-	SubnetPrefixLength  int
-	NATGatewayMode      NATGatewayMode
-	ProtectVPC          bool
-	Tags                map[string]string
+	Environment        string
+	Region             string
+	CIDRBlock          string
+	OtherCIDRs         []string
+	AvailabilityZones  []string
+	SubnetPrefixLength int
+	NATGatewayMode     NATGatewayMode
+	ProtectVPC         bool
+	Tags               map[string]string
 }
 
 // Component exposes outputs required by cluster and connectivity stacks.
@@ -36,4 +36,5 @@ type Component interface {
 	PublicRouteTableID() pulumi.StringOutput
 	PrivateRouteTableIDs() pulumi.StringArrayOutput
 	S3GatewayEndpointID() pulumi.IDOutput
+	EKSAuthEndpointID() pulumi.IDOutput
 }

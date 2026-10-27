@@ -13,6 +13,7 @@ type VPC struct {
 	publicRouteTableID   pulumi.StringOutput
 	privateRouteTableIDs pulumi.StringArrayOutput
 	s3GatewayEndpointID  pulumi.IDOutput
+	eksAuthEndpointID    pulumi.IDOutput
 }
 
 // VPCID returns the AWS VPC identifier.
@@ -35,3 +36,6 @@ func (v *VPC) PrivateRouteTableIDs() pulumi.StringArrayOutput { return v.private
 
 // S3GatewayEndpointID returns the S3 gateway endpoint identifier.
 func (v *VPC) S3GatewayEndpointID() pulumi.IDOutput { return v.s3GatewayEndpointID }
+
+// EKSAuthEndpointID returns the interface endpoint used by private nodes for EKS Pod Identity.
+func (v *VPC) EKSAuthEndpointID() pulumi.IDOutput { return v.eksAuthEndpointID }
