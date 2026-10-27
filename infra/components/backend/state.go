@@ -117,11 +117,13 @@ func NewStateBackend(ctx *pulumi.Context, name string, args *StateBackendArgs, o
 	component.bucketName = bucket.Bucket
 	component.bucketARN = bucket.Arn
 	component.kmsKeyARN = key.Arn
-	component.RegisterOutputs(pulumi.Map{
+	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"bucketName": component.bucketName,
 		"bucketArn":  component.bucketARN,
 		"kmsKeyArn":  component.kmsKeyARN,
-	})
+	}); err != nil {
+		return nil, err
+	}
 	return component, nil
 }
 

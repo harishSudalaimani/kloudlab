@@ -109,14 +109,16 @@ func NewConnectivity(ctx *pulumi.Context, name string, args *ConnectivityArgs, o
 	component.identityObservabilityPeeringID = identityObservability.ID()
 	component.identityManagementPeeringID = identityManagement.ID()
 	component.observabilityManagementPeeringID = observabilityManagement.ID()
-	component.RegisterOutputs(pulumi.Map{
+	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"appIdentityPeeringId":             component.appIdentityPeeringID,
 		"appObservabilityPeeringId":        component.appObservabilityPeeringID,
 		"appManagementPeeringId":           component.appManagementPeeringID,
 		"identityObservabilityPeeringId":  component.identityObservabilityPeeringID,
 		"identityManagementPeeringId":     component.identityManagementPeeringID,
 		"observabilityManagementPeeringId": component.observabilityManagementPeeringID,
-	})
+	}); err != nil {
+		return nil, err
+	}
 	return component, nil
 }
 

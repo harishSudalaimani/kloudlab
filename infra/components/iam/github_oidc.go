@@ -132,10 +132,12 @@ func NewGitHubActionsRole(ctx *pulumi.Context, name string, args *GitHubActionsR
 
 	component.providerARN = provider.Arn
 	component.roleARN = role.Arn
-	component.RegisterOutputs(pulumi.Map{
+	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"providerArn": component.providerARN,
 		"roleArn":     component.roleARN,
-	})
+	}); err != nil {
+		return nil, err
+	}
 	return component, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	pulumiconfig "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 
 	"github.com/harishsudalaimani/kloudlab/infra/components/network"
 	"github.com/harishsudalaimani/kloudlab/infra/config"
@@ -11,8 +12,8 @@ import (
 
 // Run connects the app, identity, observability, and management network stacks.
 func Run(ctx *pulumi.Context) error {
-	stackConfig := pulumi.NewConfig(ctx, "kloudlab-connectivity")
-	awsConfig := pulumi.NewConfig(ctx, "aws")
+	stackConfig := pulumiconfig.New(ctx, "kloudlab-connectivity")
+	awsConfig := pulumiconfig.New(ctx, "aws")
 	common := config.Common{
 		Project:     "kloudlab",
 		Environment: stackConfig.Require("environment"),

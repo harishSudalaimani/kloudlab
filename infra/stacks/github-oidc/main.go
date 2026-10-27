@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	pulumiconfig "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 
 	"github.com/harishsudalaimani/kloudlab/infra/components/iam"
 	"github.com/harishsudalaimani/kloudlab/infra/config"
@@ -9,8 +10,8 @@ import (
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-		stackConfig := pulumi.NewConfig(ctx, "kloudlab-github-oidc")
-		awsConfig := pulumi.NewConfig(ctx, "aws")
+		stackConfig := pulumiconfig.New(ctx, "kloudlab-github-oidc")
+		awsConfig := pulumiconfig.New(ctx, "aws")
 		common := config.Common{
 			Project:     "kloudlab",
 			Environment: stackConfig.Require("environment"),

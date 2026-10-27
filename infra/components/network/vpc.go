@@ -59,7 +59,7 @@ func NewVPC(ctx *pulumi.Context, name string, args *Args, opts ...pulumi.Resourc
 	component.privateRouteTableIDs = routeTableIDs(routes.privateRouteTables).ToStringArrayOutput()
 	component.s3GatewayEndpointID = routes.s3Endpoint.ID()
 
-	component.RegisterOutputs(pulumi.Map{
+	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"vpcId":                component.vpcID,
 		"cidrBlock":            component.cidrBlock,
 		"publicSubnetIds":      component.publicSubnetIDs,
@@ -67,7 +67,9 @@ func NewVPC(ctx *pulumi.Context, name string, args *Args, opts ...pulumi.Resourc
 		"publicRouteTableId":   component.publicRouteTableID,
 		"privateRouteTableIds": component.privateRouteTableIDs,
 		"s3GatewayEndpointId":  component.s3GatewayEndpointID,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	return component, nil
 }

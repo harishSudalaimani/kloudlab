@@ -2,6 +2,7 @@ package stateprogram
 
 import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	pulumiconfig "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 
 	"github.com/harishsudalaimani/kloudlab/infra/components/backend"
 	"github.com/harishsudalaimani/kloudlab/infra/config"
@@ -9,8 +10,8 @@ import (
 
 // Run creates the protected remote state bucket and KMS key.
 func Run(ctx *pulumi.Context) error {
-	stackConfig := pulumi.NewConfig(ctx, "kloudlab-state")
-	awsConfig := pulumi.NewConfig(ctx, "aws")
+	stackConfig := pulumiconfig.New(ctx, "kloudlab-state")
+	awsConfig := pulumiconfig.New(ctx, "aws")
 	common := config.Common{
 		Project:     "kloudlab",
 		Environment: stackConfig.Require("environment"),
