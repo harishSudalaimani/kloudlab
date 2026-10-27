@@ -25,11 +25,11 @@ config:
     value:
       - t3.medium
   kloudlab-cluster:minSize:
-    value: 2
+    value: 1
   kloudlab-cluster:desiredSize:
-    value: 2
+    value: 1
   kloudlab-cluster:maxSize:
-    value: 4
+    value: 2
   kloudlab-cluster:diskSizeGiB:
     value: 30
   kloudlab-cluster:manageKubeProxy:
