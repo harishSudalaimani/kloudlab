@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-35"
 spec:
-  project: default
+  project: kloudlab-observability
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main

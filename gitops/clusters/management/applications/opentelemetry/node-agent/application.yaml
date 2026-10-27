@@ -4,7 +4,7 @@ metadata:
   name: kloudlab-management-otel-node-agent
   namespace: argocd
 spec:
-  project: default
+  project: kloudlab-management
   sources:
     - repoURL: https://github.com/harishSudalaimani/kloudlab.git
       path: charts/observability/opentelemetry-collector
@@ -17,7 +17,7 @@ spec:
       targetRevision: main
       ref: values
   destination:
-    name: kloudlab-management
+    name: in-cluster
     namespace: opentelemetry
   syncPolicy:
     syncOptions:

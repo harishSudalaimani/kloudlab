@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-project-bootstrap
+  namespace: argocd
+spec:
+  project: kloudlab-bootstrap
+  source:
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    targetRevision: main
+    path: gitops/management/project-bootstrap
+    directory:
+      recurse: false
+      include: "*.yaml"
+  destination:
+    name: in-cluster
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false

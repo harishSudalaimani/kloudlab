@@ -4,7 +4,7 @@ metadata:
   name: kloudlab-app-applications
   namespace: argocd
 spec:
-  project: default
+  project: kloudlab-bootstrap
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main

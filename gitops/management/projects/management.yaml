@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kloudlab-management
+  namespace: argocd
+spec:
+  description: Applications and platform services for the KloudLab management cluster.
+  sourceRepos:
+    - https://github.com/harishSudalaimani/kloudlab.git
+  destinations:
+    - name: in-cluster
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

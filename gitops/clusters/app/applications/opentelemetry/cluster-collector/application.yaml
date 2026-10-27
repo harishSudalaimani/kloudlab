@@ -4,7 +4,7 @@ metadata:
   name: kloudlab-app-otel-cluster-collector
   namespace: argocd
 spec:
-  project: default
+  project: kloudlab-app
   sources:
     - repoURL: https://github.com/harishSudalaimani/kloudlab.git
       path: charts/observability/opentelemetry-collector
