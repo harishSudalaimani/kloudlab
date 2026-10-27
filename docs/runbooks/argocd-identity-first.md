@@ -5,34 +5,37 @@ AppProject, then the cluster registration and workload Applications are handled
 as separate steps. Do not enable the identity workload root until the cluster is
 registered and its Cilium API endpoint value has been checked.
 
-## Bootstrap the identity AppProject through Argo CD
+## Bootstrap the restricted projects through Argo CD
 
 Push the project manifest and bootstrap Application manifest to the configured
 `main` branch. Argo CD reads Git at that revision.
 
-In the local Argo CD UI, create an Application with these settings. This
-Application only installs the AppProject; it does not install identity
-workloads:
+In the local Argo CD UI, create one seed Application with these settings. It
+installs the restricted bootstrap AppProject first, then an Argo CD Application
+that syncs the identity AppProject from Git:
 
 | Setting | Value |
 | --- | --- |
-| Application name | `kloudlab-identity-projects` |
+| Application name | `kloudlab-project-bootstrap` |
 | Project | `default` |
 | Repository URL | `https://github.com/harishSudalaimani/kloudlab.git` |
 | Revision | `main` |
-| Path | `gitops/management/projects` |
+| Path | `gitops/management/project-bootstrap` |
 | Directory recurse | Off |
-| Directory include | `identity.yaml` |
 | Destination cluster | `in-cluster` |
 | Destination namespace | `argocd` |
 | Sync policy | Automated, self-heal on, prune off |
 
-The matching manifest is [identity-project.yaml](../../gitops/management/project-bootstrap/identity-project.yaml).
+The seed Application is the one-time trust root created through the Argo CD UI.
+Its two Git-managed resources are [bootstrap-project.yaml](../../gitops/management/project-bootstrap/bootstrap-project.yaml)
+and [identity-project.yaml](../../gitops/management/project-bootstrap/identity-project.yaml).
 
-Keep the local port-forward running. Confirm the `kloudlab-identity-projects`
-Application is `Synced` and `Healthy`; then, in **Settings → Projects**, confirm
-`kloudlab-identity` exists. The bootstrap Application stays in the existing
-`default` project and reads only the identity project manifest from Git.
+Keep the local port-forward running. Confirm `kloudlab-project-bootstrap` and
+its child `kloudlab-identity-projects` are `Synced` and `Healthy`. In **Settings
+→ Projects**, confirm `kloudlab-bootstrap` and `kloudlab-identity` exist.
+`kloudlab-bootstrap` can deploy only Argo CD `Application` and `AppProject`
+objects into the management cluster's `argocd` namespace. `kloudlab-identity`
+can deploy only to the identity cluster's approved namespaces.
 
 ## Before registering and deploying the identity cluster
 
@@ -60,10 +63,11 @@ Applications. The current value is `auto`; the EKS clusters do not provide the
 `kube-public/cluster-info` ConfigMap that Cilium's automatic discovery relies
 on in this configuration.
 
-The identity project currently permits only the KloudLab Git repository,
+The identity project permits only the KloudLab Git repository and the
 `kloudlab-identity` destinations in `kube-system`, `kloudlab-identity`, and
-`opentelemetry`, plus the Argo CD namespace needed for its root Application.
-Cluster-scoped permissions are limited to namespaces, CRDs, and cluster RBAC.
+`opentelemetry`. It has no destination in the management cluster. Cluster-scoped
+permissions are limited by kind and name to identity namespaces, Cilium CRDs,
+and the Cilium and OpenTelemetry collector RBAC resources.
 The allowlists are based on the configured Cilium, OpenFGA, and OpenTelemetry
 Collector workloads. Their upstream Helm dependencies are not present in the
 local chart cache, so render those pinned dependencies and review the resource

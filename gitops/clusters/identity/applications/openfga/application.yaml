@@ -4,7 +4,7 @@ metadata:
   name: openfga
   namespace: argocd
 spec:
-  project: default
+  project: kloudlab-identity
   sources:
     - repoURL: https://github.com/harishSudalaimani/kloudlab.git
       path: charts/openfga

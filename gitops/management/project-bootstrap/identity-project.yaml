@@ -3,10 +3,10 @@ kind: Application
 metadata:
   name: kloudlab-identity-projects
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
-  # This small bootstrap Application stays in the existing default project so it
-  # can create the AppProject that constrains identity workloads.
-  project: default
+  project: kloudlab-bootstrap
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
