@@ -67,7 +67,6 @@ kloudlab/
 │   ├── aws-load-balancer-controller/
 │   ├── cert-manager/          # standalone upstream chart; do not make it a subchart
 │   ├── cert-manager-resources/
-│   ├── cilium/
 │   ├── external-dns/
 │   ├── infisical/
 │   │   ├── server/
@@ -99,10 +98,8 @@ kloudlab/
 │   └── clusters/
 │   │   ├── app/
 │   │   │   ├── values/
-│   │   │   │   ├── cilium.yaml
 │   │   │   │   └── kgateway.yaml
 │   │   │   ├── applications/
-│   │   │   │   ├── cilium/application.yaml
 │   │   │   │   ├── karpenter/
 │   │   │   │   │   ├── application.yaml
 │   │   │   │   │   ├── values.yaml
@@ -159,7 +156,6 @@ kloudlab/
 │   └── runbooks/
 │       ├── argocd-management-gitops.md
 │       ├── argocd-management-gateway.md
-│       ├── cilium-multicluster.md
 │       └── kgateway-helm-argocd.md
 │
 ├── scripts/

@@ -93,6 +93,6 @@ sync only that cluster's reviewed Applications under
 `gitops/clusters/<cluster>/applications/`. The old aggregate root manifests
 have been removed so an Argo CD restart cannot activate every cluster at once.
 
-Keep `aws-node` and kube-proxy in place while preparing Cilium. Deploy Cilium
-through its individual Application only after the cluster connection is
-healthy and the values point at that cluster's EKS API endpoint.
+Keep the EKS-managed AWS VPC CNI, CoreDNS, and kube-proxy add-ons enabled. Argo
+CD manages the cluster's platform and application workloads; Pulumi manages
+the EKS baseline add-ons.

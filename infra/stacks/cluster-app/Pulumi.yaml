@@ -32,10 +32,6 @@ config:
     value: 4
   kloudlab-cluster:diskSizeGiB:
     value: 30
-  kloudlab-cluster:manageKubeProxy:
-    value: false
-  kloudlab-cluster:holdNodesForCilium:
-    value: true
   kloudlab-cluster:enableMetricsServer:
     value: true
   kloudlab-cluster:enablePodIdentityAgent:

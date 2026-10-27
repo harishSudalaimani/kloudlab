@@ -189,7 +189,6 @@ const tool = (
 const extendedCatalog: ComponentDefinition[] = [
   tool('opentofu', 'OpenTofu', 'Infrastructure as code for provisioning and managing cloud resources.', 'Infrastructure', 'TF', 'infrastructure', 'https://opentofu.org/docs/'),
   tool('crossplane', 'Crossplane', 'Compose infrastructure and platform APIs with Kubernetes.', 'Infrastructure', 'XP', 'infrastructure', 'https://docs.crossplane.io/'),
-  tool('cilium', 'Cilium', 'Kubernetes networking, network policy, and eBPF observability.', 'Networking', 'CIL', 'network', 'https://docs.cilium.io/'),
   tool('calico', 'Calico', 'Kubernetes networking and network policy.', 'Networking', 'CAL', 'network', 'https://docs.tigera.io/calico/latest/about/'),
   tool('metallb', 'MetalLB', 'Load balancing for bare-metal Kubernetes clusters.', 'Networking', 'MLB', 'network', 'https://metallb.universe.tf/'),
   tool('coredns', 'CoreDNS', 'DNS server and service discovery for cloud-native environments.', 'Networking', 'DNS', 'network', 'https://coredns.io/manual/'),

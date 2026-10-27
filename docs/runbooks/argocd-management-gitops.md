@@ -25,8 +25,8 @@ For the next cluster only:
 5. Confirm health before moving on to the next Application or cluster.
 
 Start with management, then identity, app, and observability. Keep kube-proxy
-enabled until Cilium is healthy on every node in that cluster. Do not apply a
-cluster-wide root that recursively creates all Applications.
+enabled in every cluster. Do not apply a cluster-wide root that recursively
+creates all Applications.
 
 ## Verify the current control plane
 

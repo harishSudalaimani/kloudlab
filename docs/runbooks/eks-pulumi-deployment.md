@@ -53,7 +53,7 @@ pulumi preview
 pulumi up
 ```
 
-The app, identity, and observability stacks omit the EKS `kube-proxy` add-on and apply the Cilium bootstrap taint. Management keeps kube-proxy during Argo CD bootstrap. Follow the [Cilium multi-cluster runbook](cilium-multicluster.md) to install Cilium in all four clusters and then remove management's kube-proxy add-on.
+All four cluster stacks keep the EKS-managed `kube-proxy` add-on enabled. Argo CD manages Kubernetes platform applications; Pulumi manages the EKS baseline networking add-ons.
 
 ## 4. Create the identity cluster
 

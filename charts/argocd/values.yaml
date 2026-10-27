@@ -1,7 +1,6 @@
 argo-cd:
   global:
     networkPolicy:
-      # Enable reviewed Cilium policies after the management datapath is ready.
       create: false
   controller:
     # The EKS auth plugin uses the management cluster's Pod Identity role.

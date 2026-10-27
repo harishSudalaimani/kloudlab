@@ -97,10 +97,8 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 			return nil, err
 		}
 	}
-	if args.ManageKubeProxy {
-		if _, err := createAddon(ctx, component, name, cluster.Name, "kube-proxy", args.Tags, addonDependencies); err != nil {
-			return nil, err
-		}
+	if _, err := createAddon(ctx, component, name, cluster.Name, "kube-proxy", args.Tags, addonDependencies); err != nil {
+		return nil, err
 	}
 	var podIdentityAgent *awsEks.Addon
 	if args.EnablePodIdentityAgent {

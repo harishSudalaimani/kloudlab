@@ -15,15 +15,6 @@ func createManagedNodeGroup(
 	nodeRole *iam.Role,
 	dependencies []pulumi.Resource,
 ) (*awsEks.NodeGroup, error) {
-	taints := awsEks.NodeGroupTaintArray{}
-	if args.HoldNodesForCilium {
-		taints = append(taints, awsEks.NodeGroupTaintArgs{
-			Key:    pulumi.String("node.cilium.io/agent-not-ready"),
-			Value:  pulumi.StringPtr("true"),
-			Effect: pulumi.String("NO_EXECUTE"),
-		})
-	}
-
 	instanceTypes := make(pulumi.StringArray, 0, len(args.InstanceTypes))
 	for _, instanceType := range args.InstanceTypes {
 		instanceTypes = append(instanceTypes, pulumi.String(instanceType))
@@ -43,7 +34,6 @@ func createManagedNodeGroup(
 			DesiredSize: pulumi.Int(args.DesiredSize),
 			MaxSize:     pulumi.Int(args.MaxSize),
 		},
-		Taints: taints,
 		Tags:   args.Tags,
 	}, pulumi.Parent(parent), pulumi.DependsOn(dependencies))
 }

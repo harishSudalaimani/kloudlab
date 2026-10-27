@@ -16,15 +16,14 @@ For each cluster, complete these steps before moving to the next:
 
 Use this order:
 
-1. **Management:** Cilium first, then management platform services as needed.
-2. **Identity:** Cilium, data services and Infisical prerequisites, Infisical,
+1. **Management:** management platform services as needed.
+2. **Identity:** data services and Infisical prerequisites, Infisical,
    OpenFGA, and telemetry agents.
-3. **App:** Cilium, kgateway and its prerequisites, application workloads, and
+3. **App:** kgateway and its prerequisites, application workloads, and
    telemetry agents.
-4. **Observability:** Cilium, storage, Prometheus/Loki/Tempo/Grafana, and
+4. **Observability:** storage, Prometheus/Loki/Tempo/Grafana, and
    telemetry agents.
 
-Keep kube-proxy enabled in a cluster until its Cilium installation is healthy
-on every node. Review each Application's values and prerequisites before
+Keep kube-proxy enabled in every cluster. Review each Application's values and prerequisites before
 creating it; do not create a recursive root that activates every component in
 that cluster at once.

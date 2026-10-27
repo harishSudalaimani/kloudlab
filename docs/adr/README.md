@@ -9,4 +9,3 @@ These records capture the current boundaries and choices for the platform founda
 5. [Infisical recovery boundary](0005-infisical-recovery-boundary.md)
 6. [Pulumi and Argo CD ownership](0006-pulumi-and-argocd-ownership.md)
 7. [AWS bootstrap and initial networking](0007-aws-bootstrap-and-networking.md)
-8. [Cilium replaces kube-proxy in all clusters](0008-cilium-service-datapath.md)

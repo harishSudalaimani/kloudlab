@@ -9,18 +9,17 @@ when a workload needs them.
 
 | Add-on | App | Identity | Observability | Management | Owner and purpose |
 | --- | --- | --- | --- | --- | --- |
-| Amazon VPC CNI (`vpc-cni`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; assigns VPC pod IPs. Cilium chains to it. |
+| Amazon VPC CNI (`vpc-cni`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; assigns VPC pod IPs. |
 | CoreDNS (`coredns`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; cluster DNS. |
-| kube-proxy | No after Cilium is healthy | No after Cilium is healthy | No after Cilium is healthy | No after Cilium is healthy | EKS add-on only during management bootstrap; Cilium replaces service routing. |
+| kube-proxy | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; provides Kubernetes Service routing. |
 | Metrics Server (`metrics-server`) | Yes | Yes | Yes | Yes | EKS community add-on via Pulumi; serves the resource Metrics API for `kubectl top` and HPA/VPA. |
 | EKS Pod Identity Agent (`eks-pod-identity-agent`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi; lets explicitly associated service accounts receive AWS credentials. |
 | EBS CSI (`aws-ebs-csi-driver`) | Yes | Yes | Yes | Yes | EKS add-on via Pulumi with a per-cluster Pod Identity role; provisions EBS volumes only when a PVC requests them. |
 | gp3 StorageClass | No | No | Yes | No | Local Helm chart through Argo CD; encrypted, expandable EBS volumes. |
 
-VPC CNI and CoreDNS are present in the Pulumi EKS component. Management keeps
-kube-proxy only until Argo CD has installed Cilium and Cilium is ready on every
-node. Metrics Server, EKS Pod Identity Agent, and EBS CSI are enabled in all
-four cluster Pulumi projects. EBS CSI does not create billable volumes by
+VPC CNI, CoreDNS, and kube-proxy are present in the Pulumi EKS component in all
+four clusters. Metrics Server, EKS Pod Identity Agent, and EBS CSI are enabled
+in all four cluster Pulumi projects. EBS CSI does not create billable volumes by
 itself; the observability cluster currently requests EBS-backed Prometheus and
 Alertmanager volumes.
 
@@ -33,7 +32,7 @@ Alertmanager volumes.
 | cert-manager | Helm via Argo CD | When KloudLab automates certificate issuance in Kubernetes. |
 | EFS/FSx/S3 CSI drivers and CSI snapshot controller | EKS add-on or Helm, selected per driver | Only if a workload needs shared file storage, filesystem/object mounts, or CSI volume snapshots. Current architecture does not need them. |
 
-OpenTelemetry Collector, Cilium, kgateway, Argo CD, OpenFGA, Prometheus, Loki,
+OpenTelemetry Collector, kgateway, Argo CD, OpenFGA, Prometheus, Loki,
 Tempo, and Grafana are platform software installed with Helm and reconciled by
 Argo CD; they are not EKS add-ons. Do not add CloudWatch or ADOT to this stack.
 
@@ -77,9 +76,7 @@ pulumi preview
 ```
 
 Do not create duplicate add-ons manually; reconcile the Pulumi stack to the
-AWS state. Once Cilium is healthy on management, set
-`kloudlab-cluster:manageKubeProxy` to `false` and review that the preview only
-removes the kube-proxy add-on.
+AWS state. Review previews to confirm kube-proxy remains managed.
 
 ## Enable the baseline add-ons in each cluster
 
@@ -90,8 +87,7 @@ when NAT egress is available and adds cost when deployed in private subnets.
 Each EBS CSI controller receives its own Pod Identity role and association.
 
 Run one cluster stack at a time. These settings enable Metrics Server, the EKS
-Pod Identity Agent, and EBS CSI. Leave kube-proxy unchanged during these
-updates; remove it separately only after Cilium is healthy.
+Pod Identity Agent, and EBS CSI. Keep kube-proxy enabled in every cluster.
 
 ```sh
 cd infra/stacks/cluster-management
@@ -106,8 +102,8 @@ pulumi up
 Repeat the same commands from `infra/stacks/cluster-app`,
 `infra/stacks/cluster-identity`, and `infra/stacks/cluster-observability`, one
 stack at a time. In each preview, expect Metrics Server, Pod Identity Agent,
-EBS CSI, and that cluster's EBS CSI role/association. Do not accept an
-unrelated kube-proxy change in these previews.
+EBS CSI, and that cluster's EBS CSI role/association. Keep kube-proxy in the
+managed add-on set.
 
 After the observability add-on is `ACTIVE`, sync the Argo application for the
 `gp3` StorageClass, then Prometheus and Loki. The StorageClass uses the EBS CSI

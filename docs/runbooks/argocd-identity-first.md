@@ -10,9 +10,6 @@ manually after the Argo control plane is healthy.
 - Confirm `kloudlab-management` Argo CD is healthy.
 - Confirm the identity cluster's dedicated Argo deploy role and EKS access
   entry are present.
-- Set `cilium.k8sServiceHost` in
-  `gitops/clusters/identity/values/cilium.yaml` to the identity EKS API
-  hostname, without `https://`.
 - Create the `kloudlab-identity` AppProject from
   `gitops/management/projects/identity.yaml`.
 
@@ -21,17 +18,8 @@ Confirm its connection is successful before creating an Application.
 
 ## Deploy one Application at a time
 
-From the repository root, create the Cilium Application first:
-
-```sh
-argocd app create -f gitops/clusters/identity/applications/cilium/application.yaml
-```
-
-Sync it only after reviewing the diff. Keep kube-proxy enabled until Cilium is
-healthy on every node and reports kube-proxy replacement active.
-
-After Cilium is healthy, prepare the identity services' external dependencies
-before creating their Applications:
+Keep the EKS-managed kube-proxy add-on enabled. Prepare the identity services'
+external dependencies before creating their Applications:
 
 1. Provision PostgreSQL and Redis endpoints and the required Secrets through
    the approved secret workflow.

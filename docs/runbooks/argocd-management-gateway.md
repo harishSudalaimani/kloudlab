@@ -2,7 +2,7 @@
 
 Argo CD is first installed locally with Helm from `charts/argocd`. Do not
 bootstrap its Gateway as part of that installation. Keep using a local
-port-forward until the management cluster's Cilium and kgateway prerequisites
+port-forward until the management cluster's kgateway prerequisites
 are deliberately deployed through individual Argo CD Applications.
 
 The management ingress flow remains:

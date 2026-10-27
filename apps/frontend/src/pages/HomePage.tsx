@@ -14,7 +14,7 @@ interface HomePageProps {
 
 const previewNodes = [
   { name: 'Kubernetes', type: 'COMPUTE', x: '7%', y: '37%', tone: 'green' },
-  { name: 'Cilium', type: 'NETWORK', x: '38%', y: '16%', tone: 'blue' },
+  { name: 'kube-proxy', type: 'NETWORK', x: '38%', y: '16%', tone: 'blue' },
   { name: 'OpenFGA', type: 'AUTHORIZATION', x: '38%', y: '62%', tone: 'violet' },
   { name: 'OpenTelemetry', type: 'OBSERVABILITY', x: '68%', y: '37%', tone: 'orange' },
 ]

@@ -34,7 +34,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 ## Phase 3 — EKS and cluster foundations
 
 - [x] Implement four EKS cluster stacks with private worker nodes, IAM roles, managed add-ons, and EC2 managed node groups; stack previews and deployment remain pending. Management is kept management-only.
-- [x] Prepare Cilium Helm Application definitions for all four clusters. Keep kube-proxy enabled everywhere; Argo CD is installed directly on management and Cilium is added one cluster at a time. Remove kube-proxy only after that cluster's Cilium is healthy. Rollout and live validation remain pending.
+- [x] Keep the EKS-managed kube-proxy add-on enabled in all four cluster stacks; Argo CD manages platform and application workloads.
 - [x] Set two `t3.medium` managed nodes per cluster as the initial development sizing hypothesis; workload requests, burst credits, pod density, subnet capacity, and cost still need live validation before fixing production capacity.
 - [ ] Configure Karpenter only in `kloudlab-app`; keep stable managed baseline nodes for system services and its controller.
 - [x] Configure private-subnet multi-AZ node placement, restricted public API endpoints, and EKS managed add-ons in the stack code; cluster and workload identity plus live security validation remain pending.

@@ -26,7 +26,6 @@ Current modules:
 
 - `argocd`: Argo CD bootstrap chart, installed directly with Helm on the
   management cluster.
-- `cilium`: Cilium datapath, installed by Argo CD.
 - `kgateway/controller` and `kgateway/crds`: kgateway upstream charts.
 - `kgateway/gateway-api-crds`: pinned Gateway API standard CRD bundle.
 - `kgateway/resources`: KloudLab Gateway API resources.
