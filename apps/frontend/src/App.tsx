@@ -18,7 +18,6 @@ import {
   type Viewport,
 } from '@xyflow/react'
 import { CanvasNode, type ComponentFlowNode } from './components/CanvasNode'
-import { AuthorizationDialog } from './components/AuthorizationDialog'
 import { Icon } from './components/Icon'
 import { Inspector, type InspectorTab } from './components/Inspector'
 import { SiteNavigation, type AppPage, type Theme } from './components/SiteNavigation'
@@ -29,10 +28,10 @@ import { authDisplayName, useAuth } from './auth/AuthProvider'
 import { ApiError, apiRequest, type SavedArchitecture } from './auth/api'
 import { catalog, catalogById, categories, defaultConfig, type ComponentDefinition, type ComponentCategory } from './domain/catalog'
 import { checkConnection, type ConnectionCheck, type ExistingConnection } from './domain/connections'
-import { createDefaultAuthorizationModel, type AuthorizationModel } from './domain/authorization'
 import {
   ACTIVE_KEY,
   createEmptyCanvas,
+  normalizeCanvasDocument,
   createStarterCanvas,
   isCanvasDocument,
   makeId,
@@ -88,7 +87,7 @@ function readDocument(storageKey = ACTIVE_KEY): CanvasDocument {
     const active = localStorage.getItem(storageKey)
     if (active) {
       const parsed: unknown = JSON.parse(active)
-      if (isCanvasDocument(parsed)) return parsed
+      if (isCanvasDocument(parsed)) return normalizeCanvasDocument(parsed)
     }
   } catch { /* Storage may be disabled; use the example document. */ }
   return createStarterCanvas()
@@ -100,7 +99,7 @@ function documentFromFlow(
   edges: Edge[],
 ): CanvasDocument {
   return {
-    ...base,
+    ...normalizeCanvasDocument(base),
     nodes: nodes.map((node) => ({
       id: node.id,
       typeId: node.data.typeId,
@@ -166,7 +165,6 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
   const [category, setCategory] = useState<ComponentCategory | 'All'>('All')
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('properties')
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const [authorizationOpen, setAuthorizationOpen] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [toast, setToast] = useState('')
   const [mobileCatalogOpen, setMobileCatalogOpen] = useState(false)
@@ -218,8 +216,6 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
   documentRef.current = document
 
   const currentDocument = useMemo(() => documentFromFlow(document, nodes, edges), [document, nodes, edges])
-  const authorizationModel = useMemo(() => document.authorizationModel ?? createDefaultAuthorizationModel(), [document.authorizationModel])
-  const openFgaOnCanvas = nodes.some((node) => node.data.typeId === 'openfga')
   const issues = useMemo(() => validateCanvas(currentDocument), [currentDocument])
   const errors = issues.filter((issue) => issue.severity === 'error').length
   const warnings = issues.filter((issue) => issue.severity === 'warning').length
@@ -290,15 +286,6 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
     return () => window.document.removeEventListener('fullscreenchange', updateFullscreenState)
   }, [])
 
-  const updateAuthorizationModel = useCallback((model: AuthorizationModel) => {
-    setDocument((current) => {
-      const next = { ...current, authorizationModel: model }
-      documentRef.current = next
-      return next
-    })
-    setSaveState('unsaved')
-  }, [])
-
   const navigateFromCanvas = useCallback((page: AppPage) => {
     try {
       localStorage.setItem(activeDraftKey, JSON.stringify(documentFromFlow(documentRef.current, nodesRef.current, edgesRef.current)))
@@ -312,8 +299,9 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
   }, [])
 
   const replaceDocument = useCallback((next: CanvasDocument) => {
-    const parsed = fromDocument(next)
-    setDocument(next)
+    const normalized = normalizeCanvasDocument(next)
+    const parsed = fromDocument(normalized)
+    setDocument(normalized)
     setNodes(parsed.nodes)
     setEdges(parsed.edges)
     setMobileInspectorOpen(false)
@@ -321,7 +309,7 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
     setNodeContextMenu(null)
     nodesRef.current = parsed.nodes
     edgesRef.current = parsed.edges
-    documentRef.current = next
+    documentRef.current = normalized
     historyRef.current = []
     futureRef.current = []
     setSaveState('unsaved')
@@ -600,7 +588,7 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
       try {
         const parsed: unknown = JSON.parse(String(reader.result))
         if (!isCanvasDocument(parsed)) throw new Error('not a canvas document')
-        replaceDocument({ ...parsed, id: makeId('canvas') })
+        replaceDocument({ ...normalizeCanvasDocument(parsed), id: makeId('canvas') })
         setLibraryOpen(false)
         notify(`Opened ${file.name}`)
       } catch {
@@ -740,7 +728,6 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
                 <button className="icon-button" title="Redo (⇧⌘Z)" disabled={!canRedo} onClick={redo}><Icon name="redo" size={16} /></button>
               </div>
               <button className="icon-button fit-button" title="Fit all components" aria-label="Fit all components" onClick={fitCanvas}><Icon name="grid" size={16} /></button>
-              <button className="toolbar-secondary access-model-trigger" onClick={() => setAuthorizationOpen(true)}><Icon name="shield" size={14} /><span>Access model</span></button>
               <button className="toolbar-secondary" onClick={onImportClick}><Icon name="upload" size={14} /><span>Import</span></button>
               <button className="icon-button toolbar-shortcuts" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" onClick={() => notify('⌘S save · ⌘Z undo · ⇧⌘Z redo · ⌘D duplicate · Delete remove')}><Icon name="command" size={15} /></button>
             </div>
@@ -820,18 +807,6 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
           onDeleteConnection={removeConnection}
           mobileOpen={mobileInspectorOpen}
           onMobileToggle={() => setMobileInspectorOpen((open) => !open)}
-        />
-        <AuthorizationDialog
-          open={authorizationOpen}
-          architectureName={document.name}
-          model={authorizationModel}
-          openFgaOnCanvas={openFgaOnCanvas}
-          onChange={updateAuthorizationModel}
-          onAddOpenFga={() => {
-            const component = catalogById.get('openfga')
-            if (component) addComponent(component)
-          }}
-          onClose={() => setAuthorizationOpen(false)}
         />
       </div>
 

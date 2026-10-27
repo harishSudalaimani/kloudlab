@@ -1,6 +1,5 @@
 import { catalogById, defaultConfig, type ComponentDefinition } from './catalog'
 import { checkConnection, type ExistingConnection } from './connections'
-import { createDefaultAuthorizationModel, isAuthorizationModel, type AuthorizationModel } from './authorization'
 
 export interface CanvasNodeDocument {
   id: string
@@ -24,7 +23,6 @@ export interface CanvasDocument {
   name: string
   nodes: CanvasNodeDocument[]
   edges: CanvasEdgeDocument[]
-  authorizationModel?: AuthorizationModel
   viewport?: { x: number; y: number; zoom: number }
 }
 
@@ -96,12 +94,17 @@ export function createStarterCanvas(): CanvasDocument {
     name: 'KloudLab platform',
     nodes,
     edges,
-    authorizationModel: createDefaultAuthorizationModel(),
   }
 }
 
 export function createEmptyCanvas(name = 'Untitled architecture'): CanvasDocument {
-  return { schemaVersion: '1.0.0', id: makeId('canvas'), name, nodes: [], edges: [], authorizationModel: createDefaultAuthorizationModel(), viewport: { x: 0, y: 0, zoom: 0.9 } }
+  return { schemaVersion: '1.0.0', id: makeId('canvas'), name, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 0.9 } }
+}
+
+export function normalizeCanvasDocument(document: CanvasDocument): CanvasDocument {
+  const normalized = { ...document } as CanvasDocument & { authorizationModel?: unknown }
+  delete normalized.authorizationModel
+  return normalized
 }
 
 export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
@@ -278,11 +281,11 @@ export function validateCanvas(document: CanvasDocument): ValidationIssue[] {
 export function isCanvasDocument(value: unknown): value is CanvasDocument {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<CanvasDocument>
+  // Accept and ignore the old client-side demo model when loading saved canvases.
   const allowedKeys = new Set(['schemaVersion', 'id', 'name', 'nodes', 'edges', 'authorizationModel', 'viewport'])
   if (Object.keys(value).some((key) => !allowedKeys.has(key))) return false
   if (candidate.schemaVersion !== '1.0.0' || typeof candidate.id !== 'string' || !candidate.id || candidate.id.length > 128 || typeof candidate.name !== 'string' || !candidate.name || candidate.name.length > 200) return false
   if (!Array.isArray(candidate.nodes) || !Array.isArray(candidate.edges)) return false
-  if (Object.hasOwn(candidate, 'authorizationModel') && !isAuthorizationModel(candidate.authorizationModel)) return false
   if (Object.hasOwn(candidate, 'viewport') && (!candidate.viewport || typeof candidate.viewport !== 'object' || Object.keys(candidate.viewport).some((key) => !['x', 'y', 'zoom'].includes(key)) || !Number.isFinite(candidate.viewport.x) || !Number.isFinite(candidate.viewport.y) || !Number.isFinite(candidate.viewport.zoom) || candidate.viewport.zoom <= 0)) return false
   return candidate.nodes.every((item) => {
     if (!item || typeof item !== 'object' || Object.keys(item).some((key) => !['id', 'typeId', 'componentVersion', 'position', 'config'].includes(key))) return false

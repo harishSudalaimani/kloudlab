@@ -43,6 +43,16 @@ Auth0 is external and is not deployed in Kubernetes. Each cluster has a dedicate
 
 The public request path is DNS → AWS load balancer → kgateway/Gateway API → application service → backend token validation and authorization. Only intended application entry points are public. Database, OpenFGA administration, telemetry backends, and Grafana remain private or tightly restricted.
 
+The API and OpenFGA export OTLP to a cluster-local OpenTelemetry Collector;
+per-cluster agents add pod, node, and Kubernetes signals and forward them to
+the central gateway. The observability cluster hosts Prometheus, Loki, Tempo,
+and Grafana. The cluster Collector scrapes EKS API-server metrics where
+permitted. AWS-managed EKS control-plane logs are outside this OSS collection
+path. Helm Applications and collector values are in Git, but EKS resources,
+secret delivery, storage, and network endpoints remain pending. See the
+[observability pipeline runbook](../runbooks/observability-pipeline.md) for
+signal paths and prerequisites.
+
 ## Repository structure
 
 The canonical target tree and migration rules are maintained in [repository-structure.md](repository-structure.md). The tree is a target layout, not a claim that planned applications, stacks, or cluster configuration already exist.

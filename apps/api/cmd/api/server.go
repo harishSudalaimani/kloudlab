@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -84,7 +84,7 @@ func (s *server) auth(next http.Handler) http.Handler {
 		}
 		subject, err := s.jwt.verify(r.Context(), parts[1])
 		if err != nil {
-			log.Printf("reject bearer token: %v", err)
+			slog.WarnContext(r.Context(), "reject bearer token", "error", err)
 			writeError(w, http.StatusUnauthorized, "Your sign-in has expired. Sign in again.")
 			return
 		}

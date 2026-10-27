@@ -32,7 +32,7 @@ export function AboutPage({ theme, authenticated, accountName, onNavigate, onTog
         <section className="about-pillars">
           <article><span>01</span><Icon name="book" size={20} /><h3>Open building blocks</h3><p>A broad catalog spanning infrastructure, Kubernetes, networking, data, identity, and operations.</p></article>
           <article><span>02</span><Icon name="grid" size={20} /><h3>Architecture in context</h3><p>A canvas that makes components and their relationships easier to understand and discuss.</p></article>
-          <article><span>03</span><Icon name="shield" size={20} /><h3>Relationships as policy</h3><p>OpenFGA-inspired modeling helps teams reason about who can access each resource.</p></article>
+          <article><span>03</span><Icon name="shield" size={20} /><h3>Protected workspaces</h3><p>The KloudLab API enforces access to workspaces and architecture designs.</p></article>
         </section>
 
         <section className="about-note"><span className="principle-icon green"><Icon name="sparkles" size={20} /></span><div><small>THE GOAL</small><h2>Make a powerful cloud architecture feel understandable.</h2><p>Start visually. Add implementation details as the design becomes real.</p></div><button className="button button-outline" onClick={() => onNavigate('playground')}>Try the canvas<Icon name="arrow-up-right" size={15} /></button></section>

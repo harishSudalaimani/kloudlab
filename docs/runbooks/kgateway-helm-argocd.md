@@ -24,21 +24,22 @@ The Gateway accepts routes only from namespaces labeled `kloudlab.dev/gateway-ac
 
 ## Bootstrap through management Argo CD
 
-Apply the app-cluster root Application once to the management Argo CD API. Ensure the selected Kubernetes context is the management cluster:
+Register the app cluster as `kloudlab-app` in management Argo CD, then apply the management root once after all three workload clusters are registered. Ensure the selected Kubernetes context is the management cluster:
 
 ```sh
 kubectl config current-context
-kubectl apply -f gitops/clusters/app/root-application.yaml
+kubectl --context kloudlab-management -n argocd apply -f gitops/bootstrap/argocd/root-application.yaml
 ```
 
-After that bootstrap object is created, Argo CD reconciles the child Applications from `gitops/clusters/app/applications/kgateway/`. The actual kgateway installation and gateway resources are deployed by those Argo applications.
+The management root creates a cluster-level app root; that root reconciles the child Applications from `gitops/clusters/app/applications/`. The actual kgateway installation and gateway resources are deployed to `kloudlab-app` by those Argo applications.
 
 ## Check status
 
 From the management Argo CD context:
 
 ```sh
-argocd app get kloudlab-applications
+argocd app get kloudlab-root
+argocd app get kloudlab-app-applications
 argocd app get gateway-api-crds
 argocd app get kgateway-crds
 argocd app get kgateway-parameters

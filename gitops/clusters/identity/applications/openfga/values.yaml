@@ -46,3 +46,22 @@ topologySpreadConstraints:
 log:
   format: json
   level: info
+
+telemetry:
+  metrics:
+    enabled: true
+    addr: 0.0.0.0:2112
+    enableRPCHistograms: true
+  trace:
+    enabled: true
+    otlp:
+      endpoint: otel-node-agent.opentelemetry.svc.cluster.local:4317
+      tls:
+        enabled: false
+    serviceName: openfga
+    resourceAttributes: k8s.cluster.name=kloudlab-identity
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "2112"
+  prometheus.io/path: /metrics

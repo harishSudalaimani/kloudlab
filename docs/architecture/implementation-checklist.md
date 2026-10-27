@@ -46,7 +46,8 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 - [ ] Bootstrap Argo CD in `kloudlab-management` with a single declared owner for its installation.
 - [ ] Configure least-privilege Argo CD access to all four clusters, including its management cluster, and define a separately bootstrappable management root.
-- [ ] Add reviewed GitOps roots for the managed clusters and management-only recovery documentation.
+- [x] Add a management root Application that creates cluster-level Applications for app, identity, observability, and management; cluster registration and least-privilege credentials remain pending.
+- [ ] Add reviewed GitOps policies for the managed clusters and management-only recovery documentation.
 - [ ] Reconcile Karpenter and its `NodePool`/`EC2NodeClass` resources only in `kloudlab-app`.
 - [ ] Restrict sync sources and production promotion.
 - [ ] Define health checks, rollback, and drift handling.
@@ -93,14 +94,20 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 
 ## Phase 8 — Observability
 
-- [ ] Instrument the Go API with OpenTelemetry.
-- [ ] Deploy authenticated, encrypted collectors in each cluster and a central gateway.
-- [ ] Deploy Prometheus, Loki, Tempo, and restricted Grafana.
-- [ ] Configure S3 storage, encryption, retention, and lifecycle policies where supported.
-- [ ] Add service, Kubernetes, database, OpenFGA, secret retrieval, ingestion, and deployment dashboards/alerts.
+- [x] Instrument API HTTP, OpenFGA/Auth0 HTTP calls, and PostgreSQL operations with OpenTelemetry traces and metrics; emit JSON stdout request logs for OTLP collection.
+- [x] Add OpenFGA OTLP trace and Prometheus metric settings and JSON logs in its Helm values.
+- [x] Add per-node and cluster-level OpenTelemetry Collector Helm Applications to all four clusters, plus the central gateway and Prometheus, Loki, Tempo, and Grafana Helm Applications.
+- [ ] Generate `go.sum` and compile/format the API with an installed Go toolchain.
+- [x] Keep telemetry storage and query backends open source; EKS API-server metrics are scraped by the per-cluster Collector when endpoint access and RBAC allow it.
+- [ ] Provision the OTLP gateway's private cross-VPC endpoint and DNS; sync gateway client/server credentials and Grafana credentials through Infisical.
+- [ ] Provision S3 buckets and EKS workload identities for Loki and Tempo; install the EBS CSI driver and encrypted `gp3` storage.
+- [ ] Reconcile the telemetry Helm Applications in Argo CD after their AWS and secret prerequisites exist.
+- [ ] Validate host/kubelet/container/Kubernetes object/event/API-server collection and node log paths against the chosen EKS AMI.
+- [ ] Configure the API Helm workload to export OTLP/HTTP to the in-cluster agent with service, environment, and cluster resource attributes.
+- [ ] Add service, Kubernetes, control-plane, database, OpenFGA, secret retrieval, ingestion, and deployment dashboards/alerts.
+- [ ] Verify log/trace correlation and confirm sensitive values are excluded from telemetry.
 - [ ] Add independent AWS-level alarms for observability cluster failures.
 - [ ] Forward management-cluster telemetry to the observability cluster.
-- [ ] Verify sensitive values are excluded from telemetry.
 
 **Deliverable:** correlated telemetry with documented retention and alerts.
 

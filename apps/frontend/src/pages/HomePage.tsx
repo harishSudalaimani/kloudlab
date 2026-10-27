@@ -61,7 +61,7 @@ export function HomePage({ theme, authenticated, accountName, onNavigate, onTogg
           <div className="principle-grid">
             <article><span className="principle-icon green"><Icon name="layers" size={19} /></span><small>01 / COMPOSE</small><h3>Choose your tools</h3><p>Explore a growing catalog of open-source projects across every layer of your platform.</p></article>
             <article><span className="principle-icon blue"><Icon name="link" size={19} /></span><small>02 / CONNECT</small><h3>See the whole system</h3><p>Arrange components, map relationships, and shape an architecture that fits your team.</p></article>
-            <article><span className="principle-icon violet"><Icon name="shield" size={19} /></span><small>03 / GOVERN</small><h3>Design access clearly</h3><p>Model who can view and change resources with relationship-based authorization.</p></article>
+            <article><span className="principle-icon violet"><Icon name="shield" size={19} /></span><small>03 / GOVERN</small><h3>Protect every workspace</h3><p>Access to workspaces and architecture designs is checked by the KloudLab API.</p></article>
           </div>
         </section>
 

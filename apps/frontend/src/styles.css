@@ -1068,26 +1068,6 @@ html[data-theme='light'] body { color: #26342e; background: #f4f7f4; }
 [data-theme='light'] .issue-row.warning { border-color: #e9dfc8; color: #977536; background: #fffdf5; }
 [data-theme='light'] .issue-row > span { color: #5c6a60; }
 [data-theme='light'] .issue-row small { color: #859187; }
-[data-theme='light'] .authorization-backdrop { background: #24382b78; }
-[data-theme='light'] .authorization-dialog { border-color: #d3dfd5; color: #2f4035; background: #f9fbf8; box-shadow: 0 28px 90px #20372940; }
-[data-theme='light'] .authorization-header { border-color: #e0e8e0; }
-[data-theme='light'] .authorization-header h2, [data-theme='light'] .authorization-section-heading h3 { color: #314438; }
-[data-theme='light'] .authorization-header p, [data-theme='light'] .authorization-help { color: #718078; }
-[data-theme='light'] .authorization-status { border-color: #dce6dd; color: #607167; background: #f2f7f1; }
-[data-theme='light'] .authorization-rule { border-color: #dce5dd; background: #fff; }
-[data-theme='light'] .authorization-rule input, [data-theme='light'] .authorization-add-rule input, [data-theme='light'] .authorization-add-rule select, [data-theme='light'] .authorization-tuple-form input, [data-theme='light'] .authorization-tuple-form select, [data-theme='light'] .authorization-check-form input, [data-theme='light'] .authorization-check-form select { border-color: #d4dfd6; color: #405247; background: #fbfdf9; }
-[data-theme='light'] .authorization-tuple { border-color: #dce5dd; color: #617168; background: #fff; }
-[data-theme='light'] .authorization-tuple strong { color: #477d53; }
-[data-theme='light'] .authorization-empty { color: #809087; }
-[data-theme='light'] .authorization-preview { border-color: #d7e2d9; background: #eff5ef; }
-[data-theme='light'] .authorization-preview-heading strong { color: #3a4f40; }
-[data-theme='light'] .authorization-preview pre { color: #42604b; }
-[data-theme='light'] .authorization-preview-note { border-color: #dbe5dc; color: #6c7d72; background: #f8fbf7; }
-[data-theme='light'] .authorization-footer { border-color: #dce5dd; color: #617268; background: #f2f6f1; }
-[data-theme='light'] .authorization-footer > span svg { color: #558761; }
-[data-theme='light'] .authorization-check-form > span { color: #78877e; }
-[data-theme='light'] .authorization-result.allowed { color: #3d784c; background: #eaf5e9; }
-[data-theme='light'] .authorization-result.denied { color: #a04c43; background: #fbefeb; }
 [data-theme='light'] .modal-backdrop { background: #23312873; }
 [data-theme='light'] .library-dialog { border-color: #e0e8e0; background: #fff; box-shadow: 0 24px 80px #1c2d2040; }
 [data-theme='light'] .dialog-header h2 { color: #304035; }
@@ -1117,72 +1097,6 @@ html[data-theme='light'] body { color: #26342e; background: #f4f7f4; }
 [data-theme='light'] .component-origin.managed-service { border-color: #e7d8b8; color: #8d6d34; background: #fbf5e8; }
 [data-theme='light'] .component-origin.open-core { border-color: #ddd4ed; color: #76619f; background: #f4f0fa; }
 
-/* Access model workbench. */
-.authorization-backdrop { position: fixed; z-index: 60; inset: 0; display: grid; place-items: center; padding: 20px; background: #03070bdc; backdrop-filter: blur(7px); }
-.authorization-dialog { display: flex; width: min(1120px, 100%); height: min(850px, 90vh); flex-direction: column; overflow: hidden; border: 1px solid #3a4c57; border-radius: 17px; color: #dce6ea; background: #111a22; box-shadow: 0 30px 100px #000c; }
-.authorization-header { display: flex; min-height: 94px; align-items: center; padding: 17px 22px; gap: 14px; border-bottom: 1px solid #293943; }
-.authorization-brand-icon { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border: 1px solid #3b6649; border-radius: 12px; color: #9adba9; background: #1a2e20; }
-.authorization-header > div:nth-child(2) { flex: 1; }
-.authorization-header h2 { margin: 4px 0 2px; color: #e5edf1; font: 700 21px Manrope, sans-serif; letter-spacing: -.5px; }
-.authorization-header p { margin: 0; color: #96a6af; font-size: 11px; }
-.authorization-status { display: flex; min-height: 40px; align-items: center; padding: 0 23px; gap: 8px; border-bottom: 1px solid #263641; color: #9eafb8; background: #141e26; font-size: 10px; }
-.authorization-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #d0a356; box-shadow: 0 0 0 3px #4b3922; }
-.authorization-status-dot.connected { background: #71ca89; box-shadow: 0 0 0 3px #24442e; }
-.authorization-status button { display: inline-flex; align-items: center; margin-left: auto; padding: 5px 9px; gap: 5px; border: 1px solid #35543e; border-radius: 6px; color: #a6dfb2; background: #192a20; cursor: pointer; font-size: 10px; }
-.authorization-content { display: grid; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1.65fr) minmax(260px, .85fr); overflow: auto; }
-.authorization-workbench { display: flex; min-width: 0; flex-direction: column; gap: 14px; padding: 17px; }
-.authorization-section { padding: 14px; border: 1px solid #2d3e48; border-radius: 11px; background: #141e26; }
-.authorization-section-heading { display: flex; align-items: center; justify-content: space-between; }
-.authorization-section-heading > div { display: flex; align-items: center; gap: 8px; }
-.authorization-section-heading small { color: #72927d; font: 10px 'DM Mono', monospace; }
-.authorization-section-heading h3 { margin: 0; color: #dfe8ec; font: 650 13px Manrope, sans-serif; }
-.authorization-section-heading > span { color: #82949e; font-size: 9px; }
-.authorization-help { margin: 7px 0 11px; color: #91a1aa; font-size: 10px; line-height: 1.5; }
-.authorization-help code { padding: 1px 4px; border-radius: 3px; color: #a9d8b2; background: #213329; }
-.authorization-rules { display: flex; max-height: 200px; flex-direction: column; overflow: auto; gap: 5px; }
-.authorization-rule { display: grid; min-height: 34px; grid-template-columns: 84px 84px 12px minmax(100px, 1fr) 25px; align-items: center; padding: 3px 5px 3px 8px; gap: 6px; border: 1px solid #2c3c46; border-radius: 6px; background: #101820; }
-.rule-resource { overflow: hidden; color: #8297a2; font-size: 9px; text-overflow: ellipsis; }
-.authorization-rule > strong { overflow: hidden; color: #9dc9e4; font: 600 10px 'DM Mono', monospace; text-overflow: ellipsis; }
-.rule-equals { color: #637782; font: 10px 'DM Mono', monospace; }
-.authorization-rule input, .authorization-add-rule input, .authorization-add-rule select, .authorization-tuple-form input, .authorization-tuple-form select, .authorization-check-form input, .authorization-check-form select { width: 100%; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid #344650; border-radius: 5px; outline: 0; color: #c8d5db; background: #0f171e; font-size: 10px; }
-.authorization-rule input:focus, .authorization-add-rule input:focus, .authorization-add-rule select:focus, .authorization-tuple-form input:focus, .authorization-tuple-form select:focus, .authorization-check-form input:focus, .authorization-check-form select:focus { border-color: #69a47a; box-shadow: 0 0 0 2px #69a47a33; }
-.authorization-rule > button, .authorization-tuple > button { display: grid; width: 25px; height: 25px; place-items: center; border: 0; border-radius: 5px; color: #8b9da6; background: transparent; cursor: pointer; }
-.authorization-rule > button:hover:not(:disabled), .authorization-tuple > button:hover { color: #ff9d91; background: #3a2423; }
-.authorization-rule > button:disabled { opacity: .4; }
-.authorization-add-rule { display: grid; grid-template-columns: 100px 125px minmax(100px, 1fr) 30px; margin-top: 7px; gap: 5px; }
-.authorization-add-rule .icon-button { width: 30px; height: 30px; border: 1px solid #354750; }
-.authorization-tuple-form { display: grid; grid-template-columns: minmax(150px, 1fr) 120px minmax(150px, 1fr) auto; align-items: end; gap: 7px; }
-.authorization-tuple-form label { display: flex; min-width: 0; flex-direction: column; gap: 5px; color: #91a1aa; font-size: 9px; }
-.authorization-tuple-form .button { min-height: 30px; padding: 0 9px; gap: 5px; font-size: 9px; }
-.authorization-tuples { display: flex; max-height: 120px; flex-direction: column; overflow: auto; margin-top: 9px; gap: 5px; }
-.authorization-tuple { display: flex; min-height: 32px; align-items: center; padding: 3px 5px 3px 9px; gap: 6px; border: 1px solid #2d3e47; border-radius: 6px; color: #9aabb3; background: #101820; font: 9px 'DM Mono', monospace; }
-.authorization-tuple > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.authorization-tuple > span:first-child { flex: 1; }
-.authorization-tuple > span:nth-last-child(2) { flex: 1.2; }
-.authorization-tuple > i { color: #687b85; font-style: normal; }
-.authorization-tuple > strong { color: #9ed1ae; font-weight: 600; }
-.authorization-empty { padding: 12px 5px; color: #8999a2; font-size: 10px; }
-.access-check-section { margin-top: auto; }
-.authorization-check-form { display: grid; grid-template-columns: minmax(100px, 1fr) auto minmax(100px, .9fr) auto minmax(130px, 1.2fr) auto; align-items: center; gap: 6px; }
-.authorization-check-form > span { color: #8d9ea7; font-size: 9px; }
-.authorization-check-form .button { min-height: 30px; padding: 0 10px; font-size: 10px; }
-.authorization-result { display: inline-flex; align-items: center; margin-top: 9px; padding: 6px 9px; gap: 6px; border-radius: 6px; font-size: 10px; }
-.authorization-result.allowed { color: #a4ddb0; background: #1c3022; }
-.authorization-result.denied { color: #f1a197; background: #342120; }
-.authorization-preview { min-width: 0; padding: 18px; border-left: 1px solid #2c3c45; background: #101820; }
-.authorization-preview-heading { display: flex; align-items: center; gap: 9px; }
-.preview-code-icon { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #3a4d58; border-radius: 8px; color: #9dc8e1; background: #1b2a34; font: 600 12px 'DM Mono', monospace; }
-.authorization-preview-heading > div { display: flex; flex-direction: column; gap: 3px; }
-.authorization-preview-heading small { color: #81949e; font: 9px 'DM Mono', monospace; letter-spacing: .7px; }
-.authorization-preview-heading strong { color: #d8e3e8; font: 600 11px Manrope, sans-serif; }
-.authorization-preview pre { overflow: auto; max-height: calc(100% - 85px); margin: 18px 0; color: #a8cfb1; font: 10px/1.8 'DM Mono', monospace; white-space: pre-wrap; }
-.authorization-preview-note { display: flex; align-items: flex-start; padding: 9px; gap: 7px; border: 1px solid #2b3e45; border-radius: 7px; color: #98aab2; background: #151f26; font-size: 9px; line-height: 1.5; }
-.authorization-preview-note svg { flex: 0 0 auto; color: #82bf91; }
-.authorization-footer { display: flex; min-height: 48px; align-items: center; justify-content: space-between; padding: 0 18px; border-top: 1px solid #293943; color: #91a3ad; background: #141e26; font-size: 10px; }
-.authorization-footer > span { display: inline-flex; align-items: center; gap: 7px; }
-.authorization-footer > span svg { color: #8fcca0; }
-.authorization-footer .button { min-height: 30px; font-size: 10px; }
-
 /* Larger labels and a distinctive component shelf inside the editor. */
 .catalog-panel { background-image: linear-gradient(180deg, #13221b 0, transparent 155px); }
 .catalog-header h1 { display: flex; align-items: center; gap: 8px; }
@@ -1197,36 +1111,11 @@ html[data-theme='light'] body { color: #26342e; background: #f4f7f4; }
 .component-node-kind { font-size: 11px; }
 .component-node-subtitle { font-size: 12px; }
 .component-node-footer { font-size: 11px; }
-.access-model-trigger { border-color: #365241; color: #a3d9ae; background: #18291f; }
-.access-model-trigger:hover { border-color: #52765c; background: #1d3425; }
 @media (max-width: 640px) {
   .workspace-nav .site-page-links a { padding: 0 5px; font-size: 9px; }
   .component-node { min-height: 142px; }
   .component-node-title { font-size: 16px; }
   .catalog-item-copy strong { font-size: 13px; }
-  .authorization-backdrop { padding: 7px; }
-  .authorization-dialog { width: 100%; height: 96vh; border-radius: 12px; }
-  .authorization-header { min-height: 76px; padding: 11px; gap: 9px; }
-  .authorization-brand-icon { width: 36px; height: 36px; }
-  .authorization-header h2 { font-size: 18px; }
-  .authorization-status { padding: 0 12px; font-size: 9px; }
-  .authorization-content { display: flex; flex-direction: column; }
-  .authorization-workbench { padding: 10px; }
-  .authorization-section { padding: 10px; }
-  .authorization-rule { grid-template-columns: 65px 67px 8px minmax(60px, 1fr) 23px; gap: 3px; padding-left: 5px; }
-  .rule-resource { font-size: 8px; }
-  .authorization-rule > strong { font-size: 8px; }
-  .authorization-rule input { padding: 0 4px; font-size: 8px; }
-  .authorization-add-rule { grid-template-columns: 74px 85px minmax(70px, 1fr) 28px; gap: 3px; }
-  .authorization-add-rule input, .authorization-add-rule select { padding: 0 4px; font-size: 8px; }
-  .authorization-tuple-form { grid-template-columns: 1fr 108px; }
-  .authorization-tuple-form .button { min-height: 32px; }
-  .authorization-tuple { flex-wrap: wrap; font-size: 8px; }
-  .authorization-check-form { grid-template-columns: minmax(95px, 1fr) auto minmax(82px, .8fr); }
-  .authorization-check-form > span:nth-of-type(2) { display: none; }
-  .authorization-check-form input:last-of-type { grid-column: 1 / 3; }
-  .authorization-preview { min-height: 180px; border-top: 1px solid #2c3c45; border-left: 0; padding: 12px; }
-  .authorization-preview pre { max-height: 150px; margin: 10px 0; }
 }
 
 /* The canvas stays open for the architecture; actions live in the top toolbar. */

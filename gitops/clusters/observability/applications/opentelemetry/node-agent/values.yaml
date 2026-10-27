@@ -1,0 +1,137 @@
+mode: daemonset
+fullnameOverride: otel-node-agent
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: 0.163.2
+command:
+  name: otelcol-contrib
+presets:
+  logsCollection:
+    enabled: true
+    includeCollectorLogs: false
+    storeCheckpoints: true
+  hostMetrics:
+    enabled: true
+  kubeletMetrics:
+    enabled: true
+  kubernetesAttributes:
+    enabled: true
+clusterRole:
+  rules:
+    - nonResourceURLs:
+        - /metrics
+      verbs:
+        - get
+extraEnvs:
+  - name: OTEL_GATEWAY_ENDPOINT
+    valueFrom:
+      secretKeyRef:
+        name: kloudlab-otel-gateway-client
+        key: endpoint
+  - name: OTEL_GATEWAY_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: kloudlab-otel-gateway-client
+        key: token
+extraVolumes:
+  - name: host-var-log
+    hostPath:
+      path: /var/log
+      type: DirectoryOrCreate
+extraVolumeMounts:
+  - name: host-var-log
+    mountPath: /host/var/log
+    readOnly: true
+config:
+  receivers:
+    file_log:
+      operators:
+        - type: container
+        - type: json_parser
+          if: 'body matches "^\\{"'
+          parse_from: body
+          trace:
+            trace_id:
+              parse_from: attributes.trace_id
+            span_id:
+              parse_from: attributes.span_id
+    file_log/node_system:
+      include:
+        - /host/var/log/messages
+        - /host/var/log/secure
+      start_at: end
+      include_file_path: true
+    jaeger: null
+    zipkin: null
+  exporters:
+    otlp:
+      endpoint: ${env:OTEL_GATEWAY_ENDPOINT}
+      headers:
+        authorization: Bearer ${env:OTEL_GATEWAY_TOKEN}
+      tls: {}
+  processors:
+    resource:
+      attributes:
+        - key: k8s.cluster.name
+          value: kloudlab-observability
+          action: upsert
+  service:
+    pipelines:
+      logs:
+        receivers:
+          - otlp
+          - file_log
+          - file_log/node_system
+        exporters:
+          - otlp
+        processors:
+          - memory_limiter
+          - k8s_attributes
+          - resource
+          - batch
+      metrics:
+        receivers:
+          - otlp
+          - prometheus
+          - host_metrics
+          - kubelet_stats
+        exporters:
+          - otlp
+        processors:
+          - memory_limiter
+          - k8s_attributes
+          - resource
+          - batch
+      traces:
+        receivers:
+          - otlp
+        exporters:
+          - otlp
+        processors:
+          - memory_limiter
+          - k8s_attributes
+          - resource
+          - batch
+ports:
+  otlp:
+    enabled: true
+    hostPort: 0
+  otlp-http:
+    enabled: true
+    hostPort: 0
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+service:
+  enabled: true
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi

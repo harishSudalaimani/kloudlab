@@ -2,27 +2,65 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"log"
+	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/XSAM/otelsql"
+	"github.com/harishsudalaimani/kloudlab/apps/api/internal/observability"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	ctx := context.Background()
+	shutdownTelemetry, err := observability.Setup(ctx)
+	if err != nil {
+		slog.Error("configure OpenTelemetry", "error", err)
+		os.Exit(1)
+	}
+
+	err = run(ctx)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if shutdownErr := shutdownTelemetry(shutdownCtx); shutdownErr != nil {
+		slog.Error("flush OpenTelemetry", "error", shutdownErr)
+		if err == nil {
+			err = shutdownErr
+		}
+	}
+	if err != nil {
+		slog.Error("KloudLab API stopped unexpectedly", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context) error {
 	config, err := loadConfig()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	db, err := sql.Open("pgx", config.databaseURL)
+	db, err := otelsql.Open("pgx", config.databaseURL,
+		otelsql.WithAttributes(attribute.String("db.system.name", "postgresql")),
+	)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("open application database: %w", err)
 	}
 	defer db.Close()
+	dbStatsRegistration, err := otelsql.RegisterDBStatsMetrics(db,
+		otelsql.WithAttributes(attribute.String("db.system.name", "postgresql")),
+	)
+	if err != nil {
+		return fmt.Errorf("register database pool metrics: %w", err)
+	}
+	defer dbStatsRegistration.Unregister()
 	db.SetMaxOpenConns(12)
 	db.SetMaxIdleConns(4)
 	db.SetConnMaxLifetime(30 * time.Minute)
@@ -30,7 +68,7 @@ func main() {
 	startup, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if err := db.PingContext(startup); err != nil {
-		log.Fatalf("connect to application database: %v", err)
+		return fmt.Errorf("connect to application database: %w", err)
 	}
 	if _, err := db.ExecContext(startup, `CREATE TABLE IF NOT EXISTS architectures (
 		id text PRIMARY KEY,
@@ -38,10 +76,10 @@ func main() {
 		document jsonb NOT NULL,
 		updated_at timestamptz NOT NULL DEFAULT now()
 	)`); err != nil {
-		log.Fatalf("initialize application schema: %v", err)
+		return fmt.Errorf("initialize application schema: %w", err)
 	}
 	if _, err := db.ExecContext(startup, `CREATE INDEX IF NOT EXISTS architectures_workspace_updated_idx ON architectures (workspace_id, updated_at DESC)`); err != nil {
-		log.Fatalf("initialize architecture index: %v", err)
+		return fmt.Errorf("initialize architecture index: %w", err)
 	}
 
 	openFGA := &fgaClient{
@@ -49,19 +87,45 @@ func main() {
 		storeID:  config.openFGAStoreID,
 		modelID:  config.openFGAModelID,
 		apiToken: config.openFGAAPIToken,
-		http:     &http.Client{Timeout: 5 * time.Second},
+		http:     observability.InstrumentHTTPClient(&http.Client{Timeout: 5 * time.Second}),
 	}
 	api := &server{
 		db:       db,
 		fga:      openFGA,
-		jwt:      &jwtVerifier{issuer: config.auth0Issuer, audience: config.auth0Audience, http: &http.Client{Timeout: 5 * time.Second}},
+		jwt: &jwtVerifier{
+			issuer:   config.auth0Issuer,
+			audience: config.auth0Audience,
+			http:     observability.InstrumentHTTPClient(&http.Client{Timeout: 5 * time.Second}),
+		},
 		origin:   config.frontendOrigin,
 	}
 
 	address := ":" + config.port
-	log.Printf("KloudLab API listening on %s", address)
-	if err := http.ListenAndServe(address, api.routes()); err != nil {
-		log.Fatal(err)
+	slog.Info("KloudLab API starting", "address", address)
+	return serve(address, observability.InstrumentHTTP(api.routes()))
+}
+
+func serve(address string, handler http.Handler) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	server := &http.Server{
+		Addr:              address,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	serverErr := make(chan error, 1)
+	go func() { serverErr <- server.ListenAndServe() }()
+	select {
+	case err := <-serverErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return server.Shutdown(shutdownCtx)
 	}
 }
 

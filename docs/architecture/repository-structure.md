@@ -65,11 +65,16 @@ kloudlab/
 ├── gitops/
 │   ├── bootstrap/
 │   │   └── argocd/
+│   │       ├── root-application.yaml
 │   │       ├── application.yaml
-│   │       └── values.yaml
+│   │       ├── values.yaml
+│   │       └── roots/
+│   │           ├── app.yaml
+│   │           ├── identity.yaml
+│   │           ├── observability.yaml
+│   │           └── management.yaml
 │   ├── clusters/
 │   │   ├── app/
-│   │   │   ├── root-application.yaml
 │   │   │   ├── values/
 │   │   │   │   ├── cilium.yaml
 │   │   │   │   └── kgateway.yaml
@@ -82,11 +87,11 @@ kloudlab/
 │   │   │   │   │       ├── ec2-node-class.yaml
 │   │   │   │   │       └── node-pool.yaml
 │   │   │   │   ├── kgateway/
-│   │   │   │   │   ├── gateway-api-crds.yaml
-│   │   │   │   │   ├── kgateway-crds.yaml
-│   │   │   │   │   ├── kgateway-parameters.yaml
-│   │   │   │   │   ├── kgateway-controller.yaml
-│   │   │   │   │   └── kgateway-public-gateway.yaml
+│   │   │   │   │   ├── gateway-api-crds/application.yaml
+│   │   │   │   │   ├── kgateway-crds/application.yaml
+│   │   │   │   │   ├── kgateway-parameters/application.yaml
+│   │   │   │   │   ├── kgateway/application.yaml
+│   │   │   │   │   └── kgateway-public-gateway/application.yaml
 │   │   │   │   ├── cert-manager/
 │   │   │   │   ├── frontend/
 │   │   │   │   └── api/
@@ -133,6 +138,7 @@ kloudlab/
 │   ├── operations/
 │   ├── disaster-recovery/
 │   └── runbooks/
+│       ├── argocd-management-gitops.md
 │       ├── cilium-app-cluster.md
 │       └── kgateway-helm-argocd.md
 │

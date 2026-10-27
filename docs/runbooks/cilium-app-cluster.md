@@ -4,13 +4,13 @@ Cilium is installed from its official Helm chart by management-cluster Argo CD. 
 
 ## Cluster bootstrap requirements
 
-These settings are prerequisites for creating the app EKS cluster; do not register the cluster with the auto-syncing Argo root until they are in place:
+These settings are prerequisites for creating the app EKS cluster; do not register it with management Argo CD until they are in place:
 
 1. Create EKS with `bootstrapSelfManagedAddons: false`; this prevents the default self-managed `vpc-cni`, `coredns`, and `kube-proxy` from being installed.
 2. Explicitly install the Amazon VPC CNI and CoreDNS as EKS managed add-ons, and do not install the EKS `kube-proxy` add-on.
 3. Taint the app managed node group with `node.cilium.io/agent-not-ready=true:NoExecute` so ordinary pods wait for Cilium.
 4. Confirm `kube-public/cluster-info` contains the Kubernetes API server address. The Cilium Helm values use `k8sServiceHost: auto`; if the ConfigMap is absent or lacks the endpoint, set `k8sServiceHost` to the EKS API endpoint from the cluster stack output.
-5. Register the ready cluster in management Argo CD as `kloudlab-app` and allow the root Application to sync.
+5. Register the ready cluster in management Argo CD as `kloudlab-app`. Apply the root Application only after all three workload clusters have been registered.
 
 AWS identifies the Amazon VPC CNI as the supported CNI for EC2-backed EKS nodes. Cilium documents chaining with AWS VPC CNI, but this adds a separately operated networking datapath; validate the exact EKS/Kubernetes/kernel/Cilium versions and support model before production rollout.
 

@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-management-otel-cluster-collector
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+      chart: opentelemetry-collector
+      targetRevision: 0.177.0
+      helm:
+        releaseName: otel-cluster-collector
+        valueFiles:
+          - $values/gitops/clusters/management/applications/opentelemetry/cluster-collector/values.yaml
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      ref: values
+  destination:
+    name: kloudlab-management
+    namespace: opentelemetry
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

@@ -29,4 +29,25 @@ go run ./cmd/api
 
 The API creates its initial `architectures` table at startup. The target deployment has Argo CD reconciling the OpenFGA Helm release in the identity cluster and Pulumi provisioning its private Amazon RDS PostgreSQL database; those deployments are not implemented yet. The bundled legacy Bitnami datastore chart is disabled. See [`docs/runbooks/openfga-helm.md`](../../docs/runbooks/openfga-helm.md) for the deployment layout and prerequisites. OpenFGA remains private and must not be exposed to browsers.
 
+## Telemetry
+
+The API exports HTTP server spans/metrics, OpenFGA and Auth0 HTTP client spans,
+and PostgreSQL query spans and connection-pool metrics over OTLP/HTTP. In the
+app cluster, set `OTEL_EXPORTER_OTLP_ENDPOINT` to
+`http://otel-node-agent.opentelemetry.svc.cluster.local:4318` and set
+`OTEL_SERVICE_NAME=kloudlab-api` plus `OTEL_RESOURCE_ATTRIBUTES` for the
+environment and `k8s.cluster.name`. The cluster agent forwards OTLP to the
+central gateway.
+
+The API writes structured JSON logs to stdout. The OpenTelemetry `file_log`
+receiver parses them into OTLP logs; request logs include native trace and span
+context so Grafana can correlate them with Tempo traces. Do not add access
+tokens, authorization headers, request bodies, SQL parameters, or secret values
+to telemetry fields.
+
+For local development, leaving `OTEL_EXPORTER_OTLP_ENDPOINT` unset disables
+trace/metric export and keeps JSON logs on stdout. In Kubernetes, the local
+collector receiver is cluster-internal and does not require a shared
+cross-cluster credential.
+
 In the Auth0 dashboard, register `http://localhost:5173/` as an allowed callback URL, logout URL, and web origin. Create an API whose identifier matches `AUTH0_AUDIENCE`; use that audience in the frontend's `VITE_AUTH0_AUDIENCE`. Configure the API issuer with the tenant domain and trailing slash. The SPA uses Authorization Code with PKCE and keeps access tokens in memory.

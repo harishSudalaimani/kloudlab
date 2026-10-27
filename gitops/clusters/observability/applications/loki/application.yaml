@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-loki
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: loki
+      targetRevision: 20.0.1
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/gitops/clusters/observability/applications/loki/values.yaml
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      ref: values
+  destination:
+    name: kloudlab-observability
+    namespace: observability
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
