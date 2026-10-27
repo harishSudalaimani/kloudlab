@@ -9,9 +9,10 @@ against embedding it as a dependency of another chart. Cluster-specific
 settings stay in `gitops/clusters/<cluster>/` and are passed as values by Argo
 CD.
 
-Use Argo CD to own application releases. Pulumi owns the Argo CD bootstrap
-release and AWS-managed EKS add-ons. A release must have exactly one lifecycle
-owner. Pulumi and Argo CD must not both manage the same Helm release.
+Use Argo CD to own application releases. Bootstrap Argo CD directly with the
+Helm CLI from `charts/argocd`; Pulumi owns AWS infrastructure, including the
+Argo controller's EKS Pod Identity role. A release must have exactly one
+lifecycle owner. Pulumi and Argo CD must not both manage the same Helm release.
 
 Upstream chart versions are pinned in each module's `Chart.yaml`. Run
 `helm dependency update charts/<module>` when changing a pin and commit the
@@ -23,7 +24,8 @@ the modules and dependencies to an internal OCI registry.
 
 Current modules:
 
-- `argocd`: Argo CD bootstrap chart, installed by Pulumi.
+- `argocd`: Argo CD bootstrap chart, installed directly with Helm on the
+  management cluster.
 - `cilium`: Cilium datapath, installed by Argo CD.
 - `kgateway/controller` and `kgateway/crds`: kgateway upstream charts.
 - `kgateway/gateway-api-crds`: pinned Gateway API standard CRD bundle.

@@ -1,73 +1,37 @@
-# Argo CD multi-cluster GitOps flow
+# Argo CD management and cluster onboarding
 
-Pulumi owns the EKS clusters and AWS infrastructure. Argo CD runs only in `kloudlab-management`; it reconciles Applications targeting the three workload clusters and its own cluster.
+Pulumi provisions the four EKS clusters, AWS resources, and the restricted
+Argo application-controller Pod Identity role. Install Argo CD itself directly
+with Helm from `charts/argocd`; see
+[`argocd-bootstrap-helm.md`](argocd-bootstrap-helm.md).
 
-## Bring up the GitOps control plane
+The repository intentionally has no aggregate root Application. This keeps a
+fresh Argo CD installation idle until a cluster is deliberately registered and
+its Applications are added. Individual cluster Application definitions remain
+under `gitops/clusters/<cluster>/applications/` for reviewed, one-at-a-time
+deployment.
 
-1. Confirm the management cluster has kube-proxy while Argo CD is bootstrapped:
+## Onboard a cluster
 
-   ```sh
-   kubectl --context kloudlab-management -n kube-system get ds kube-proxy
-   ```
+For the next cluster only:
 
-2. Install Argo CD from the Argo Helm chart using the dedicated Pulumi stack,
-   referenced through `charts/argocd`; its upstream chart version is pinned in
-   `charts/argocd/Chart.yaml`. The stack uses the
-   local kubeconfig context `kloudlab-management`; the kubeconfig's AWS exec
-   plugin uses the selected `AWS_PROFILE` to authenticate. Do not also install
-   this Helm release manually.
+1. Confirm its EKS API endpoint is reachable from `kloudlab-management` and its
+   dedicated deploy role is provisioned by that cluster's Pulumi stack.
+2. Register the cluster in Argo CD using the reviewed restricted IAM
+   credentials. Do not use a human kubeconfig or cluster-admin credential.
+3. Create or select the matching AppProject from `gitops/management/projects/`.
+4. Create only the first required Application from that cluster's
+   `applications/` directory. Review its diff before syncing.
+5. Confirm health before moving on to the next Application or cluster.
 
-   ```sh
-   export AWS_PROFILE=kloudlab
-   export AWS_REGION=ap-south-1
-   cd infra/stacks/argocd-management
-   pulumi stack select dev
-   pulumi preview
-   pulumi up
-   ```
+Start with management, then identity, app, and observability. Keep kube-proxy
+enabled until Cilium is healthy on every node in that cluster. Do not apply a
+cluster-wide root that recursively creates all Applications.
 
-   Initialize the `dev` stack once with the S3 backend and KMS secrets provider if it does not already exist.
-
-   Verify it is ready and access the UI locally:
-
-   ```sh
-   kubectl --context kloudlab-management -n argocd get pods
-   kubectl --context kloudlab-management -n argocd port-forward svc/argocd-server 8080:443
-   ```
-
-   Open `https://localhost:8080`. Retrieve the one-time bootstrap password in
-   another terminal:
-
-   ```sh
-   kubectl --context kloudlab-management -n argocd get secret \
-     argocd-initial-admin-secret \
-     -o jsonpath='{.data.password}' | base64 --decode
-   echo
-   ```
-
-   Change it after the first login; do not commit or share it.
-
-3. Provision `kloudlab-app`, `kloudlab-identity`, and `kloudlab-observability`
-   with Pulumi. The three workload clusters omit kube-proxy and hold normal
-   scheduling until their Cilium agents become ready. Register each with
-   management Argo CD under its exact destination name. Use a distinct deploy
-   identity for each cluster with only the API permissions and namespaces
-   required by its reviewed Applications. Do not use a human kubeconfig or a
-   cluster-admin credential. Keep credentials in Argo CD's cluster Secret store
-   or the approved secret manager; never commit bearer tokens or certificate
-   data to Git.
-
-4. Follow the [one-cluster-at-a-time Argo CD rollout](argocd-rollout-sequence.md) to create the project seed from Argo CD's built-in `default` project, then manage roots with `kloudlab-management`. Sync management first, followed by identity, app, and observability. Pulumi remains responsible for AWS/EKS infrastructure, the initial Argo CD installation, and registered cluster credentials; Argo CD manages Kubernetes Applications and releases.
-
-## Verify
+## Verify the current control plane
 
 ```sh
-argocd app get kloudlab-root
-argocd app get kloudlab-app-applications
-argocd app get kloudlab-identity-applications
-argocd app get kloudlab-observability-applications
-argocd app get kloudlab-management-applications
+kubectl --context kloudlab-management -n argocd get pods
+kubectl --context kloudlab-management -n argocd get applications
 argocd cluster list
 ```
-
-Check that each cluster is connected and the corresponding cluster root is healthy before syncing it. Argo CD deploys Cilium from the management cluster's GitOps Application; keep kube-proxy enabled until Cilium is ready on both nodes and reports `KubeProxyReplacement: True`. Additional applications can be enabled as their infrastructure and prerequisites are ready.

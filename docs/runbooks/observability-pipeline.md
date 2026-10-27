@@ -120,12 +120,12 @@ Helm definitions do not imply that live telemetry is already flowing.
 1. Finish EKS, S3/EBS, the VPC peering routes, internal gateway endpoint, DNS,
    and certificates in Pulumi;
    verify every dependency and permission.
-2. Bootstrap Argo CD and register the four workload clusters with restricted
-   credentials.
-3. Sync Prometheus, Loki, Tempo, Grafana, and the OTLP gateway on the
-   observability cluster.
-4. Sync node agents and cluster collectors to app, identity, observability,
-   and management clusters.
+2. Bootstrap Argo CD directly with Helm and connect clusters one at a time with
+   restricted credentials.
+3. On the observability cluster's turn, add Prometheus, Loki, Tempo, Grafana,
+   and the OTLP gateway as individual Applications.
+4. Add node agents and cluster collectors one cluster at a time after the
+   observability gateway is reachable.
 5. Configure API and OpenFGA telemetry endpoints and resource attributes.
 6. Verify all available signal paths, OpenFGA metrics, API-server metrics, and
    log/trace correlation. Add dashboards and alerts for ingestion failures,

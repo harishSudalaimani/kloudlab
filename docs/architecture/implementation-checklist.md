@@ -34,7 +34,7 @@ Each phase should end with a reviewable artifact and validation evidence. Cloud 
 ## Phase 3 — EKS and cluster foundations
 
 - [x] Implement four EKS cluster stacks with private worker nodes, IAM roles, managed add-ons, and EC2 managed node groups; stack previews and deployment remain pending. Management is kept management-only.
-- [x] Configure Cilium kube-proxy replacement Helm Applications for all four clusters. Workload clusters omit kube-proxy and use the Cilium bootstrap taint; the already-created management cluster keeps kube-proxy until Argo deploys Cilium, then Pulumi removes it. Rollout and live validation remain pending.
+- [x] Prepare Cilium Helm Application definitions for all four clusters. Keep kube-proxy enabled everywhere; Argo CD is installed directly on management and Cilium is added one cluster at a time. Remove kube-proxy only after that cluster's Cilium is healthy. Rollout and live validation remain pending.
 - [x] Set two `t3.medium` managed nodes per cluster as the initial development sizing hypothesis; workload requests, burst credits, pod density, subnet capacity, and cost still need live validation before fixing production capacity.
 - [ ] Configure Karpenter only in `kloudlab-app`; keep stable managed baseline nodes for system services and its controller.
 - [x] Configure private-subnet multi-AZ node placement, restricted public API endpoints, and EKS managed add-ons in the stack code; cluster and workload identity plus live security validation remain pending.
@@ -51,7 +51,7 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 - [ ] Bootstrap Argo CD in `kloudlab-management` with a single declared owner for its installation.
 - [x] Configure Argo CD cluster access from the management cluster to all four clusters.
 - [ ] Apply the single `kloudlab-management` AppProject for the control plane and one AppProject per workload cluster; use Argo CD's built-in `default` project only to seed these projects.
-- [ ] Roll out cluster roots in order with manual sync: management, identity, app, observability.
+- [ ] Connect clusters and create individual Applications one at a time: management, identity, app, observability. Do not install an aggregate auto-sync root.
 - [ ] Add reviewed GitOps policies for the managed clusters and management-only recovery documentation.
 - [ ] Reconcile Karpenter and its `NodePool`/`EC2NodeClass` resources only in `kloudlab-app`.
 - [ ] Restrict sync sources and production promotion.

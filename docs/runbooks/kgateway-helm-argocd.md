@@ -22,21 +22,20 @@ The Gateway accepts routes only from namespaces labeled `kloudlab.dev/gateway-ac
 - The app cluster needs capacity for the two controller replicas and the Envoy proxy.
 - Management Argo CD needs repository access to this Git repository and network access to the upstream Gateway API and kgateway chart repositories.
 
-## Bootstrap through management Argo CD
+## Deploy when the app cluster is ready
 
-Register the app cluster as `kloudlab-app` in management Argo CD. Follow the
-[one-cluster-at-a-time rollout](argocd-rollout-sequence.md): sync identity
-first, then the app root when its turn comes. The app root reconciles child
-Applications from `gitops/clusters/app/applications/`; those Argo Applications
-deploy the kgateway stack to `kloudlab-app`.
+Register the app cluster as `kloudlab-app` in management Argo CD and create its
+AppProject. Then create only the reviewed kgateway Applications required for
+the app cluster from `gitops/clusters/app/applications/kgateway/`. There is no
+aggregate app root; each Application is added and synced individually after its
+prerequisites are ready. Follow the
+[one-cluster-at-a-time rollout](argocd-rollout-sequence.md).
 
 ## Check status
 
 From the management Argo CD context:
 
 ```sh
-argocd app get kloudlab-root
-argocd app get kloudlab-app-applications
 argocd app get gateway-api-crds
 argocd app get kgateway-crds
 argocd app get kgateway-parameters

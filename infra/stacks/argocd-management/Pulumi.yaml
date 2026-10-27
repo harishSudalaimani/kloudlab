@@ -1,21 +1,12 @@
 name: kloudlab-argocd-management
 runtime: go
 main: .
-description: Argo CD Helm release on the existing KloudLab management EKS cluster
+description: AWS Pod Identity access for Argo CD installed directly with Helm
 config:
   aws:region:
     value: ap-south-1
   kubernetes:context:
     value: kloudlab-management
-  bootstrapManagementRoot:
-    default: false
-    description: Temporarily create the management root with retain-on-delete so Argo CD can safely take ownership; disable after Argo reconciles it.
-  bootstrapManagementGateway:
-    default: false
-    description: Create the management Gateway API stack, AWS Load Balancer Controller Pod Identity, and encrypted Cloudflare DNS API token Secret.
   kloudlab-argocd-management:enableCrossClusterAccess:
     default: false
     description: Create the Argo application-controller Pod Identity role and its restricted workload-role assume policy.
-  kloudlab-argocd-management:registerWorkloadClusters:
-    default: false
-    description: Register app, identity, and observability EKS clusters in Argo CD from their Pulumi stack outputs.
