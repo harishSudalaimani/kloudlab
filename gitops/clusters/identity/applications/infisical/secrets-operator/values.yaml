@@ -1,0 +1,16 @@
+secrets-operator:
+  controllerManager:
+    replicas: 2
+    serviceAccount:
+      create: true
+
+  # Limit secret reconciliation to the identity workload and its telemetry agents.
+  scopedNamespaces:
+    - kloudlab-identity
+    - opentelemetry
+  scopedRBAC: true
+  installCRDs: true
+
+  telemetry:
+    serviceMonitor:
+      enabled: false

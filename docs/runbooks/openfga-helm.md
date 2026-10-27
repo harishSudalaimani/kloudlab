@@ -7,7 +7,7 @@ OpenFGA runs in the `kloudlab-identity` EKS cluster. Argo CD is hosted centrally
 - `charts/openfga/Chart.yaml` pins the upstream OpenFGA chart version. `gitops/clusters/identity/applications/openfga/application.yaml` references this local module; its adjacent `values.yaml` configures three replicas, disables the playground and ingress, enables pre-shared-key API authentication, and reads the RDS URI from a Kubernetes Secret.
 - OpenFGA runs in a private namespace and uses a `ClusterIP` service. The intended API URL is `https://fga.internal.kloudlab.in`; private cross-cluster routing and endpoint termination remain infrastructure work, and the service is not exposed publicly.
 
-Infisical must sync `kloudlab-openfga-datastore` with a `uri` key containing the RDS connection URI, including `sslmode=verify-full`. It must also sync `kloudlab-openfga-auth` with a `keys` key for OpenFGA and a `token` key for the API. Keep `keys` and `token` identical during normal operation. Secret delivery is a prerequisite: the Phase 7 Infisical integration is not implemented yet. Do not commit credentials or put them in Helm values.
+Infisical must sync `kloudlab-openfga-datastore` with a `uri` key containing the RDS connection URI, including `sslmode=verify-full`. It must also sync `kloudlab-openfga-auth` with a `keys` key for OpenFGA and a `token` key for the API. Keep `keys` and `token` identical during normal operation. The identity GitOps Applications for Infisical server and Secrets Operator are now defined, but the server bootstrap, machine identity, connection/auth resources, and OpenFGA secret sync resources remain prerequisites. Do not commit credentials or put them in Helm values.
 
 ## Deployment ownership
 

@@ -89,7 +89,7 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 ## Phase 7 — Secrets management
 
 - [x] Select self-hosted Infisical and add separate server and Kubernetes Secrets Operator Helm modules.
-- [ ] Choose Infisical's cluster placement and edition; document licensing, service persistence, recovery, and bootstrap access.
+- [x] Choose `kloudlab-identity` for Infisical's control plane; document licensing, service persistence, recovery, and bootstrap access before production use.
 - [ ] Create narrowly scoped identities and per-workload secret access policies.
 - [ ] Integrate app workloads with Infisical using machine identities or another supported authentication method, without committing secret material.
 - [ ] Back up configuration and required state outside the normal retrieval failure domain.

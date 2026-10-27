@@ -36,6 +36,15 @@ spec:
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: otel-cluster-collector*
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: "*.secrets.infisical.com"
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: infisical-secrets-operator*
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: infisical-secrets-operator*
   namespaceResourceWhitelist:
     - group: ""
       kind: ConfigMap
@@ -59,3 +68,9 @@ spec:
       kind: Role
     - group: rbac.authorization.k8s.io
       kind: RoleBinding
+    - group: secrets.infisical.com
+      kind: InfisicalConnection
+    - group: secrets.infisical.com
+      kind: InfisicalAuth
+    - group: secrets.infisical.com
+      kind: InfisicalStaticSecret

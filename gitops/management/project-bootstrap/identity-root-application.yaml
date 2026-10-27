@@ -4,13 +4,14 @@ metadata:
   name: kloudlab-root
   namespace: argocd
 spec:
-  project: default
+  project: kloudlab-bootstrap
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
     path: gitops/management/workload-roots
     directory:
-      recurse: true
+      recurse: false
+      include: identity.yaml
   destination:
     name: in-cluster
     namespace: argocd
@@ -18,5 +19,3 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true

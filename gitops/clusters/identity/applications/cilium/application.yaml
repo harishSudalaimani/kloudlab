@@ -21,9 +21,8 @@ spec:
   destination:
     name: kloudlab-identity
     namespace: kube-system
+  # Keep sync manual until the EKS API endpoint is pinned in values/cilium.yaml
+  # and the identity cluster is registered with Argo CD.
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
       - ServerSideApply=true
