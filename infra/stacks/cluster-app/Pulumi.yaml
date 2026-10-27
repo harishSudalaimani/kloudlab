@@ -10,9 +10,9 @@ config:
   kloudlab-cluster:clusterName:
     value: kloudlab-app
   kloudlab-cluster:networkStack:
-    value: kloudlab-network-app/dev
+    value: organization/kloudlab-network-app/dev
   kloudlab-cluster:managementNetworkStack:
-    value: kloudlab-network-management/dev
+    value: organization/kloudlab-network-management/dev
   kloudlab-cluster:kubernetesVersion:
     value: "1.36"
   kloudlab-cluster:publicAccessCidrs:

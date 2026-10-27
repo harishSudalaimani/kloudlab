@@ -8,13 +8,13 @@ config:
   kloudlab-connectivity:environment:
     value: dev
   kloudlab-connectivity:appNetworkStack:
-    value: kloudlab-network-app/dev
+    value: organization/kloudlab-network-app/dev
   kloudlab-connectivity:identityNetworkStack:
-    value: kloudlab-network-identity/dev
+    value: organization/kloudlab-network-identity/dev
   kloudlab-connectivity:observabilityNetworkStack:
-    value: kloudlab-network-observability/dev
+    value: organization/kloudlab-network-observability/dev
   kloudlab-connectivity:managementNetworkStack:
-    value: kloudlab-network-management/dev
+    value: organization/kloudlab-network-management/dev
   kloudlab-connectivity:privateRouteTableCount:
     value: 2
   kloudlab-connectivity:protectConnections:

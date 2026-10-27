@@ -44,7 +44,8 @@ func NewCluster(ctx *pulumi.Context, name string, args *ClusterArgs, opts ...pul
 			BootstrapClusterCreatorAdminPermissions: pulumi.Bool(true),
 		},
 		VpcConfig: &awsEks.ClusterVpcConfigArgs{
-			VpcId:                 args.Network.VPCID().ToStringPtrOutput(),
+			// EKS determines the VPC from the selected subnet IDs; vpc_id is
+			// an output-only provider attribute and must not be configured.
 			SubnetIds:             args.Network.PrivateSubnetIDs(),
 			EndpointPrivateAccess: pulumi.BoolPtr(args.PrivateEndpointAccess),
 			EndpointPublicAccess:  pulumi.BoolPtr(args.PublicEndpointAccess),
