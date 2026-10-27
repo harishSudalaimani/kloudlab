@@ -7,12 +7,17 @@ metadata:
     argocd.argoproj.io/sync-wave: "-20"
 spec:
   project: default
-  source:
-    repoURL: https://github.com/harishSudalaimani/kloudlab.git
-    targetRevision: main
-    path: gitops/management
-    directory:
-      include: "{projects/identity.yaml,workload-roots/identity.yaml}"
+  sources:
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      path: gitops/management/projects
+      directory:
+        include: identity.yaml
+    - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+      targetRevision: main
+      path: gitops/management/workload-roots
+      directory:
+        include: identity.yaml
   destination:
     name: in-cluster
     namespace: argocd
