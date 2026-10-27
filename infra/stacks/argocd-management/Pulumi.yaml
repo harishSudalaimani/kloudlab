@@ -5,3 +5,9 @@ description: Argo CD Helm release on the existing KloudLab management EKS cluste
 config:
   kubernetes:context:
     value: kloudlab-management
+  bootstrapManagementRoot:
+    default: false
+    description: Create the management-only Argo root so Argo CD can deploy management cluster applications.
+  bootstrapRootApplication:
+    default: false
+    description: Create the multi-cluster GitOps root after all workload clusters are registered in Argo CD.

@@ -8,10 +8,9 @@ spec:
   source:
     repoURL: https://github.com/harishSudalaimani/kloudlab.git
     targetRevision: main
-    path: gitops/clusters/management/applications
+    path: gitops/clusters/management/applications/cilium
     directory:
-      recurse: true
-      include: "**/application.yaml"
+      recurse: false
   destination:
     name: in-cluster
     namespace: argocd

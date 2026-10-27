@@ -19,11 +19,14 @@ Pulumi owns the EKS clusters and AWS infrastructure. Argo CD runs only in `kloud
 
    ```sh
    export AWS_PROFILE=kloudlab
+   export AWS_REGION=ap-south-1
    cd infra/stacks/argocd-management
-   pulumi stack init dev --secrets-provider='awskms://alias/kloudlab-pulumi-state?region=ap-south-1'
+   pulumi stack select dev
    pulumi preview
    pulumi up
    ```
+
+   Initialize the `dev` stack once with the S3 backend and KMS secrets provider if it does not already exist.
 
    Verify it is ready and access the UI locally:
 
@@ -44,22 +47,7 @@ Pulumi owns the EKS clusters and AWS infrastructure. Argo CD runs only in `kloud
 
    Change it after the first login; do not commit or share it.
 
-3. The management Cilium Application loads its Helm values from the repository's
-   `main` branch. Push the Cilium Application and values to that branch before
-   syncing. Until the other clusters exist and are registered, apply only the
-   management Cilium Application:
-
-   ```sh
-   kubectl --context kloudlab-management apply \
-     -f gitops/clusters/management/applications/cilium/application.yaml
-   ```
-
-   Wait for `kloudlab-management-cilium` to sync and become healthy. Verify
-   Cilium is ready on both management nodes and reports
-   `KubeProxyReplacement: True` using the [Cilium multi-cluster runbook](cilium-multicluster.md).
-   Keep kube-proxy enabled until those checks pass.
-
-4. Provision `kloudlab-app`, `kloudlab-identity`, and `kloudlab-observability`
+3. Provision `kloudlab-app`, `kloudlab-identity`, and `kloudlab-observability`
    with Pulumi. The three workload clusters omit kube-proxy and hold normal
    scheduling until their Cilium agents become ready. Register each with
    management Argo CD under its exact destination name. Use a distinct deploy
@@ -69,13 +57,16 @@ Pulumi owns the EKS clusters and AWS infrastructure. Argo CD runs only in `kloud
    or the approved secret manager; never commit bearer tokens or certificate
    data to Git.
 
-5. After all workload clusters are registered, apply the management root Application once, from the management-cluster context. Pulumi installs Argo CD; this root Application configures which cluster Applications that Argo CD reconciles:
+4. Push the root Application, root definitions, cluster Applications, and chart modules to the configured Git revision. After all workload clusters are registered in Argo CD, enable root Application creation through the Pulumi stack:
 
    ```sh
-   kubectl --context kloudlab-management -n argocd apply -f gitops/management/root-application.yaml
+   cd infra/stacks/argocd-management
+   pulumi config set kloudlab-argocd-management:bootstrapRootApplication true
+   pulumi preview
+   pulumi up
    ```
 
-The root Application reads only `gitops/management/roots/`. It creates a cluster-level Application for each cluster. Those Applications live in the management Argo CD namespace and load only `**/application.yaml` files from their respective cluster paths, so Helm `values.yaml` files are not treated as Kubernetes manifests. Each cluster-level Application is the owner of that cluster's child Application objects; each child Application then deploys to its designated cluster. Do not apply this multi-cluster root until all three workload clusters are registered.
+Pulumi owns the root Application resource; Argo CD owns the child Applications and workload releases. The root reads only `gitops/management/roots/` and creates a cluster-level Application for each cluster. Those Applications load only `**/application.yaml` files from their respective cluster paths, so Helm `values.yaml` files are not treated as Kubernetes manifests. Each cluster-level Application owns that cluster's child Application objects; each child then deploys to its designated cluster. Leave `bootstrapRootApplication` enabled after turning it on so Pulumi continues to track the root resource.
 
 ## Verify
 
@@ -88,4 +79,4 @@ argocd app get kloudlab-management-applications
 argocd cluster list
 ```
 
-Check that each cluster is connected and the corresponding cluster-level Application is healthy before relying on its child Applications. Cilium is the first management and workload-cluster application; additional applications can be enabled as their infrastructure and prerequisites are ready.
+Check that each cluster is connected and the corresponding cluster-level Application is healthy before relying on its child Applications. Argo CD deploys Cilium from the management cluster's GitOps Application; keep kube-proxy enabled until Cilium is ready on both nodes and reports `KubeProxyReplacement: True`. Additional applications can be enabled as their infrastructure and prerequisites are ready.
