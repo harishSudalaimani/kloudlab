@@ -833,15 +833,13 @@ body, .app-shell { color: var(--ink); background: #0a0f14; }
 .site-footer-links { display: flex; align-items: center; gap: 18px; }
 .site-footer-links button { display: inline-flex; align-items: center; padding: 7px 0; gap: 5px; border: 0; color: #a8b7bf; background: transparent; cursor: pointer; font-size: 11px; }
 .site-footer-links button:hover { color: #9ce0ad; }
-.site-repo-link { display: inline-flex; align-items: center; padding: 7px 0; gap: 6px; color: #a8b7bf; text-decoration: none; font-size: 11px; }
+.site-repo-link { display: inline-flex; min-width: 30px; min-height: 30px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 7px; color: #a8b7bf; text-decoration: none; }
 .site-repo-link:hover { color: #9ce0ad; }
 .site-footer-bottom { display: flex; grid-column: 1 / -1; justify-content: space-between; padding-top: 13px; border-top: 1px solid #202d36; color: #73848d; font-size: 10px; }
 .about-hero { position: relative; max-width: 1280px; min-height: 490px; margin: 0 auto; padding: 100px 7.2vw 80px; border-bottom: 1px solid #273640; }
 .about-hero h1 { font-size: clamp(45px, 5.2vw, 68px); }
 .about-hero > p { max-width: 670px; }
-.about-hero-actions { display: flex; align-items: center; margin-top: 28px; gap: 12px; }
-.about-hero-actions .hero-primary { margin-top: 0; }
-.about-github-link { min-height: 48px; gap: 9px; border-radius: 9px; font-size: 13px; }
+.about-hero .hero-primary { margin-top: 28px; }
 .about-hero-mark { position: absolute; top: 105px; right: 12%; display: grid; width: 144px; height: 144px; place-items: center; border: 1px solid #3a5647; border-radius: 34px; color: #a5e1b3; background: linear-gradient(145deg, #1c3528, #14231e); box-shadow: 0 0 80px #5fb17b1d; transform: rotate(-7deg); }
 .about-hero-mark span { font: 800 40px Manrope, sans-serif; letter-spacing: -5px; }
 .about-hero-mark i { position: absolute; width: 9px; height: 9px; border-radius: 3px; background: #7bd594; }
@@ -899,7 +897,6 @@ body, .app-shell { color: var(--ink); background: #0a0f14; }
   .site-footer-links { flex-wrap: wrap; }
   .site-footer-bottom { gap: 12px; font-size: 9px; }
   .about-hero { min-height: auto; padding: 68px 21px 52px; }
-  .about-hero-actions { align-items: flex-start; flex-direction: column; }
   .about-hero h1 { font-size: clamp(40px, 10vw, 57px); letter-spacing: -2.7px; }
   .about-hero-mark { top: auto; right: 20px; bottom: 30px; width: 64px; height: 64px; border-radius: 18px; opacity: .75; }
   .about-hero-mark span { font-size: 23px; }

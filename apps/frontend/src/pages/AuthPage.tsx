@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { SiteNavigation, type AppPage, type Theme } from '../components/SiteNavigation'
 import { SiteFooter } from '../components/SiteFooter'
-import { useAuth } from '../auth/AuthProvider'
+import { authDisplayName, useAuth } from '../auth/AuthProvider'
 
 interface AuthPageProps {
   mode: 'login' | 'signup'
@@ -25,7 +25,7 @@ export function AuthPage({ mode, theme, onNavigate, onToggleTheme }: AuthPagePro
 
   return (
     <div className="marketing-page auth-page">
-      <SiteNavigation page={mode} theme={theme} authenticated={Boolean(auth.user)} accountName={auth.user?.name ?? auth.user?.email} onNavigate={onNavigate} onToggleTheme={onToggleTheme} onLogout={auth.logout} />
+      <SiteNavigation page={mode} theme={theme} authenticated={Boolean(auth.user)} accountName={authDisplayName(auth.user)} onNavigate={onNavigate} onToggleTheme={onToggleTheme} onLogout={auth.logout} />
       <main className="auth-layout">
         <section className="auth-story">
           <span className="auth-story-kicker"><i />KLOUDLAB WORKSPACE</span>

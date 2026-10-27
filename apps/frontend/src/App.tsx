@@ -25,7 +25,7 @@ import { SiteNavigation, type AppPage, type Theme } from './components/SiteNavig
 import { AboutPage } from './pages/AboutPage'
 import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
-import { useAuth } from './auth/AuthProvider'
+import { authDisplayName, useAuth } from './auth/AuthProvider'
 import { ApiError, apiRequest, type SavedArchitecture } from './auth/api'
 import { catalog, catalogById, categories, defaultConfig, type ComponentDefinition, type ComponentCategory } from './domain/catalog'
 import { checkConnection, type ConnectionCheck, type ExistingConnection } from './domain/connections'
@@ -917,15 +917,15 @@ function AuthRoutes() {
   if (page === 'playground') {
     if (auth.loading) return <div className="site-root auth-loading" data-theme={theme}><span className="save-dot saving" />Checking your KloudLab session…</div>
     if (!auth.user) return <div className="site-root" data-theme={theme}><AuthPage mode="login" theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} /></div>
-    return <div className="site-root" data-theme={theme}><ReactFlowProvider><AppContent theme={theme} accessToken={auth.accessToken ?? ''} apiConfigured={auth.apiConfigured} subject={auth.user?.sub ?? ''} accountName={auth.user?.name ?? auth.user?.email} onToggleTheme={toggleTheme} onNavigate={navigate} onLogout={auth.logout} /></ReactFlowProvider></div>
+    return <div className="site-root" data-theme={theme}><ReactFlowProvider><AppContent theme={theme} accessToken={auth.accessToken ?? ''} apiConfigured={auth.apiConfigured} subject={auth.user?.sub ?? ''} accountName={authDisplayName(auth.user)} onToggleTheme={toggleTheme} onNavigate={navigate} onLogout={auth.logout} /></ReactFlowProvider></div>
   }
   return (
     <div className="site-root" data-theme={theme}>
       {page === 'about'
-        ? <AboutPage theme={theme} authenticated={Boolean(auth.user)} accountName={auth.user?.name ?? auth.user?.email} onNavigate={navigate} onToggleTheme={toggleTheme} onLogout={auth.logout} />
+        ? <AboutPage theme={theme} authenticated={Boolean(auth.user)} accountName={authDisplayName(auth.user)} onNavigate={navigate} onToggleTheme={toggleTheme} onLogout={auth.logout} />
         : page === 'login' || page === 'signup'
           ? <AuthPage mode={page} theme={theme} onNavigate={navigate} onToggleTheme={toggleTheme} />
-          : <HomePage theme={theme} authenticated={Boolean(auth.user)} accountName={auth.user?.name ?? auth.user?.email} onNavigate={navigate} onToggleTheme={toggleTheme} onLogout={auth.logout} />}
+          : <HomePage theme={theme} authenticated={Boolean(auth.user)} accountName={authDisplayName(auth.user)} onNavigate={navigate} onToggleTheme={toggleTheme} onLogout={auth.logout} />}
     </div>
   )
 }

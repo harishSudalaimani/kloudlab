@@ -1,7 +1,6 @@
 import { Icon } from '../components/Icon'
 import { SiteNavigation, type AppPage, type Theme } from '../components/SiteNavigation'
 import { SiteFooter } from '../components/SiteFooter'
-import { GITHUB_REPOSITORY_URL } from '../domain/links'
 
 interface AboutPageProps {
   theme: Theme
@@ -21,10 +20,7 @@ export function AboutPage({ theme, authenticated, accountName, onNavigate, onTog
           <div className="hero-kicker"><span />A PLATFORM FOR OPEN INFRASTRUCTURE</div>
           <h1>Cloud-native should mean<br /><em>open by design.</em></h1>
           <p>KloudLab is a visual workspace for designing platforms from open-source tools, with cloud providers available where hosting is needed.</p>
-          <div className="about-hero-actions">
-            <button className="button button-primary hero-primary" onClick={() => onNavigate('playground')}>Explore the playground<Icon name="arrow-up-right" size={17} /></button>
-            <a className="button button-outline about-github-link" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer"><Icon name="github" size={17} />View repository</a>
-          </div>
+          <button className="button button-primary hero-primary" onClick={() => onNavigate('playground')}>Explore the playground<Icon name="arrow-up-right" size={17} /></button>
           <div className="about-hero-mark"><span>KL</span><i /><i /><i /></div>
         </section>
 

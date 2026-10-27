@@ -3,9 +3,14 @@ import { Auth0Provider as SdkAuth0Provider, useAuth0 } from '@auth0/auth0-react'
 
 export interface AuthUser {
   sub: string
+  username?: string
   name?: string
   email?: string
   picture?: string
+}
+
+export function authDisplayName(user: AuthUser | null): string | undefined {
+  return user?.username?.trim() || user?.name?.trim() || user?.email?.trim() || undefined
 }
 
 interface AuthContextValue {
@@ -90,12 +95,18 @@ function AuthBridge({ children }: { children: ReactNode }) {
     void sdkLogout({ logoutParams: { returnTo: `${window.location.origin}/` } })
   }, [sdkLogout])
 
-  const user = sdkUser?.sub ? {
-    sub: sdkUser.sub,
-    name: sdkUser.name,
-    email: sdkUser.email,
-    picture: sdkUser.picture,
-  } : null
+  const user = sdkUser?.sub ? (() => {
+    const namespacedUsername = Object.entries(sdkUser).find(([claim, value]) => claim.endsWith('/username') && typeof value === 'string')?.[1]
+    const username = [sdkUser.username, sdkUser.preferred_username, namespacedUsername]
+      .find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim()
+    return {
+      sub: sdkUser.sub,
+      username,
+      name: sdkUser.name,
+      email: sdkUser.email,
+      picture: sdkUser.picture,
+    }
+  })() : null
   const value = useMemo<AuthContextValue>(() => ({
     configured,
     apiConfigured: Boolean(config.audience),

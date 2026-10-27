@@ -15,7 +15,7 @@ export function SiteFooter({ onNavigate }: { onNavigate: (page: AppPage) => void
         <button onClick={() => onNavigate('home')}>Home</button>
         <button onClick={() => onNavigate('about')}>About</button>
         <button onClick={() => onNavigate('playground')}>Playground<Icon name="arrow-up-right" size={13} /></button>
-        <a className="site-repo-link" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer"><Icon name="github" size={15} />GitHub</a>
+        <a className="site-repo-link" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer" aria-label="KloudLab on GitHub" title="KloudLab on GitHub"><Icon name="github" size={17} /></a>
       </nav>
       <div className="site-footer-bottom"><span>© {new Date().getFullYear()} KloudLab</span><span>Open source. Cloud by choice.</span></div>
     </footer>
