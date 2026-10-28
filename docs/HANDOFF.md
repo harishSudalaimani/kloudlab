@@ -188,6 +188,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   had Kubernetes-defaulted fields missing from Git. Local manifests now
   declare those defaults explicitly, including route parent/backend kinds,
   default path matches and weights, and StatefulSet PVC retention policy.
+  The two live PostgreSQL StatefulSets also contain a controller-populated
+  PVC template `status` under `spec`; their manifests ignore only that
+  generated field during Argo comparison.
 
 ## Open work, in order
 

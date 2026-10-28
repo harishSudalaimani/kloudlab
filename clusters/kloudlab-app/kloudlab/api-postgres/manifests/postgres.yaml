@@ -21,6 +21,10 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: kloudlab-api-postgres
+  annotations:
+    argocd.argoproj.io/ignore-differences: |
+      jsonPointers:
+        - /spec/volumeClaimTemplates/0/status
   labels:
     app.kubernetes.io/name: kloudlab-api-postgres
     app.kubernetes.io/part-of: kloudlab

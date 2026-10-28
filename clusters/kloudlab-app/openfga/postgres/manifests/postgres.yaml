@@ -19,6 +19,10 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: openfga-postgres
+  annotations:
+    argocd.argoproj.io/ignore-differences: |
+      jsonPointers:
+        - /spec/volumeClaimTemplates/0/status
   labels:
     app.kubernetes.io/name: openfga-postgres
 spec:
