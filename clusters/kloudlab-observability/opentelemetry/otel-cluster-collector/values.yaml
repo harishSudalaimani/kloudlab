@@ -134,6 +134,8 @@ ports:
     enabled: false
   zipkin:
     enabled: false
+service:
+  enabled: false
 resources:
   requests:
     cpu: 100m

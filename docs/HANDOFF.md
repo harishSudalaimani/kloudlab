@@ -120,20 +120,19 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 
 ## Current blockers (2026-10-28)
 
-- Gateway certificates are not Ready. The `argocd` Gateway reports
-  `ResolvedRefs=False`; its Certificate is waiting for the missing TLS
-  Secret. The Grafana and public Gateways also report unresolved TLS
-  references. Check each ClusterIssuer, CertificateRequest, Order and
-  Challenge, plus the Cloudflare token Secret in `cert-manager`, before
-  changing ACME configuration. Secret values stay out of Git.
+- Gateway certificates are not Ready because cert-manager reports the
+  Cloudflare API token invalid on all three DNS-01 Challenges. Replace
+  the token Secret in each cluster's `cert-manager` and `external-dns`
+  namespaces with a valid token; keep secret values out of Git.
 - Application rollout order is now an `order` field consumed by
   ApplicationSet `RollingSync`; the old `# order` comments were ignored.
 - The three cluster-collector pipelines now reference the chart preset's
   `k8sobjects` receiver. The chart preset supplies its receiver config;
-  keep the pipeline receiver ID in sync with that preset.
-- The three node-agent metrics pipelines now use the chart preset receiver
-  IDs `hostmetrics` and `kubeletstats`; the underscore variants were not
-  configured receivers in this chart.
+  keep the pipeline receiver ID in sync with that preset. Their inbound
+  ports are disabled, so their chart Service is disabled too.
+- The three node-agent metrics pipelines use the chart preset receiver
+  IDs `hostmetrics` and `kubeletstats`; the running agents still need to
+  be reconciled to this config.
 - Gateway Secret references specify the core API group as `group: ""`
   so the desired manifest matches the live API representation. HTTPS
   listeners retain `tls.mode: Terminate`.
