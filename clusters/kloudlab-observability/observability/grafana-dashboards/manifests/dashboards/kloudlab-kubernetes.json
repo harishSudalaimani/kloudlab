@@ -19,7 +19,7 @@
         "definition": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)",
         "multi": true,
         "includeAll": true,
-        "allValue": ".*",
+      "allValue": ".+",
         "refresh": 2,
         "sort": 1,
         "current": {"selected": true, "text": "All", "value": "$__all"}

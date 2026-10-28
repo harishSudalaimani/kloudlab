@@ -285,9 +285,8 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   Application is order 5, after Grafana at order 4. Commit 173960c is synced;
   both dashboard ConfigMaps are present and the Grafana sidecar wrote both files
   and received a 200 response when reloading provisioned dashboards. The current
-  Grafana pod is Ready with the sidecar. The dashboards appear, but the panels
-  were empty. Live checks found no application or cluster metric series and
-  collectors repeatedly failed to export all three signals. The cause was the
+  Grafana pod is Ready with the sidecar. Initially the panels were empty because
+  collectors could not export all three signals. The cause was the
   gateway Service's old `external-dns.alpha.kubernetes.io/*` annotations:
   ExternalDNS 0.22.0 uses `external-dns.kubernetes.io/` by default and no longer
   reads the old prefix. Public DNS returned NXDOMAIN for `otel.kloudlab.in`.
@@ -299,12 +298,15 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   now point to the NLB's AWS DNS hostname; collector exporters set TLS
   `server_name_override: otel.kloudlab.in` to validate the existing certificate.
   The NLB hostname is tied to the current Service load balancer; refresh the
-  Secret endpoints if the load balancer is recreated. Verify collector export
-  errors stop and metrics/logs/traces become queryable after the collector
-  values sync. Dashboard-only changes do not match the current GitHub Actions
-  path filters; Argo CD is the deployer. API HTTP metrics use OTel's Prometheus
-  name translation; the Kubernetes dashboard filters cluster metric labels from
-  the OTel resource attributes.
+  Secret endpoints if the load balancer is recreated. After commit f808d48, all
+  six collector Applications are Synced and Healthy. Live checks now find API
+  request and cluster metrics in Prometheus, API logs in Loki, and API traces in
+  Tempo. Grafana's cluster logs panel had a separate Loki parser error because
+  the cluster variable's All value was `.*`; the local dashboard change uses
+  `.+` and still needs push/sync. Dashboard-only changes do not match the current
+  GitHub Actions path filters; Argo CD is the deployer. API HTTP metrics use
+  OTel's Prometheus name translation; the Kubernetes dashboard filters cluster
+  metric labels from the OTel resource attributes.
 
 ## Gaps found while migrating
 
