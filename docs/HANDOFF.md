@@ -297,9 +297,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   hostname resolve publicly and the app cluster can connect to NLB port 4317.
   To restore exports while that negative cache expires, the three client Secrets
   now point to the NLB's AWS DNS hostname; collector exporters set TLS
-  `server_name: otel.kloudlab.in` to validate the existing certificate. The NLB
-  hostname is tied to the current Service load balancer and must be refreshed in
-  these Secrets if that load balancer is recreated. Verify collector export
+  `server_name_override: otel.kloudlab.in` to validate the existing certificate.
+  The NLB hostname is tied to the current Service load balancer; refresh the
+  Secret endpoints if the load balancer is recreated. Verify collector export
   errors stop and metrics/logs/traces become queryable after the collector
   values sync. Dashboard-only changes do not match the current GitHub Actions
   path filters; Argo CD is the deployer. API HTTP metrics use OTel's Prometheus

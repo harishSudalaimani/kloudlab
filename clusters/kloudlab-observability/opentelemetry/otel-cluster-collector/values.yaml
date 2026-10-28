@@ -91,7 +91,7 @@ config:
       headers:
         authorization: Bearer ${env:OTEL_GATEWAY_TOKEN}
       tls:
-        server_name: otel.kloudlab.in
+        server_name_override: otel.kloudlab.in
   processors:
     resource:
       attributes:
