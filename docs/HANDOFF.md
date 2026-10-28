@@ -110,13 +110,20 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   - management: `argocd.kloudlab.in`
   - app: `kloudlab.in`, `www.kloudlab.in` (frontend),
     `api.kloudlab.in` (API)
-  - observability: `grafana.kloudlab.in` (adds a third AWS load
-    balancer)
+  - observability: `grafana.kloudlab.in` and `monitoring.kloudlab.in`
+    (aliases on one AWS load balancer)
   Prometheus, Loki, Tempo, OpenTelemetry and OpenFGA stay internal.
 - kgateway runs on app (`kgateway-system`), installed by hand.
 - Management, app and observability each have a Gateway and certificate
   application. Check current status in Argo; the Grafana and observability
   OTel certificates are Ready in the live observability cluster.
+- Live GatewayClass, Gateway, and HTTPRoute conditions are Accepted,
+  Programmed, and ResolvedRefs=True in all three clusters. NLB Services
+  exist and direct HTTPS probes return 200 for Argo CD and the app, and 302
+  for Grafana (login redirect). Cloudflare DNS currently resolves
+  `argocd.kloudlab.in`, `kloudlab.in`, and `grafana.kloudlab.in`; it has no
+  record for `monitoring.kloudlab.in`. Local GitOps now adds that Grafana
+  alias and its certificate SAN; this change still needs a commit and push.
 
 ## Current blockers (2026-10-28)
 
@@ -131,9 +138,10 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   Argo automated pruning is off, so sync the Tempo application with prune
   once to remove its existing Memcached pod. No node-agent target is
   excluded: it should keep collecting from every node.
-- The Grafana Gateway is Healthy and its references resolve. Its Argo
-  application is OutOfSync only for the HTTPRoute; the local manifest now
-  spells out the API default fields from the live route. The OTel gateway
+- The Grafana Gateway and route are live and their references resolve. The
+  local GitOps change adds `monitoring.kloudlab.in` as a Grafana alias; it
+  must be pushed before ExternalDNS can publish it and cert-manager can add
+  it to the certificate. The OTel gateway
   certificate is Ready in `observability`, but its pods run in
   `opentelemetry` and cannot mount a Secret across namespaces. The local
   GitOps fix creates the namespace first and adds a second Certificate

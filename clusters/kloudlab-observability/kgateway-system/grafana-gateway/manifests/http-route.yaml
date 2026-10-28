@@ -11,6 +11,7 @@ spec:
       namespace: kgateway-system
   hostnames:
     - "grafana.kloudlab.in"
+    - "monitoring.kloudlab.in"
   rules:
     - matches:
         - path:

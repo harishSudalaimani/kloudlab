@@ -34,7 +34,8 @@ datasources:
             spanStartTimeShift: 1h
             spanEndTimeShift: -1h
 
-# Served at grafana.kloudlab.in (Gateway grafana in kgateway-system).
+# Served at monitoring.kloudlab.in and grafana.kloudlab.in (Gateway grafana
+# in kgateway-system).
 grafana.ini:
   server:
-    root_url: https://grafana.kloudlab.in
+    root_url: https://monitoring.kloudlab.in

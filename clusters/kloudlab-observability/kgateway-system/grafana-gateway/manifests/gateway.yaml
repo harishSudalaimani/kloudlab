@@ -22,3 +22,19 @@ spec:
           selector:
             matchLabels:
               kloudlab.dev/gateway-access: "public"
+    - name: https-monitoring
+      protocol: HTTPS
+      port: 443
+      hostname: "monitoring.kloudlab.in"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: grafana-kgateway-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kloudlab.dev/gateway-access: "public"

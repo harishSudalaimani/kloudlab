@@ -12,3 +12,4 @@ spec:
     group: cert-manager.io
   dnsNames:
     - "grafana.kloudlab.in"
+    - "monitoring.kloudlab.in"

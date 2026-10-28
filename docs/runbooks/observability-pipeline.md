@@ -52,8 +52,10 @@ metrics to its Prometheus exporter endpoint, which Prometheus scrapes through a
 ServiceMonitor. It sends logs to Loki's native OTLP HTTP endpoint and traces to Tempo over
 OTLP/gRPC at `tempo-monolithic.observability.svc.cluster.local:4317`. Grafana
 queries Tempo at `tempo-monolithic.observability.svc.cluster.local:3200` and
-has Prometheus, Loki, and Tempo datasources with trace-to-log
-navigation configured. Grafana has no public ingress.
+has Prometheus, Loki, and Tempo datasources with trace-to-log navigation
+configured. Grafana is exposed through the observability cluster's
+internet-facing kgateway NLB at `monitoring.kloudlab.in` and
+`grafana.kloudlab.in`.
 
 Telemetry application releases pin the OpenTelemetry Helm chart and Contrib
 image. The node and cluster collectors send OTLP over TLS with a gateway token.
