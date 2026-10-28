@@ -1,0 +1,15 @@
+# Certificates are namespaced with their generated Secret. Keep this copy
+# where the gateway pods run so their volume can mount the Secret.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kloudlab-otel-gateway-server-tls
+  namespace: opentelemetry
+spec:
+  secretName: kloudlab-otel-gateway-server-tls
+  issuerRef:
+    name: kloudlab-letsencrypt
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - "otel.kloudlab.in"

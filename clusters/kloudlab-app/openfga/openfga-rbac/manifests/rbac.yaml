@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openfga
+  namespace: openfga
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openfga-migration-wait
+  namespace: openfga
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    resourceNames: ["openfga-migrate"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openfga-migration-wait
+  namespace: openfga
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+subjects:
+  - kind: ServiceAccount
+    name: openfga
+    namespace: openfga
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: openfga-migration-wait

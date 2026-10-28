@@ -31,8 +31,6 @@ querier:
   replicas: 1
 queryFrontend:
   replicas: 1
-compactor:
-  replicas: 1
 
 # Tempo 3.0's Kafka write path (block-builder, live-store) needs a Kafka
 # broker; this POC keeps the classic ingester path without Kafka.
@@ -43,7 +41,7 @@ liveStore:
 
 tempo:
   structuredConfig:
-    compactor:
+    backend_worker:
       compaction:
         block_retention: 168h
 

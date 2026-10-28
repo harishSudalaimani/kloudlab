@@ -6,11 +6,16 @@ metadata:
 spec:
   parentRefs:
     - name: grafana
+      group: gateway.networking.k8s.io
+      kind: Gateway
       namespace: kgateway-system
   hostnames:
     - "grafana.kloudlab.in"
   rules:
     - backendRefs:
         - name: grafana
+          group: ""
+          kind: Service
           namespace: observability
           port: 80
+          weight: 1

@@ -99,11 +99,11 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   kube-proxy, metrics-server, pod identity agent, EBS CSI.
 - Argo CD on management (installed with Helm by hand). `root` applied
   from commit 07bd3aa (two ApplicationSets `charts`, `manifests`).
-- OpenFGA on app: Postgres runs. OpenFGA's migrate Job (PreSync
-  hook) failed: ServiceAccount `openfga` did not exist yet. Fix in the
-  next commit: `serviceAccount.create: false`; after the push delete
-  Job `openfga-migrate` so Argo retries. OutOfSync apps are expected
-  for now.
+- OpenFGA on app: Postgres and the `openfga-migrate` Job run, but the
+  OpenFGA pods' `wait-for-migration` init container uses the default
+  ServiceAccount and gets Forbidden reading that Job. A local GitOps fix
+  adds a pre-created `openfga` ServiceAccount and narrowly scoped Role;
+  it must be pushed before Argo can apply it.
 - Public hostnames (kgateway Gateway per cluster, one cert-manager
   DNS-01 certificate per Gateway, records by external-dns, all via
   Cloudflare):
@@ -114,28 +114,48 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
     balancer)
   Prometheus, Loki, Tempo, OpenTelemetry and OpenFGA stay internal.
 - kgateway runs on app (`kgateway-system`), installed by hand.
-- Management, app and observability currently each have a Gateway and
-  certificate application. Their TLS certificate issuance is blocked;
-  see the current blockers below.
+- Management, app and observability each have a Gateway and certificate
+  application. Check current status in Argo; the Grafana and observability
+  OTel certificates are Ready in the live observability cluster.
 
 ## Current blockers (2026-10-28)
 
-- Gateway certificates are not Ready because cert-manager reports the
-  Cloudflare API token invalid on all three DNS-01 Challenges. Replace
-  the token Secret in each cluster's `cert-manager` and `external-dns`
-  namespaces with a valid token; keep secret values out of Git.
+- A Cloudflare API token was pasted into chat; rotate it and keep the
+  replacement out of Git and chat. The Grafana and OTel certificates in
+  the observability cluster are currently Ready.
 - Observability has four `t3.medium` nodes (17 pod slots each); all
-  existing nodes were full or near full. The Loki chunks-cache chart
-  default requests 9830 MiB (`allocatedMemory: 8192` MB), so its pod
-  cannot fit on these nodes. The local GitOps values now set the cache
-  allocation to 256 MB (estimated request ~307 MiB); this change is not
-  yet synced. Other pending pods still report pod-slot/memory limits, and
-  the AWS VPC CNI reported an IP assignment failure. The new node has no
-  taint now. Inspect VPC subnet free IPs and CNI logs after the Loki
-  values sync.
-- App cluster Karpenter cannot create its Spot service-linked role
-  (`iam:CreateServiceLinkedRole` denied). OpenFGA's migration Job also
-  reports that ServiceAccount `openfga` is missing; diagnose separately.
+  nodes Ready, untainted, and without MemoryPressure or DiskPressure.
+  The Loki chunks-cache is now Running after reducing its memory
+  allocation to 256 MB. One OTel node-agent pod remains Pending because
+  its target node is at the 17-pod limit.
+- The Grafana Gateway is Healthy and its references resolve. Its Argo
+  application is OutOfSync only for the HTTPRoute; the local manifest now
+  spells out the API default fields from the live route. The OTel gateway
+  certificate is Ready in `observability`, but its pods run in
+  `opentelemetry` and cannot mount a Secret across namespaces. The local
+  GitOps fix creates the namespace first and adds a second Certificate
+  in `opentelemetry`, while keeping the existing Certificate in
+  `observability` tracked because Argo pruning is disabled. This fix is
+  not yet pushed.
+- Tempo 3.17.0 pods crash because the configured top-level `compactor`
+  field is no longer accepted. Local values now set retention under
+  `backend_worker.compaction` and remove the obsolete compactor replica
+  setting; this change is not yet pushed. Tempo pods have no CPU or memory
+  requests/limits configured; resource pressure is not their current
+  failure.
+- OpenFGA pods' `wait-for-migration` init container uses the `default`
+  ServiceAccount and gets Forbidden when reading Job `openfga-migrate`.
+  The local GitOps change adds an order-3 ServiceAccount and a Role limited
+  to `get` on that Job, and configures the chart to use that account. This
+  change is not yet synced. OpenFGA requests 100m CPU/128Mi memory and
+  limits 1 CPU/512Mi; resource pressure is not its current failure.
+- OTel gateway requests 250m CPU/512Mi memory and limits 1 CPU/1Gi per
+  replica; its pods are blocked on the missing TLS Secret. OTel node
+  agents request 100m CPU/256Mi and limit memory to 512Mi; the pending
+  DaemonSet pod is blocked by its target node's pod count.
+- Previously observed AWS CNI IP allocation errors are not represented
+  in the current pod states; EBS CSI node pods are Running on all four
+  nodes. Recheck CNI logs if IP assignment failures recur.
 - Application rollout order is now an `order` field consumed by
   ApplicationSet `RollingSync`; the old `# order` comments were ignored.
 - The three cluster-collector pipelines now reference the chart preset's
