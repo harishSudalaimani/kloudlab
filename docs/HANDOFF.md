@@ -284,9 +284,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   cross-service Tempo searches. Logs and traces have their own dashboards so
   the metrics views stay easier to scan. Grafana's
   dashboard sidecar watches only the `observability` namespace. The dashboard
-  Application is order 5, after Grafana at order 4. Commit 173960c is synced;
-  both dashboard ConfigMaps are present and the Grafana sidecar wrote both files
-  and received a 200 response when reloading provisioned dashboards. The current
+  Application is order 5, after Grafana at order 4. Commit 47db1fb is synced;
+  all five dashboard ConfigMaps are present and the Grafana sidecar wrote each
+  dashboard file and received HTTP 200 when reloading provisioning. The current
   Grafana pod is Ready with the sidecar. Initially the panels were empty because
   collectors could not export all three signals. The cause was the
   gateway Service's old `external-dns.alpha.kubernetes.io/*` annotations:
