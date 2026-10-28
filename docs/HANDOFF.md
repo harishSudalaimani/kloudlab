@@ -189,8 +189,8 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   declare those defaults explicitly, including route parent/backend kinds,
   default path matches and weights, and StatefulSet PVC retention policy.
   The two live PostgreSQL StatefulSets also contain a controller-populated
-  PVC template `status` under `spec`; their manifests ignore only that
-  generated field during Argo comparison.
+  PVC template GVK and `status` under `spec`; their manifests now declare
+  the GVK and ignore only that generated status field during Argo comparison.
 
 ## Open work, in order
 
