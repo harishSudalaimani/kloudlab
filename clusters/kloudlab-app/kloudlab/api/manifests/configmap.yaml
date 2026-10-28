@@ -12,9 +12,9 @@ metadata:
 data:
   PORT: "8080"
   # Auth0 tenant issuer, trailing slash; audience = Auth0 API identifier
-  # (same value as the frontend's VITE_AUTH0_AUDIENCE)
-  AUTH0_ISSUER: https://REPLACE_ME.auth0.com/
-  AUTH0_AUDIENCE: REPLACE_ME
+  # (same value as the frontend's VITE_AUTH0_AUDIENCE).
+  AUTH0_ISSUER: https://dev-rfog4fw2atmd5wrd.us.auth0.com/
+  AUTH0_AUDIENCE: https://api.kloudlab.in
   # the only origin allowed by CORS (one value, no list)
   FRONTEND_ORIGIN: https://kloudlab.in
   OPENFGA_API_URL: http://openfga.openfga.svc.cluster.local:8080

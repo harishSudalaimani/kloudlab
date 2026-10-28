@@ -114,11 +114,11 @@ func createRouting(
 	}
 
 	result.s3Endpoint, err = ec2.NewVpcEndpoint(ctx, name+"-s3-gateway-endpoint", &ec2.VpcEndpointArgs{
-		VpcId:            vpc.ID(),
-		ServiceName:      pulumi.String("com.amazonaws." + args.Region + ".s3"),
+		VpcId:           vpc.ID(),
+		ServiceName:     pulumi.String("com.amazonaws." + args.Region + ".s3"),
 		VpcEndpointType: pulumi.String("Gateway"),
-		RouteTableIds:    privateRouteTableIDs,
-		Tags:             makeTags(args.Tags, name+"-s3-gateway-endpoint"),
+		RouteTableIds:   privateRouteTableIDs,
+		Tags:            makeTags(args.Tags, name+"-s3-gateway-endpoint"),
 	}, pulumi.Parent(parent))
 	if err != nil {
 		return nil, err

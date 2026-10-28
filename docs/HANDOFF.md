@@ -234,20 +234,28 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   clusters (orange cloud); `otel.kloudlab.in` is DNS only (annotation
   on the otel-gateway Service). Zone SSL mode must be Full (strict).
 - App: `apps/api/Dockerfile`, `apps/frontend/Dockerfile`, workflow
-  `.github/workflows/images.yml` builds `ghcr.io/harishsudalaimani/
-  kloudlab-{api,frontend}:main` on push. Deployed in namespace
+  `.github/workflows/images.yml` builds and publishes ECR images on push,
+  then commits their short-SHA tags to the GitOps deployment manifests.
+  Argo CD deploys that Git commit. Deployed in namespace
   `kloudlab` on app (`clusters/kloudlab-app/kloudlab/`): api,
   api-postgres, frontend; routes `kloudlab.in` (frontend),
   `www.kloudlab.in` (301 to apex), `api.kloudlab.in` (API).
-- Placeholders to replace: Auth0 (`AUTH0_ISSUER`, `AUTH0_AUDIENCE` in
-  the api ConfigMap; repository variables `VITE_AUTH0_DOMAIN`,
-  `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE` for the frontend
-  build), `OPENFGA_STORE_ID`, `OPENFGA_AUTHORIZATION_MODEL_ID` (create
-  the store and upload `apps/api/internal/authorization/model.fga`).
+- Placeholders to replace: `OPENFGA_STORE_ID` and
+  `OPENFGA_AUTHORIZATION_MODEL_ID` (create the store and upload
+  `apps/api/internal/authorization/model.fga`).
+- Live app check (2026-10-28): the Auth0 API `KloudLab-API` now uses
+  `https://api.kloudlab.in` as its Identifier. The API ConfigMap and frontend
+  image build use this as their audience. Authorize the `KloudLab` SPA for
+  user-delegated access in the Auth0 API's Application Access tab. The frontend
+  Docker build and CI fail if required build values are missing. The dedicated
+  Pulumi stack now manages ECR publishing role
+  `arn:aws:iam::481665121849:role/kloudlab-dev-github-ecr-publisher`; set the
+  GitHub variable `AWS_ECR_PUBLISH_ROLE_ARN` to this ARN. GitHub Actions also
+  needs repository contents write permission to commit updated tags; Argo CD
+  then deploys the new SHA-tagged ECR images. See
+  [`docs/runbooks/ecr-image-publishing.md`](runbooks/ecr-image-publishing.md).
 - Secrets in `kloudlab` (hand-made): `kloudlab-api-postgres`
-  (`password`), `kloudlab-api` (`database-url`, `openfga-api-token`),
-  `ghcr-pull` (dockerconfigjson for ghcr.io, token with
-  `read:packages`).
+  (`password`), `kloudlab-api` (`database-url`, `openfga-api-token`).
 
 - Karpenter on app: Pulumi `infra/components/iam/karpenter.go`
   (queue `kloudlab-app-karpenter`, node role
@@ -266,12 +274,8 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   memory across ingest and query work, so move back to microservices with a
   Kafka-compatible backend if the workload or availability needs grow.
 
-- App images: ECR repos `kloudlab-api` and `kloudlab-frontend`
-  (created with the AWS CLI, not yet in Pulumi), built on an operator
-  machine with `docker buildx --platform linux/amd64` and pushed as
-  `:main` and `:<short sha>`. The GHCR workflow's frontend build
-  failed; move the workflow to ECR with GitHub OIDC to drop the
-  local build.
+- App image packages are published to ECR as `main` and short-SHA tags.
+  EKS worker node roles provide image pull access.
 
 ## Gaps found while migrating
 

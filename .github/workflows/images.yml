@@ -1,21 +1,19 @@
 name: Images
 
-# Builds the API and frontend images and pushes them to GHCR with tags
-# main and the short commit SHA. The frontend's VITE_* values are
-# public build-time settings from repository variables (Settings >
-# Secrets and variables > Actions > Variables).
+# Builds API and frontend images, publishes them to ECR, then commits the
+# short-SHA image tags to the GitOps deployments. Argo CD deploys that commit.
 on:
   push:
     branches: [main]
     paths:
       - "apps/api/**"
       - "apps/frontend/**"
+      - "clusters/kloudlab-app/kloudlab/api/manifests/configmap.yaml"
       - ".github/workflows/images.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: images-${{ github.ref }}
@@ -25,6 +23,10 @@ jobs:
   image:
     name: Build and push ${{ matrix.name }}
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -44,12 +46,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - name: Validate ECR publishing role
+        env:
+          AWS_ECR_PUBLISH_ROLE_ARN: ${{ vars.AWS_ECR_PUBLISH_ROLE_ARN }}
+        run: |
+          if [[ "$AWS_ECR_PUBLISH_ROLE_ARN" != arn:aws:iam::481665121849:role/* ]]; then
+            echo "Set AWS_ECR_PUBLISH_ROLE_ARN to a role ARN in account 481665121849." >&2
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          role-to-assume: ${{ vars.AWS_ECR_PUBLISH_ROLE_ARN }}
+          aws-region: ap-south-1
+          role-session-name: kloudlab-images-${{ github.run_id }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -58,16 +73,76 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/harishsudalaimani/${{ matrix.name }}:main
-            ghcr.io/harishsudalaimani/${{ matrix.name }}:${{ steps.sha.outputs.short }}
+            ${{ steps.ecr.outputs.registry }}/${{ matrix.name }}:main
+            ${{ steps.ecr.outputs.registry }}/${{ matrix.name }}:${{ steps.sha.outputs.short }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
           # ignored by the API Dockerfile (no such ARGs there)
           build-args: |
-            VITE_AUTH0_DOMAIN=${{ vars.VITE_AUTH0_DOMAIN || 'REPLACE_ME.auth0.com' }}
-            VITE_AUTH0_CLIENT_ID=${{ vars.VITE_AUTH0_CLIENT_ID || 'REPLACE_ME' }}
-            VITE_AUTH0_AUDIENCE=${{ vars.VITE_AUTH0_AUDIENCE || 'REPLACE_ME' }}
+            VITE_AUTH0_DOMAIN=${{ vars.VITE_AUTH0_DOMAIN || 'dev-rfog4fw2atmd5wrd.us.auth0.com' }}
+            VITE_AUTH0_CLIENT_ID=${{ vars.VITE_AUTH0_CLIENT_ID || 'gNuTg6P3eMIERdxAtowzW76AU7ihqP2L' }}
+            VITE_AUTH0_AUDIENCE=${{ vars.VITE_AUTH0_AUDIENCE || 'https://api.kloudlab.in' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'https://api.kloudlab.in/api' }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  update-gitops:
+    name: Update GitOps image tags
+    needs: image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Point deployments at the published images
+        env:
+          IMAGE_TAG: ${{ steps.sha.outputs.short }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          tag = os.environ["IMAGE_TAG"]
+          images = {
+              "api": ("clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml", "kloudlab-api"),
+              "frontend": ("clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml", "kloudlab-frontend"),
+          }
+          for path, image in images.values():
+              file = Path(path)
+              content = file.read_text()
+              updated, count = re.subn(
+                  rf"(?m)^(\s*image:\s*).*/{re.escape(image)}:[^\s]+$",
+                  rf"\g<1>481665121849.dkr.ecr.ap-south-1.amazonaws.com/{image}:{tag}",
+                  content,
+              )
+              if count != 1:
+                  raise SystemExit(f"expected one {image} image in {path}, found {count}")
+              file.write_text(updated)
+          PY
+
+      - name: Commit GitOps image update
+        env:
+          IMAGE_TAG: ${{ steps.sha.outputs.short }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml \
+            clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml
+          if git diff --cached --quiet; then
+            echo "GitOps manifests already use image tag ${IMAGE_TAG}"
+            exit 0
+          fi
+          git commit -m "chore(gitops): deploy app images ${IMAGE_TAG}"
+          git push origin HEAD:main

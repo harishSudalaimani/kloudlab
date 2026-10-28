@@ -16,14 +16,20 @@ RUN pnpm install --frozen-lockfile --config.strict-dep-builds=false
 COPY index.html vite.config.ts tsconfig.json tsconfig.app.json \
   tsconfig.node.json ./
 COPY src ./src
-ARG VITE_AUTH0_DOMAIN=REPLACE_ME.auth0.com
-ARG VITE_AUTH0_CLIENT_ID=REPLACE_ME
-ARG VITE_AUTH0_AUDIENCE=REPLACE_ME
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
 ARG VITE_API_BASE_URL=https://api.kloudlab.in/api
 ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN \
   VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID \
   VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE \
   VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN if [ -z "$VITE_AUTH0_DOMAIN" ] || [ "$VITE_AUTH0_DOMAIN" = "REPLACE_ME.auth0.com" ] || \
+      [ -z "$VITE_AUTH0_CLIENT_ID" ] || [ "$VITE_AUTH0_CLIENT_ID" = "REPLACE_ME" ] || \
+      [ -z "$VITE_AUTH0_AUDIENCE" ] || [ "$VITE_AUTH0_AUDIENCE" = "REPLACE_ME" ]; then \
+      echo "VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, and VITE_AUTH0_AUDIENCE must be configured." >&2; \
+      exit 1; \
+    fi
 RUN pnpm run build
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine

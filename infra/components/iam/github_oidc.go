@@ -1,6 +1,7 @@
 package iam
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -17,11 +18,12 @@ var iamRoleNamePattern = regexp.MustCompile(`^[A-Za-z0-9_+=,.@-]{1,64}$`)
 // GitHubActionsRoleArgs configures a branch-restricted GitHub Actions trust
 // and its explicitly supplied permissions policy.
 type GitHubActionsRoleArgs struct {
-	RoleName           string
-	Repository         string
-	Branches           []string
-	PermissionsPolicy  string
-	Tags               map[string]string
+	RoleName          string
+	Repository        string
+	Branches          []string
+	PermissionsPolicy string
+	PolicyDescription string
+	Tags              map[string]string
 }
 
 // GitHubActionsRole exports the provider and role identifiers.
@@ -34,11 +36,63 @@ type GitHubActionsRole struct {
 func (r *GitHubActionsRole) ProviderARN() pulumi.StringOutput { return r.providerARN }
 func (r *GitHubActionsRole) RoleARN() pulumi.StringOutput     { return r.roleARN }
 
+//go:embed policies/github-actions-ecr-publish.json
+var githubActionsECRPublishPolicy string
+
+// GitHubActionsECRPublishPolicy returns the least-privilege policy used by the
+// image-publishing role.
+func GitHubActionsECRPublishPolicy() string { return githubActionsECRPublishPolicy }
+
 // NewGitHubActionsRole creates GitHub's OIDC provider and a role that can be
 // assumed only by exact refs/heads subjects in the configured repository.
 // Permission grants are supplied as reviewed JSON and attached as a separate
 // IAM policy to keep trust and permissions independently visible.
 func NewGitHubActionsRole(ctx *pulumi.Context, name string, args *GitHubActionsRoleArgs, opts ...pulumi.ResourceOption) (*GitHubActionsRole, error) {
+	branchSubjects, err := validateGitHubActionsRole(name, args)
+	if err != nil {
+		return nil, err
+	}
+
+	component := &GitHubActionsRole{}
+	if err := ctx.RegisterComponentResource("kloudlab:iam:GitHubActionsRole", name, component, opts...); err != nil {
+		return nil, err
+	}
+	provider, err := iam.NewOpenIdConnectProvider(ctx, name+"-github-oidc", &iam.OpenIdConnectProviderArgs{
+		Url: pulumi.String("https://token.actions.githubusercontent.com"),
+		ClientIdLists: pulumi.StringArray{
+			pulumi.String("sts.amazonaws.com"),
+		},
+	}, pulumi.Parent(component), pulumi.Protect(true))
+	if err != nil {
+		return nil, err
+	}
+	return createGitHubActionsRole(ctx, name, component, args, provider.Arn, branchSubjects)
+}
+
+// NewGitHubActionsRoleWithProvider creates another branch-restricted role
+// that reuses an OIDC provider created by NewGitHubActionsRole.
+func NewGitHubActionsRoleWithProvider(
+	ctx *pulumi.Context,
+	name string,
+	args *GitHubActionsRoleArgs,
+	providerARN pulumi.StringInput,
+	opts ...pulumi.ResourceOption,
+) (*GitHubActionsRole, error) {
+	branchSubjects, err := validateGitHubActionsRole(name, args)
+	if err != nil {
+		return nil, err
+	}
+	if providerARN == nil {
+		return nil, fmt.Errorf("OIDC provider ARN is required")
+	}
+	component := &GitHubActionsRole{}
+	if err := ctx.RegisterComponentResource("kloudlab:iam:GitHubActionsRole", name, component, opts...); err != nil {
+		return nil, err
+	}
+	return createGitHubActionsRole(ctx, name, component, args, providerARN, branchSubjects)
+}
+
+func validateGitHubActionsRole(name string, args *GitHubActionsRoleArgs) ([]string, error) {
 	if args == nil || name == "" || args.RoleName == "" {
 		return nil, fmt.Errorf("component name, arguments, and role name are required")
 	}
@@ -73,29 +127,24 @@ func NewGitHubActionsRole(ctx *pulumi.Context, name string, args *GitHubActionsR
 		seen[branch] = struct{}{}
 		branchSubjects = append(branchSubjects, "repo:"+args.Repository+":ref:refs/heads/"+branch)
 	}
+	return branchSubjects, nil
+}
 
-	component := &GitHubActionsRole{}
-	if err := ctx.RegisterComponentResource("kloudlab:iam:GitHubActionsRole", name, component, opts...); err != nil {
-		return nil, err
-	}
-	provider, err := iam.NewOpenIdConnectProvider(ctx, name+"-github-oidc", &iam.OpenIdConnectProviderArgs{
-		Url: pulumi.String("https://token.actions.githubusercontent.com"),
-		ClientIdLists: pulumi.StringArray{
-			pulumi.String("sts.amazonaws.com"),
-		},
-	}, pulumi.Parent(component), pulumi.Protect(true))
-	if err != nil {
-		return nil, err
-	}
-	trustPolicy := provider.Arn.ApplyT(func(providerARN string) string {
+func createGitHubActionsRole(
+	ctx *pulumi.Context,
+	name string,
+	component *GitHubActionsRole,
+	args *GitHubActionsRoleArgs,
+	providerARN pulumi.StringInput,
+	branchSubjects []string,
+) (*GitHubActionsRole, error) {
+	trustPolicy := providerARN.ToStringOutput().ApplyT(func(providerARN string) string {
 		policy, _ := json.Marshal(map[string]interface{}{
 			"Version": "2012-10-17",
 			"Statement": []map[string]interface{}{{
-				"Effect": "Allow",
-				"Principal": map[string]string{
-					"Federated": providerARN,
-				},
-				"Action": "sts:AssumeRoleWithWebIdentity",
+				"Effect":    "Allow",
+				"Principal": map[string]string{"Federated": providerARN},
+				"Action":    "sts:AssumeRoleWithWebIdentity",
 				"Condition": map[string]interface{}{
 					"StringEquals": map[string]interface{}{
 						"token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
@@ -114,9 +163,13 @@ func NewGitHubActionsRole(ctx *pulumi.Context, name string, args *GitHubActionsR
 	if err != nil {
 		return nil, err
 	}
+	description := args.PolicyDescription
+	if description == "" {
+		description = "Reviewed deployment permissions for KloudLab network stacks"
+	}
 	policy, err := iam.NewPolicy(ctx, name+"-permissions", &iam.PolicyArgs{
-		Name:        pulumi.String(args.RoleName+"-permissions"),
-		Description: pulumi.String("Reviewed deployment permissions for KloudLab network stacks"),
+		Name:        pulumi.String(args.RoleName + "-permissions"),
+		Description: pulumi.String(description),
 		Policy:      pulumi.String(args.PermissionsPolicy),
 		Tags:        toStringMap(args.Tags),
 	}, pulumi.Parent(component), pulumi.Protect(true))
@@ -129,8 +182,7 @@ func NewGitHubActionsRole(ctx *pulumi.Context, name string, args *GitHubActionsR
 	}, pulumi.Parent(component), pulumi.DependsOn([]pulumi.Resource{role, policy})); err != nil {
 		return nil, err
 	}
-
-	component.providerARN = provider.Arn
+	component.providerARN = providerARN.ToStringOutput()
 	component.roleARN = role.Arn
 	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
 		"providerArn": component.providerARN,

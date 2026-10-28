@@ -1,6 +1,6 @@
 # KloudLab API. Hand-made Secrets in namespace kloudlab (not in Git):
 #   kloudlab-api   keys openfga-api-token, database-url
-#   ghcr-pull      registry login, unused since images moved to ECR
+# ECR images are pulled with the EKS node role.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,8 +19,6 @@ spec:
         app.kubernetes.io/name: kloudlab-api
         app.kubernetes.io/part-of: kloudlab
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull
       automountServiceAccountToken: false
       securityContext:
         # nonroot user of the distroless image

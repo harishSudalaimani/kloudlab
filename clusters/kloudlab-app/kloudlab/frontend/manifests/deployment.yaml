@@ -1,5 +1,5 @@
 # KloudLab frontend (static SPA on nginx-unprivileged, uid 101).
-# Image from ECR (node role pulls it); ghcr-pull is unused.
+# ECR image is pulled with the EKS node role.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,8 +18,6 @@ spec:
         app.kubernetes.io/name: kloudlab-frontend
         app.kubernetes.io/part-of: kloudlab
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull
       automountServiceAccountToken: false
       securityContext:
         runAsUser: 101

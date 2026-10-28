@@ -34,6 +34,6 @@ func createManagedNodeGroup(
 			DesiredSize: pulumi.Int(args.DesiredSize),
 			MaxSize:     pulumi.Int(args.MaxSize),
 		},
-		Tags:   args.Tags,
+		Tags: args.Tags,
 	}, pulumi.Parent(parent), pulumi.DependsOn(dependencies))
 }

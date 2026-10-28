@@ -1,0 +1,17 @@
+name: kloudlab-github-ecr-publisher
+runtime: go
+main: .
+description: Branch-restricted GitHub Actions role for publishing KloudLab images to ECR
+config:
+  aws:region:
+    value: ap-south-1
+  kloudlab-github-ecr-publisher:environment:
+    default: dev
+  kloudlab-github-ecr-publisher:repository:
+    default: harishSudalaimani/kloudlab
+  kloudlab-github-ecr-publisher:branches:
+    default:
+      - main
+    type: array
+    items:
+      type: string
