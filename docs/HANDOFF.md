@@ -15,10 +15,14 @@ so here.
 ## Frontend playground
 
 For an account without a saved local draft, the playground starts with an
-editable overview of KloudLab's GitHub workflows, Pulumi infrastructure,
-three EKS clusters, application services, DNS and TLS, and observability
-pipeline. Existing local drafts still take precedence; **New architecture**
-starts with a blank canvas.
+editable end-to-end view of KloudLab's GitHub CI, API/frontend image builds,
+ECR publishing, GitOps tag commit and Argo CD rollout; Pulumi-managed VPCs,
+peering, EKS and IAM; Cloudflare DNS and DNS-01 TLS; all three EKS clusters,
+application services, and the observability pipeline. It distinguishes the
+versioned, KMS-encrypted Pulumi state bucket from Loki/Tempo S3 storage, and
+shows the KloudLab API and OpenFGA PostgreSQL links. A pristine older starter
+canvas is upgraded on open; customized local drafts still take precedence.
+**New architecture** starts with a blank canvas.
 
 ## Clusters (ap-south-1, EKS 1.36)
 
@@ -390,6 +394,7 @@ workspace DNS resolution is blocked. Gaps:
 
 ## Rules for agents
 
+- No Makefile is maintained; use package scripts and native Go/Helm commands.
 - Never print, commit or paste a secret; no `.env` or token files in
   the repo.
 - Preview before every change: `pulumi preview`, `helm template`, the

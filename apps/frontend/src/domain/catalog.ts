@@ -93,7 +93,7 @@ function definition(
   return {
     typeId,
     version: '1.0.0',
-    availability: typeId === 'aws-vpc' || typeId === 'eks-cluster' || typeId === 'amazon-ecr' || typeId === 'aws-vpc-peering'
+    availability: typeId === 'aws-vpc' || typeId === 'eks-cluster' || typeId === 'aws-iam-role' || typeId === 'amazon-ecr' || typeId === 'aws-vpc-peering'
       ? 'cloud-hosting'
       : typeId === 'auth0' || typeId === 'cloudflare-dns'
         ? 'managed-service'
@@ -167,6 +167,7 @@ const tool = (
     ? [
         { id: 'repository', direction: 'input', connectionTypes: ['gitops-source'], allowedComponentTypes: ['github'] },
         { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
+        { id: 'aws-identity', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
         { id: 'http', direction: 'input', connectionTypes: ['http-service'], allowedComponentTypes: ['kgateway'] },
         { id: 'deployments', direction: 'output', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['kubernetes-workload', 'kgateway', 'postgresql', 'openfga', 'otel-collector', 'prometheus', 'loki', 'tempo', 'grafana', 'external-dns', 'cert-manager'] },
       ]
@@ -180,6 +181,7 @@ const tool = (
       : typeId === 'cert-manager'
         ? [
             { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
+            { id: 'dns-provider', direction: 'input', connectionTypes: ['dns-provider'], allowedComponentTypes: ['cloudflare-dns'] },
             { id: 'certificate', direction: 'output', connectionTypes: ['tls-certificate'], allowedComponentTypes: ['kgateway'] },
             { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
           ]
@@ -270,6 +272,7 @@ const additionalCatalog: ComponentDefinition[] = [
   // KloudLab's own infrastructure toolchain and AWS resources.
   openSourceTool('pulumi', 'Pulumi', 'Infrastructure as code using Go and cloud provider SDKs.', 'Infrastructure', 'PUL', [
     { id: 'source', direction: 'input', connectionTypes: ['iac-source'], allowedComponentTypes: ['github', 'gitlab'] },
+    { id: 'state', direction: 'input', connectionTypes: ['object-storage'], allowedComponentTypes: ['aws-s3'] },
     { id: 'provider', direction: 'output', connectionTypes: ['pulumi-program'], allowedComponentTypes: ['pulumi-aws-provider'] },
   ], 'https://www.pulumi.com/docs/'),
   openSourceTool('github', 'GitHub', 'Git repository and collaboration platform used by KloudLab.', 'Source Control', 'GH', [
@@ -277,24 +280,33 @@ const additionalCatalog: ComponentDefinition[] = [
     { id: 'gitops', direction: 'output', connectionTypes: ['gitops-source'], allowedComponentTypes: ['argocd'] },
     { id: 'gitops-update', direction: 'input', connectionTypes: ['gitops-update'], allowedComponentTypes: ['github-actions'] },
   ], 'https://docs.github.com/', 'managed-service'),
-  openSourceTool('github-actions', 'GitHub Actions', 'Repository workflows that build, validate, and deploy KloudLab infrastructure.', 'CI/CD', 'GHA', [
+  openSourceTool('github-actions', 'GitHub Actions', 'Repository workflows that validate code, publish images, and update GitOps manifests.', 'CI/CD', 'GHA', [
     { id: 'repository', direction: 'input', connectionTypes: ['iac-source'], allowedComponentTypes: ['github'] },
     { id: 'oidc', direction: 'output', connectionTypes: ['oidc-token'], allowedComponentTypes: ['aws-iam-role'] },
     { id: 'images', direction: 'output', connectionTypes: ['container-image'], allowedComponentTypes: ['amazon-ecr'] },
     { id: 'gitops-update', direction: 'output', connectionTypes: ['gitops-update'], allowedComponentTypes: ['github'] },
+    { id: 'job-complete', direction: 'output', connectionTypes: ['workflow-dependency'], allowedComponentTypes: ['github-actions'] },
+    { id: 'needs', direction: 'input', connectionTypes: ['workflow-dependency'], allowedComponentTypes: ['github-actions'] },
   ], 'https://docs.github.com/actions', 'managed-service'),
-  openSourceTool('aws-iam-role', 'AWS IAM role for GitHub OIDC', 'Short-lived AWS access for trusted GitHub Actions branches.', 'Security', 'IAM', [
-    { id: 'trust', direction: 'input', connectionTypes: ['oidc-token'], allowedComponentTypes: ['github-actions'], required: true, multiple: false },
-    { id: 'identity', direction: 'output', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['pulumi-aws-provider', 'amazon-ecr'] },
-  ], 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html', 'cloud-hosting'),
+  definition('aws-iam-role', 'AWS IAM role', 'Scoped AWS permissions assumed by GitHub Actions or EKS workloads through short-lived identity.', 'Security', 'IAM', categoryAccent.Security, {
+    name,
+    trustSource: { type: 'string', title: 'Trusted identity source' },
+    permissionScope: { type: 'string', title: 'Permission scope' },
+  }, ['name'], [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'trust', direction: 'input', connectionTypes: ['oidc-token', 'pod-identity', 'role-assumption'], allowedComponentTypes: ['github-actions', 'eks-cluster', 'aws-iam-role'] },
+    { id: 'identity', direction: 'output', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['pulumi-aws-provider', 'amazon-ecr', 'eks-cluster', 'argocd', 'kubernetes-workload', 'aws-s3'] },
+    { id: 'assume-role', direction: 'output', connectionTypes: ['role-assumption'], allowedComponentTypes: ['aws-iam-role'] },
+  ], [], ['https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html']),
   openSourceTool('pulumi-aws-provider', 'Pulumi AWS Provider', 'Pulumi provider package used by KloudLab to provision AWS infrastructure.', 'Infrastructure', 'AWS', [
     { id: 'program', direction: 'input', connectionTypes: ['pulumi-program'], allowedComponentTypes: ['pulumi'], required: true, multiple: false },
     { id: 'identity', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
-    { id: 'resources', direction: 'output', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['aws-vpc', 'eks-cluster', 'aws-s3', 'aws-kms', 'aws-route53', 'aws-subnet', 'aws-security-group', 'aws-nat-gateway', 'aws-vpc-peering'] },
+    { id: 'resources', direction: 'output', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['aws-vpc', 'eks-cluster', 'aws-iam-role', 'aws-s3', 'aws-kms', 'aws-route53', 'aws-subnet', 'aws-security-group', 'aws-nat-gateway', 'aws-vpc-peering'] },
   ], 'https://www.pulumi.com/registry/packages/aws/'),
-  openSourceTool('aws-s3', 'Amazon S3 bucket', 'Object storage used for encrypted, versioned Pulumi state.', 'Storage', 'S3', [
+  openSourceTool('aws-s3', 'Amazon S3 bucket', 'Object storage for Pulumi state, telemetry, and application data.', 'Storage', 'S3', [
     { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
     { id: 'encryption', direction: 'input', connectionTypes: ['encryption-key'], allowedComponentTypes: ['aws-kms'] },
+    { id: 'access', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
     { id: 'objects', direction: 'output', connectionTypes: ['object-storage'] },
   ], 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html', 'cloud-hosting'),
   openSourceTool('aws-kms', 'AWS KMS key', 'Customer managed encryption key with rotation for state and secrets.', 'Security', 'KMS', [
@@ -475,10 +487,12 @@ export const catalog: ComponentDefinition[] = [
     availabilityZones: { type: 'number', title: 'Availability zones', minimum: 1, maximum: 6 },
   }, ['name', 'region', 'kubernetesVersion', 'apiAccess', 'availabilityZones'], [
     { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'iam-role', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
     { id: 'network', direction: 'input', connectionTypes: ['network'], required: true, multiple: false },
     { id: 'peering', direction: 'input', connectionTypes: ['vpc-peering'], allowedComponentTypes: ['aws-vpc-peering'] },
     { id: 'workloads', direction: 'output', connectionTypes: ['workload'] },
     { id: 'telemetry', direction: 'output', connectionTypes: ['telemetry'] },
+    { id: 'pod-identity', direction: 'output', connectionTypes: ['pod-identity'], allowedComponentTypes: ['aws-iam-role'] },
   ], [
     { id: 'eks.multi-az', scope: 'configuration', severity: 'warning', message: 'This cluster spans fewer than two availability zones.', description: 'A zone outage could make the whole cluster unavailable.', options: ['Use at least two availability zones for the cluster.', 'Keep one zone only for a deliberate development or cost-saving environment.'] },
   ], ['https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html'], { kind: 'pulumi-go', reference: 'components/eks', version: '1.0.0' }),
@@ -492,6 +506,7 @@ export const catalog: ComponentDefinition[] = [
     { id: 'cluster', direction: 'input', connectionTypes: ['workload'], required: true, multiple: false },
     { id: 'http', direction: 'input', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kgateway', 'envoy-gateway', 'traefik', 'kong', 'nginx', 'haproxy', 'envoy-proxy', 'apisix', 'caddy', 'contour'], multiple: false },
     { id: 'image', direction: 'input', connectionTypes: ['container-image'], allowedComponentTypes: ['amazon-ecr'] },
+    { id: 'aws-identity', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
     { id: 'oidc', direction: 'input', connectionTypes: ['oidc'] },
     { id: 'identity', direction: 'input', connectionTypes: ['identity-decision'] },
     { id: 'database', direction: 'input', connectionTypes: ['database'], protocols: ['TCP'] },

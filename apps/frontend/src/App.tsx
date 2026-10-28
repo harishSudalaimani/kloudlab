@@ -32,6 +32,7 @@ import { checkConnection, type ConnectionCheck, type ExistingConnection } from '
 import {
   ACTIVE_KEY,
   createEmptyCanvas,
+  migrateStarterCanvas,
   normalizeCanvasDocument,
   createStarterCanvas,
   STARTER_CANVAS_ID,
@@ -90,7 +91,7 @@ function readDocument(storageKey = ACTIVE_KEY): CanvasDocument {
     const active = localStorage.getItem(storageKey)
     if (active) {
       const parsed: unknown = JSON.parse(active)
-      if (isCanvasDocument(parsed)) return normalizeCanvasDocument(parsed)
+      if (isCanvasDocument(parsed)) return migrateStarterCanvas(parsed)
     }
   } catch { /* Storage may be disabled; use the example document. */ }
   return createStarterCanvas()
@@ -302,7 +303,7 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
   }, [])
 
   const replaceDocument = useCallback((next: CanvasDocument) => {
-    const normalized = normalizeCanvasDocument(next)
+  const normalized = migrateStarterCanvas(next)
     const parsed = fromDocument(normalized)
     setDocument(normalized)
     setNodes(parsed.nodes)
@@ -591,7 +592,7 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
       try {
         const parsed: unknown = JSON.parse(String(reader.result))
         if (!isCanvasDocument(parsed)) throw new Error('not a canvas document')
-        replaceDocument({ ...normalizeCanvasDocument(parsed), id: makeId('canvas') })
+        replaceDocument({ ...migrateStarterCanvas(parsed), id: makeId('canvas') })
         setLibraryOpen(false)
         notify(`Opened ${file.name}`)
       } catch {
