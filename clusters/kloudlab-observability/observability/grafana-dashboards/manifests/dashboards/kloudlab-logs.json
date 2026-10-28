@@ -1,0 +1,248 @@
+{
+  "uid": "kloudlab-logs",
+  "title": "KloudLab Logs",
+  "description": "Search application and cluster logs by cluster, namespace, and service. API request logs include trace IDs for correlation.",
+  "tags": [
+    "kloudlab",
+    "logs"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log lines per minute by service",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (service_name) (rate({k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",service_name=~\"$service\"}[5m])) * 60)",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "description": "Recent log volume grouped by service.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "KloudLab API request logs",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{k8s_cluster_name=\"kloudlab-app\",k8s_namespace_name=\"kloudlab\",service_name=\"kloudlab-api\"} |= \"http.request.method\"",
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "description": "Structured HTTP request records. Open a row to inspect trace_id and request attributes.",
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 3,
+      "title": "Warnings, errors, and failures",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",service_name=~\"$service\"} |~ \"(?i)warn|error|fatal|panic|failed\"",
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "description": "Lines that contain common warning or failure terms.",
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 4,
+      "title": "All logs for selected scope",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",service_name=~\"$service\"}",
+          "queryType": "range",
+          "editorMode": "code"
+        }
+      ],
+      "description": "Select a cluster, namespace, and service above.",
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)",
+          "refId": "Prometheus-cluster-Variable-Query"
+        },
+        "definition": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\"}, k8s_namespace_name)",
+          "refId": "Prometheus-namespace-Variable-Query"
+        },
+        "definition": "label_values(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\"}, k8s_namespace_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "query": {
+          "query": "label_values(service_name)",
+          "refId": "Loki-service-Variable-Query"
+        },
+        "definition": "label_values(service_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
+}

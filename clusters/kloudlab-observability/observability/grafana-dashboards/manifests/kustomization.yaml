@@ -15,3 +15,24 @@ configMapGenerator:
       disableNameSuffixHash: true
       labels:
         grafana_dashboard: "1"
+  - name: grafana-dashboard-kloudlab-workloads
+    files:
+      - dashboards/kloudlab-workloads.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+  - name: grafana-dashboard-kloudlab-logs
+    files:
+      - dashboards/kloudlab-logs.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+  - name: grafana-dashboard-kloudlab-traces
+    files:
+      - dashboards/kloudlab-traces.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"

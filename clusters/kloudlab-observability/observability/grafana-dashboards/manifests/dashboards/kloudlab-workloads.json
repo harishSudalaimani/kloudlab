@@ -1,0 +1,617 @@
+{
+  "uid": "kloudlab-workloads",
+  "title": "KloudLab Workloads",
+  "description": "Namespace and pod resource drilldown, including use compared with requests.",
+  "tags": [
+    "kloudlab",
+    "kubernetes",
+    "workloads"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU usage",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}) or vector(0)"
+        }
+      ],
+      "description": "Current CPU use for the selected pods.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cores",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Memory working set",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k8s_pod_memory_working_set_bytes{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}) or vector(0)"
+        }
+      ],
+      "description": "Current working-set memory for the selected pods.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Container restarts",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k8s_container_restarts{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}) or vector(0)"
+        }
+      ],
+      "description": "Current restart count for selected pods.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Unready containers",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(k8s_container_ready{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"} == 0) or vector(0)"
+        }
+      ],
+      "description": "Containers whose latest readiness state is false.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "title": "CPU usage by pod",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (k8s_pod_name) (k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"})",
+          "legendFormat": "{{k8s_pod_name}}"
+        }
+      ],
+      "description": "CPU cores used by each selected pod.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cores",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "CPU use as percent of request",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, 100 * sum by (k8s_pod_name) (k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}) / clamp_min(sum by (k8s_pod_name) (k8s_container_cpu_request{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}), 0.001))",
+          "legendFormat": "{{k8s_pod_name}}"
+        }
+      ],
+      "description": "Pod CPU use divided by its requested CPU.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "orientation": "horizontal",
+            "barWidthFactor": 0.7,
+            "showValues": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Memory working set by pod",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (k8s_pod_name) (k8s_pod_memory_working_set_bytes{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}))",
+          "legendFormat": "{{k8s_pod_name}}"
+        }
+      ],
+      "description": "Top 10 selected pods by current memory.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Memory use as percent of request",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, 100 * sum by (k8s_pod_name) (k8s_pod_memory_working_set_bytes{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}) / clamp_min(sum by (k8s_pod_name) (k8s_container_memory_request_bytes{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}), 1))",
+          "legendFormat": "{{k8s_pod_name}}"
+        }
+      ],
+      "description": "Pod working-set memory divided by its requested memory.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "orientation": "horizontal",
+            "barWidthFactor": 0.7,
+            "showValues": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Network throughput by pod",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (k8s_pod_name,direction) (rate(k8s_pod_network_io_bytes_total{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}[5m])))",
+          "legendFormat": "{{k8s_pod_name}} / {{direction}}"
+        }
+      ],
+      "description": "Receive and transmit bytes per second.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Filesystem usage by pod",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (k8s_pod_name) (k8s_pod_filesystem_usage_bytes{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\",k8s_pod_name=~\"$pod\"}))",
+          "legendFormat": "{{k8s_pod_name}}"
+        }
+      ],
+      "description": "Pod filesystem usage reported by kubelet.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "orientation": "horizontal",
+            "barWidthFactor": 0.7,
+            "showValues": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)",
+          "refId": "Prometheus-cluster-Variable-Query"
+        },
+        "definition": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\"}, k8s_namespace_name)",
+          "refId": "Prometheus-namespace-Variable-Query"
+        },
+        "definition": "label_values(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\"}, k8s_namespace_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "pod",
+        "label": "Pod",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\"}, k8s_pod_name)",
+          "refId": "Prometheus-pod-Variable-Query"
+        },
+        "definition": "label_values(k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\",k8s_namespace_name=~\"$namespace\"}, k8s_pod_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
+}

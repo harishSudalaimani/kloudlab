@@ -276,11 +276,13 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 
 - App image packages are published to ECR as `main` and short-SHA tags.
   EKS worker node roles provide image pull access.
-- Grafana's local GitOps config now provisions `KloudLab API` (HTTP rate,
-  p95 latency, 5xx rate, database connection pool, API request logs, and
-  recent API traces from Tempo) and
-  `KloudLab Kubernetes` (pod/node CPU, pod working set, container restarts,
-  and cluster logs/events) dashboards from stable, labelled ConfigMaps. Grafana's
+- Grafana's local GitOps config provisions five focused dashboards from stable,
+  labelled ConfigMaps: `KloudLab API` for HTTP and database health,
+  `KloudLab Kubernetes` for cross-cluster node and pod health,
+  `KloudLab Workloads` for namespace/pod resource drilldown,
+  `KloudLab Logs` for scoped service logs, and `KloudLab Traces` for API and
+  cross-service Tempo searches. Logs and traces have their own dashboards so
+  the metrics views stay easier to scan. Grafana's
   dashboard sidecar watches only the `observability` namespace. The dashboard
   Application is order 5, after Grafana at order 4. Commit 173960c is synced;
   both dashboard ConfigMaps are present and the Grafana sidecar wrote both files
