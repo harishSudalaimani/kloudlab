@@ -11,8 +11,6 @@ spec:
     - https://github.com/harishSudalaimani/kloudlab.git
   destinations:
     - name: kloudlab-identity
-      namespace: kube-system
-    - name: kloudlab-identity
       namespace: kloudlab-identity
     - name: kloudlab-identity
       namespace: opentelemetry

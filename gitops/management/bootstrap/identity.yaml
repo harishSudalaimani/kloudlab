@@ -15,13 +15,14 @@ spec:
         include: identity.yaml
     - repoURL: https://github.com/harishSudalaimani/kloudlab.git
       targetRevision: main
-      path: gitops/management/workload-roots
+      path: gitops/clusters/identity/applications
       directory:
-        include: identity.yaml
+        recurse: true
+        include: "**/application.yaml"
   destination:
     name: in-cluster
     namespace: argocd
   syncPolicy:
     automated:
       selfHeal: true
-      prune: false
+      prune: true
