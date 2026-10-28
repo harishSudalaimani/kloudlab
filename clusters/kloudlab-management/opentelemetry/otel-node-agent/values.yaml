@@ -68,7 +68,8 @@ config:
       endpoint: ${env:OTEL_GATEWAY_ENDPOINT}
       headers:
         authorization: Bearer ${env:OTEL_GATEWAY_TOKEN}
-      tls: {}
+      tls:
+        server_name: otel.kloudlab.in
   processors:
     resource:
       attributes:

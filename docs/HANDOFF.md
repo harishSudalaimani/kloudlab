@@ -291,14 +291,20 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   gateway Service's old `external-dns.alpha.kubernetes.io/*` annotations:
   ExternalDNS 0.22.0 uses `external-dns.kubernetes.io/` by default and no longer
   reads the old prefix. Public DNS returned NXDOMAIN for `otel.kloudlab.in`.
-  The local GitOps change updates both hostname and Cloudflare-proxy annotations
-  to the current prefix; after pushing, confirm Argo syncs the gateway, DNS
-  publishes the internal NLB hostname without Cloudflare proxying, collector
-  export errors stop, and metrics/logs/traces are queryable. Dashboard-only
-  changes do not match the current GitHub Actions path filters; Argo CD is the
-  deployer. API HTTP metrics use OTel's Prometheus name translation; the
-  Kubernetes dashboard filters cluster metric labels from the OTel resource
-  attributes.
+  The GitOps fix uses the current ExternalDNS annotation prefix, and ExternalDNS
+  created an unproxied CNAME to the internal NLB. The app VPC resolver still
+  returned a cached NXDOMAIN for the A lookup, although the CNAME and NLB
+  hostname resolve publicly and the app cluster can connect to NLB port 4317.
+  To restore exports while that negative cache expires, the three client Secrets
+  now point to the NLB's AWS DNS hostname; collector exporters set TLS
+  `server_name: otel.kloudlab.in` to validate the existing certificate. The NLB
+  hostname is tied to the current Service load balancer and must be refreshed in
+  these Secrets if that load balancer is recreated. Verify collector export
+  errors stop and metrics/logs/traces become queryable after the collector
+  values sync. Dashboard-only changes do not match the current GitHub Actions
+  path filters; Argo CD is the deployer. API HTTP metrics use OTel's Prometheus
+  name translation; the Kubernetes dashboard filters cluster metric labels from
+  the OTel resource attributes.
 
 ## Gaps found while migrating
 
@@ -316,7 +322,9 @@ workspace DNS resolution is blocked. Gaps:
   `cert-manager` and `external-dns` namespaces on all three clusters,
   `kloudlab-grafana-admin` (user `admin`), `kloudlab-otel-gateway-server`
   (token) on observability, `kloudlab-otel-gateway-client` (endpoint
-  `otel.kloudlab.in:4317`, same token) on all three.
+  `k8s-opentele-otelgate-fbc6d7fa80-0d44af39e22d09f9.elb.ap-south-1.amazonaws.com:4317`,
+  same token) on all three. Update the endpoint if the gateway Service is
+  recreated.
 - `kloudlab-otel-gateway-server-tls` comes from cert-manager
   (Let's Encrypt, `otel.kloudlab.in`). The gateway Service publishes
   `otel.kloudlab.in` as an unproxied CNAME to its internal load balancer via
