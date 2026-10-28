@@ -153,9 +153,12 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   change is not yet synced. OpenFGA requests 100m CPU/128Mi memory and
   limits 1 CPU/512Mi; resource pressure is not its current failure.
 - OTel gateway requests 250m CPU/512Mi memory and limits 1 CPU/1Gi per
-  replica; its pod is blocked on the missing TLS Secret. OTel node
-  agents request 100m CPU/256Mi and limit memory to 512Mi; the pending
-  DaemonSet pod is blocked by its target node's pod count.
+  replica. Its pod was crashing because `service.telemetry.metrics` had
+  an empty `readers` list, which the Collector rejects; local values now
+  set its internal telemetry level to `none` while retaining the metrics
+  data pipeline and Prometheus exporter. OTel node agents request 100m
+  CPU/256Mi and limit memory to 512Mi; check the DaemonSet after pruning
+  Tempo's Memcached resources.
 - For the low-volume POC, local GitOps values now reduce the API,
   frontend, OpenFGA, Tempo distributor and OTel gateway to one replica
   each, and disable Loki's two Memcached caches. Core behavior remains;

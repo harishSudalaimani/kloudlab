@@ -83,7 +83,7 @@ config:
   service:
     telemetry:
       metrics:
-        readers: []
+        level: none
     extensions:
       - health_check
       - bearertokenauth
