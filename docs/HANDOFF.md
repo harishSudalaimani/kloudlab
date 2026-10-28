@@ -20,9 +20,10 @@ ECR publishing, GitOps tag commit and Argo CD rollout; Pulumi-managed VPCs,
 peering, EKS and IAM; Cloudflare DNS and DNS-01 TLS; all three EKS clusters,
 application services, and the observability pipeline. It distinguishes the
 versioned, KMS-encrypted Pulumi state bucket from Loki/Tempo S3 storage, and
-shows the KloudLab API and OpenFGA PostgreSQL links. A pristine older starter
-canvas is upgraded on open; customized local drafts still take precedence.
-**New architecture** starts with a blank canvas.
+shows the KloudLab API and OpenFGA PostgreSQL links. An older starter with the
+same components and connections upgrades on open, carrying over changed
+component settings; structurally edited drafts remain as saved. **New
+architecture** starts with a blank canvas.
 
 ## Clusters (ap-south-1, EKS 1.36)
 

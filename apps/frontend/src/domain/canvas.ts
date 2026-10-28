@@ -348,16 +348,56 @@ function stableSerialize(value: unknown): string {
 
 export function migrateStarterCanvas(document: CanvasDocument): CanvasDocument {
   if (document.id === 'starter-kloudlab-platform' && document.name === 'KloudLab platform') {
-    const normalizedNodes = document.nodes.map((canvasNode) => {
-      const component = catalogById.get(canvasNode.typeId)
-      return { ...canvasNode, config: component ? { ...defaultConfig(component), ...canvasNode.config } : canvasNode.config }
-    })
-    const matchesLegacyLayout = (layout: 'current' | 'early') => {
+    const matchesLegacyStructure = (layout: 'current' | 'early') => {
       const legacy = legacyStarterSnapshot(layout)
-      return stableSerialize(normalizedNodes) === stableSerialize(legacy.nodes) && stableSerialize(document.edges) === stableSerialize(legacy.edges)
+      const expectedNodes = legacy.nodes
+        .map(({ id, typeId }) => ({ id, typeId }))
+        .sort((left, right) => left.id.localeCompare(right.id))
+      const actualNodes = document.nodes
+        .map(({ id, typeId }) => ({ id, typeId }))
+        .sort((left, right) => left.id.localeCompare(right.id))
+      const expectedEdges = legacy.edges
+        .map(({ source, sourcePort, target, targetPort }) => ({ source, sourcePort, target, targetPort }))
+        .sort((left, right) => stableSerialize(left).localeCompare(stableSerialize(right)))
+      const actualEdges = document.edges
+        .map(({ source, sourcePort, target, targetPort }) => ({ source, sourcePort, target, targetPort }))
+        .sort((left, right) => stableSerialize(left).localeCompare(stableSerialize(right)))
+      return document.nodes.length === legacy.nodes.length &&
+        document.edges.length === legacy.edges.length &&
+        stableSerialize(actualNodes) === stableSerialize(expectedNodes) &&
+        stableSerialize(actualEdges) === stableSerialize(expectedEdges)
     }
-    if (matchesLegacyLayout('current') || matchesLegacyLayout('early')) {
-      return createStarterCanvas()
+
+    const legacyLayout = (['current', 'early'] as const).find(matchesLegacyStructure)
+    if (legacyLayout) {
+      const legacy = legacyStarterSnapshot(legacyLayout)
+      const upgraded = createStarterCanvas()
+      const legacyTargets: Record<string, string> = {
+        vpc: 'app-vpc',
+        eks: 'app-eks',
+        gateway: 'app-gateway',
+        api: 'api',
+        auth0: 'auth0',
+        fga: 'openfga',
+        postgres: 'openfga-postgres',
+        collector: 'otel-gateway',
+        prometheus: 'prometheus',
+        loki: 'loki',
+        tempo: 'tempo',
+        grafana: 'grafana',
+      }
+      const baselineById = new Map(legacy.nodes.map((canvasNode) => [canvasNode.id, canvasNode]))
+      const upgradedById = new Map(upgraded.nodes.map((canvasNode) => [canvasNode.id, canvasNode]))
+      for (const oldNode of document.nodes) {
+        const baseline = baselineById.get(oldNode.id)
+        const target = upgradedById.get(legacyTargets[oldNode.id])
+        if (!baseline || !target || baseline.typeId !== oldNode.typeId || target.typeId !== oldNode.typeId) continue
+        for (const [key, value] of Object.entries(oldNode.config)) {
+          if (!Object.hasOwn(target.config, key) || stableSerialize(value) === stableSerialize(baseline.config[key])) continue
+          target.config[key] = value
+        }
+      }
+      return upgraded
     }
   }
   return normalizeCanvasDocument(document)
