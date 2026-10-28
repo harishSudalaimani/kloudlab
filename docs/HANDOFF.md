@@ -124,6 +124,18 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   Cloudflare API token invalid on all three DNS-01 Challenges. Replace
   the token Secret in each cluster's `cert-manager` and `external-dns`
   namespaces with a valid token; keep secret values out of Git.
+- Observability has four `t3.medium` nodes (17 pod slots each); all
+  existing nodes were full or near full. The Loki chunks-cache chart
+  default requests 9830 MiB (`allocatedMemory: 8192` MB), so its pod
+  cannot fit on these nodes. The local GitOps values now set the cache
+  allocation to 256 MB (estimated request ~307 MiB); this change is not
+  yet synced. Other pending pods still report pod-slot/memory limits, and
+  the AWS VPC CNI reported an IP assignment failure. The new node has no
+  taint now. Inspect VPC subnet free IPs and CNI logs after the Loki
+  values sync.
+- App cluster Karpenter cannot create its Spot service-linked role
+  (`iam:CreateServiceLinkedRole` denied). OpenFGA's migration Job also
+  reports that ServiceAccount `openfga` is missing; diagnose separately.
 - Application rollout order is now an `order` field consumed by
   ApplicationSet `RollingSync`; the old `# order` comments were ignored.
 - The three cluster-collector pipelines now reference the chart preset's

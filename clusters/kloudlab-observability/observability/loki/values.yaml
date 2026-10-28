@@ -4,6 +4,12 @@ serviceAccount:
 
 deploymentMode: SingleBinary
 
+# The upstream default allocates 8192 MB to Memcached, which gives its pod
+# a 9830 MiB memory request. Keep this cache sized for the t3.medium nodes.
+chunksCache:
+  allocatedMemory: 256
+  allocatedCPU: 100m
+
 loki:
   auth_enabled: false
   commonConfig:
