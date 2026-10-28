@@ -8,15 +8,24 @@ metadata:
     app.kubernetes.io/part-of: kloudlab
 spec:
   parentRefs:
-    - name: public
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: public
       namespace: kgateway-system
       sectionName: https-apex
   hostnames:
     - "kloudlab.in"
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
         - name: kloudlab-frontend
+          group: ""
+          kind: Service
           port: 8080
+          weight: 1
 ---
 # www.kloudlab.in redirects to the apex: the API allows one CORS
 # origin (https://kloudlab.in).
@@ -28,13 +37,19 @@ metadata:
     app.kubernetes.io/part-of: kloudlab
 spec:
   parentRefs:
-    - name: public
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: public
       namespace: kgateway-system
       sectionName: https-www
   hostnames:
     - "www.kloudlab.in"
   rules:
-    - filters:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
         - type: RequestRedirect
           requestRedirect:
             hostname: kloudlab.in

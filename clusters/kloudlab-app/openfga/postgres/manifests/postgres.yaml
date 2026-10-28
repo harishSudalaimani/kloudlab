@@ -22,8 +22,13 @@ metadata:
   labels:
     app.kubernetes.io/name: openfga-postgres
 spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
   serviceName: openfga-postgres
   replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app.kubernetes.io/name: openfga-postgres
@@ -32,6 +37,10 @@ spec:
       labels:
         app.kubernetes.io/name: openfga-postgres
     spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
       securityContext:
         # uid and gid of the postgres user in the alpine image
         runAsUser: 70
@@ -41,9 +50,11 @@ spec:
       containers:
         - name: postgres
           image: postgres:17.11-alpine
+          imagePullPolicy: IfNotPresent
           ports:
             - name: postgres
               containerPort: 5432
+              protocol: TCP
           env:
             - name: POSTGRES_USER
               value: openfga
@@ -60,11 +71,17 @@ spec:
             exec:
               command: ["pg_isready", "-U", "openfga", "-d", "openfga"]
             periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 1
           livenessProbe:
             exec:
               command: ["pg_isready", "-U", "openfga", "-d", "openfga"]
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 1
           resources:
             requests:
               cpu: 100m
@@ -74,6 +91,8 @@ spec:
               memory: 1Gi
           securityContext:
             allowPrivilegeEscalation: false
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -82,7 +101,12 @@ spec:
         name: data
       spec:
         accessModes: ["ReadWriteOnce"]
+        volumeMode: Filesystem
         storageClassName: gp3-encrypted
         resources:
           requests:
             storage: 10Gi
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0

@@ -184,6 +184,10 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 - Gateway Secret references specify the core API group as `group: ""`
   so the desired manifest matches the live API representation. HTTPS
   listeners retain `tls.mode: Terminate`.
+- Healthy but OutOfSync Gateway HTTPRoutes and PostgreSQL StatefulSets
+  had Kubernetes-defaulted fields missing from Git. Local manifests now
+  declare those defaults explicitly, including route parent/backend kinds,
+  default path matches and weights, and StatefulSet PVC retention policy.
 
 ## Open work, in order
 

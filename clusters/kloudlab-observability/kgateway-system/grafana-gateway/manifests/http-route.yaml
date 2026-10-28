@@ -12,7 +12,11 @@ spec:
   hostnames:
     - "grafana.kloudlab.in"
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
         - name: grafana
           group: ""
           kind: Service

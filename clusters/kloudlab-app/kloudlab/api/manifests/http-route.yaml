@@ -8,12 +8,21 @@ metadata:
     app.kubernetes.io/part-of: kloudlab
 spec:
   parentRefs:
-    - name: public
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: public
       namespace: kgateway-system
       sectionName: https-api
   hostnames:
     - "api.kloudlab.in"
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
         - name: kloudlab-api
+          group: ""
+          kind: Service
           port: 8080
+          weight: 1

@@ -5,12 +5,21 @@ metadata:
   namespace: kgateway-system
 spec:
   parentRefs:
-    - name: argocd
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: argocd
       namespace: kgateway-system
   hostnames:
     - "argocd.kloudlab.in"
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
         - name: argocd-server
+          group: ""
+          kind: Service
           namespace: argocd
           port: 80
+          weight: 1
