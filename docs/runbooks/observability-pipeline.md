@@ -134,8 +134,10 @@ Helm definitions do not imply that live telemetry is already flowing.
    observability gateway is reachable.
 5. Configure API and OpenFGA telemetry endpoints and resource attributes.
 6. Verify all available signal paths, OpenFGA metrics, API-server metrics, and
-   log/trace correlation. Add dashboards and alerts for ingestion failures,
-   app latency/errors, database/OpenFGA health, node pressure, pod restarts,
+   log/trace correlation. GitOps provisions `KloudLab API` and
+   `KloudLab Kubernetes` Grafana dashboards for API traffic/errors/database
+   pool/logs/traces and cluster CPU, memory, restarts, and logs. Still add
+   alerts for ingestion failures, database/OpenFGA health, node pressure,
    API-server health, and collector/backend capacity.
 7. Confirm tokens, personal data, request bodies, SQL parameters, and secrets
    are excluded from telemetry. Test backup/restore and retention before

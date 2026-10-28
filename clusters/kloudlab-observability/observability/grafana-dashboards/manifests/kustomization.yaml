@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: grafana-dashboard-kloudlab-api
+    files:
+      - dashboards/kloudlab-api.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+  - name: grafana-dashboard-kloudlab-kubernetes
+    files:
+      - dashboards/kloudlab-kubernetes.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"

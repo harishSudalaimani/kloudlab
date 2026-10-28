@@ -15,6 +15,7 @@ datasources:
     datasources:
       - name: Prometheus
         type: prometheus
+        uid: prometheus
         access: proxy
         url: http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090
         isDefault: true
@@ -33,6 +34,21 @@ datasources:
             datasourceUid: loki
             spanStartTimeShift: 1h
             spanEndTimeShift: -1h
+
+# Load dashboards from labelled ConfigMaps managed by the adjacent GitOps app.
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: observability
+    provider:
+      name: kloudlab-dashboards
+      orgid: 1
+      folder: KloudLab
+      type: file
+      disableDelete: false
+      allowUiUpdates: false
 
 # Served at monitoring.kloudlab.in and grafana.kloudlab.in (Gateway grafana
 # in kgateway-system).

@@ -1,0 +1,80 @@
+{
+  "uid": "kloudlab-kubernetes",
+  "title": "KloudLab Kubernetes",
+  "description": "Node and pod resource use and container restarts from the OpenTelemetry cluster and kubelet receivers across all KloudLab clusters.",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "time": {"from": "now-6h", "to": "now"},
+  "refresh": "30s",
+  "annotations": {"list": []},
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "query": {"query": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)", "refId": "Prometheus-cluster-Variable-Query"},
+        "definition": "label_values(k8s_pod_cpu_usage, k8s_cluster_name)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 2,
+        "sort": 1,
+        "current": {"selected": true, "text": "All", "value": "$__all"}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pod CPU usage by cluster and namespace",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0},
+      "targets": [{"refId": "A", "expr": "sum by (k8s_cluster_name, k8s_namespace_name) (k8s_pod_cpu_usage{k8s_cluster_name=~\"$cluster\"})", "legendFormat": "{{k8s_cluster_name}} / {{k8s_namespace_name}}"}],
+      "fieldConfig": {"defaults": {"unit": "cores", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": false}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "id": 2,
+      "title": "Pod working set memory",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+      "targets": [{"refId": "A", "expr": "topk(10, sum by (k8s_cluster_name, k8s_namespace_name, k8s_pod_name) (k8s_pod_memory_working_set_bytes{k8s_cluster_name=~\"$cluster\"}))", "legendFormat": "{{k8s_cluster_name}} / {{k8s_namespace_name}} / {{k8s_pod_name}}"}],
+      "fieldConfig": {"defaults": {"unit": "bytes", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": false}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "id": 3,
+      "title": "Container restarts by pod",
+      "type": "barchart",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 9},
+      "targets": [{"refId": "A", "expr": "topk(10, sum by (k8s_cluster_name, k8s_namespace_name, k8s_pod_name) (k8s_container_restarts{k8s_cluster_name=~\"$cluster\"}))", "legendFormat": "{{k8s_cluster_name}} / {{k8s_namespace_name}} / {{k8s_pod_name}}"}],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}, "custom": {"orientation": "horizontal", "barWidthFactor": 0.7, "showValues": "always"}}, "overrides": []},
+      "options": {"orientation": "horizontal", "legend": {"showLegend": false}, "tooltip": {"mode": "single", "sort": "desc"}}
+    },
+    {
+      "id": 4,
+      "title": "Node CPU usage",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 9},
+      "targets": [{"refId": "A", "expr": "sum by (k8s_cluster_name, k8s_node_name) (k8s_node_cpu_usage{k8s_cluster_name=~\"$cluster\"})", "legendFormat": "{{k8s_cluster_name}} / {{k8s_node_name}}"}],
+      "fieldConfig": {"defaults": {"unit": "cores", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": false}}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "id": 5,
+      "title": "Cluster logs and events",
+      "type": "logs",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18},
+      "targets": [{"refId": "A", "expr": "{k8s_cluster_name=~\"$cluster\"}", "queryType": "range", "editorMode": "code"}],
+      "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "sortOrder": "Descending", "dedupStrategy": "none", "enableLogDetails": true}
+    }
+  ]
+}

@@ -276,10 +276,25 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 
 - App image packages are published to ECR as `main` and short-SHA tags.
   EKS worker node roles provide image pull access.
+- Grafana's local GitOps config now provisions `KloudLab API` (HTTP rate,
+  p95 latency, 5xx rate, database connection pool, API request logs, and
+  recent API traces from Tempo) and
+  `KloudLab Kubernetes` (pod/node CPU, pod working set, container restarts,
+  and cluster logs/events) dashboards from stable, labelled ConfigMaps. Grafana's
+  dashboard sidecar watches only the `observability` namespace. The dashboard
+  Application is order 5, after Grafana at order 4. Push and sync these local
+  changes, then confirm the dashboards appear and the Prometheus/Loki/Tempo
+  queries return data. API HTTP metrics use OTel's Prometheus name translation;
+  the Kubernetes dashboard filters cluster metric labels from the OTel resource
+  attributes. A read-only live check from this workspace could not resolve the
+  EKS API DNS names, so current signal availability remains unverified here.
 
 ## Gaps found while migrating
 
-Unchecked against the real charts (no render was run). Gaps:
+Most migration values below were not rendered against their upstream charts.
+The pinned Grafana chart values were checked for the dashboard sidecar
+settings, but `helm template` could not reach the chart repository because
+workspace DNS resolution is blocked. Gaps:
 
 - AWS Load Balancer Controller is in all three clusters, but no
   cluster has its IAM role yet: add a Pod Identity role per cluster
