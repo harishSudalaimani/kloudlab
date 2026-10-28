@@ -93,8 +93,8 @@ config:
         receivers:
           - otlp
           - prometheus
-          - host_metrics
-          - kubelet_stats
+          - hostmetrics
+          - kubeletstats
         exporters:
           - otlp
         processors:

@@ -131,6 +131,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 - The three cluster-collector pipelines now reference the chart preset's
   `k8sobjects` receiver. The chart preset supplies its receiver config;
   keep the pipeline receiver ID in sync with that preset.
+- The three node-agent metrics pipelines now use the chart preset receiver
+  IDs `hostmetrics` and `kubeletstats`; the underscore variants were not
+  configured receivers in this chart.
 - Gateway Secret references specify the core API group as `group: ""`
   so the desired manifest matches the live API representation. HTTPS
   listeners retain `tls.mode: Terminate`.
