@@ -1,0 +1,26 @@
+# Non-secret API settings. REPLACE_ME values must be set before the
+# API can start (it exits when a required value is missing).
+# Secrets (DATABASE_URL, OPENFGA_API_TOKEN) come from the hand-made
+# Secret kloudlab-api, see deployment.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kloudlab-api
+  labels:
+    app.kubernetes.io/name: kloudlab-api
+    app.kubernetes.io/part-of: kloudlab
+data:
+  PORT: "8080"
+  # Auth0 tenant issuer, trailing slash; audience = Auth0 API identifier
+  # (same value as the frontend's VITE_AUTH0_AUDIENCE)
+  AUTH0_ISSUER: https://REPLACE_ME.auth0.com/
+  AUTH0_AUDIENCE: REPLACE_ME
+  # the only origin allowed by CORS (one value, no list)
+  FRONTEND_ORIGIN: https://kloudlab.in
+  OPENFGA_API_URL: http://openfga.openfga.svc.cluster.local:8080
+  OPENFGA_STORE_ID: REPLACE_ME
+  OPENFGA_AUTHORIZATION_MODEL_ID: REPLACE_ME
+  # OTLP/HTTP to the node agent; it forwards to the central gateway
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-node-agent.opentelemetry.svc.cluster.local:4318
+  OTEL_SERVICE_NAME: kloudlab-api
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment.name=poc,k8s.cluster.name=kloudlab-app

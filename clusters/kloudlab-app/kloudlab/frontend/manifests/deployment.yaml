@@ -1,0 +1,67 @@
+# KloudLab frontend (static SPA on nginx-unprivileged, uid 101).
+# Pulls from GHCR with the hand-made Secret ghcr-pull.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kloudlab-frontend
+  labels:
+    app.kubernetes.io/name: kloudlab-frontend
+    app.kubernetes.io/part-of: kloudlab
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kloudlab-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kloudlab-frontend
+        app.kubernetes.io/part-of: kloudlab
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 101
+        runAsGroup: 101
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: frontend
+          image: ghcr.io/harishsudalaimani/kloudlab-frontend:main
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            # nginx pid file and temp paths live in /tmp
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

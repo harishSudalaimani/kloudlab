@@ -133,10 +133,38 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 5. The KloudLab API and frontend, then Karpenter on app.
 6. Update ADRs and runbooks to three clusters.
 
-## Before syncing the migrated services
+## End to end (commit after a59503f)
 
-All `sync: manual`, unchecked against the real charts (no render was
-run). Sync by hand in `# order:` 1 to 5, Argo diff first. Gaps:
+- Every service is `sync: auto`; Argo syncs all at once, anything out
+  of `# order:` fails and retries. Nothing was rendered before; real
+  failures stay to fix.
+- Load balancer controller IAM: `infra/components/iam/load_balancer_controller.go`
+  (role, upstream policy v3.6.1 in `infra/components/iam/policies/`,
+  Pod Identity for `kube-system/aws-load-balancer-controller`), called
+  from `cluster-program`; applied with `pulumi up --target` on the 3
+  cluster stacks.
+- Cloudflare: external-dns runs with `--cloudflare-proxied` on all
+  clusters (orange cloud); `otel.kloudlab.in` is DNS only (annotation
+  on the otel-gateway Service). Zone SSL mode must be Full (strict).
+- App: `apps/api/Dockerfile`, `apps/frontend/Dockerfile`, workflow
+  `.github/workflows/images.yml` builds `ghcr.io/harishsudalaimani/
+  kloudlab-{api,frontend}:main` on push. Deployed in namespace
+  `kloudlab` on app (`clusters/kloudlab-app/kloudlab/`): api,
+  api-postgres, frontend; routes `kloudlab.in` (frontend),
+  `www.kloudlab.in` (301 to apex), `api.kloudlab.in` (API).
+- Placeholders to replace: Auth0 (`AUTH0_ISSUER`, `AUTH0_AUDIENCE` in
+  the api ConfigMap; repository variables `VITE_AUTH0_DOMAIN`,
+  `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE` for the frontend
+  build), `OPENFGA_STORE_ID`, `OPENFGA_AUTHORIZATION_MODEL_ID` (create
+  the store and upload `apps/api/internal/authorization/model.fga`).
+- Secrets in `kloudlab` (hand-made): `kloudlab-api-postgres`
+  (`password`), `kloudlab-api` (`database-url`, `openfga-api-token`),
+  `ghcr-pull` (dockerconfigjson for ghcr.io, token with
+  `read:packages`).
+
+## Gaps found while migrating
+
+Unchecked against the real charts (no render was run). Gaps:
 
 - AWS Load Balancer Controller is in all three clusters, but no
   cluster has its IAM role yet: add a Pod Identity role per cluster

@@ -10,7 +10,7 @@ import (
 	pulumiconfig "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 
 	"github.com/harishsudalaimani/kloudlab/infra/components/eks"
-	"github.com/harishsudalaimani/kloudlab/infra/components/secrets"
+	kloudiam "github.com/harishsudalaimani/kloudlab/infra/components/iam"
 	"github.com/harishsudalaimani/kloudlab/infra/config"
 )
 
@@ -124,6 +124,12 @@ func Run(ctx *pulumi.Context, workload string) error {
 	ctx.Export("nodeGroupName", cluster.NodeGroupName())
 	ctx.Export("vpcId", networkOutputs.VPCID())
 	ctx.Export("privateSubnetIds", networkOutputs.PrivateSubnetIDs())
+	lbcRoleArn, err := kloudiam.NewLoadBalancerControllerAccess(ctx, clusterName,
+		pulumiTags, pulumi.DependsOn([]pulumi.Resource{cluster}))
+	if err != nil {
+		return err
+	}
+	ctx.Export("loadBalancerControllerRoleArn", lbcRoleArn)
 	if workload != "management" {
 		role, err := createArgoDeployerRole(ctx, workload, clusterName, pulumiTags, cluster)
 		if err != nil {
@@ -131,22 +137,9 @@ func Run(ctx *pulumi.Context, workload string) error {
 		}
 		ctx.Export("argocdDeployerRoleArn", role.Arn)
 	}
-	if workload == "identity" {
-		parameterAccess, err := secrets.NewParameterStoreAccess(ctx, "kloudlab-identity-external-secrets", &secrets.ParameterStoreAccessArgs{
-			Region:              region,
-			ClusterName:         pulumi.String(clusterName),
-			Namespace:           "external-secrets",
-			ServiceAccount:      "external-secrets",
-			ParameterPathPrefix: fmt.Sprintf("/kloudlab/%s/identity/openfga", environment),
-			ProtectKey:          stackConfig.GetBool("protectCluster"),
-			Tags:                pulumiTags,
-		})
-		if err != nil {
-			return err
-		}
-		ctx.Export("externalSecretsParameterStoreRoleArn", parameterAccess.RoleARN())
-		ctx.Export("externalSecretsParameterStoreKmsKeyArn", parameterAccess.KeyARN())
-	}
+	// The identity cluster and its SSM/ESO access are gone (OpenFGA runs
+	// on kloudlab-app with hand-made Secrets); secrets.NewParameterStoreAccess
+	// no longer exists.
 	return nil
 }
 

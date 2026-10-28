@@ -1,5 +1,5 @@
 type: chart
-sync: manual
+sync: auto
 repo: https://argoproj.github.io/argo-helm
 chart: argo-cd
 version: 10.11.6

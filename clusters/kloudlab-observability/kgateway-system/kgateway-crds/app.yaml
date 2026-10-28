@@ -1,6 +1,6 @@
 # order: 2
 type: chart
-sync: manual
+sync: auto
 repo: cr.kgateway.dev/kgateway-dev/charts
 chart: kgateway-crds
 version: v2.4.3

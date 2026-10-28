@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kloudlab-api
+  labels:
+    app.kubernetes.io/name: kloudlab-api
+    app.kubernetes.io/part-of: kloudlab
+spec:
+  selector:
+    app.kubernetes.io/name: kloudlab-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

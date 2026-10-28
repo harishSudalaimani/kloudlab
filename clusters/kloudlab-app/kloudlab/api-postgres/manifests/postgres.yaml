@@ -1,0 +1,92 @@
+# Single-instance PostgreSQL for the KloudLab API (POC), same pattern
+# as openfga/postgres. The Secret kloudlab-api-postgres (key: password)
+# is created once by hand, not from Git. StorageClass gp3-encrypted
+# exists cluster-wide (openfga/postgres).
+apiVersion: v1
+kind: Service
+metadata:
+  name: kloudlab-api-postgres
+  labels:
+    app.kubernetes.io/name: kloudlab-api-postgres
+    app.kubernetes.io/part-of: kloudlab
+spec:
+  selector:
+    app.kubernetes.io/name: kloudlab-api-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kloudlab-api-postgres
+  labels:
+    app.kubernetes.io/name: kloudlab-api-postgres
+    app.kubernetes.io/part-of: kloudlab
+spec:
+  serviceName: kloudlab-api-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kloudlab-api-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kloudlab-api-postgres
+        app.kubernetes.io/part-of: kloudlab
+    spec:
+      securityContext:
+        # uid and gid of the postgres user in the alpine image
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        runAsNonRoot: true
+      containers:
+        - name: postgres
+          image: postgres:17.11-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: kloudlab
+            - name: POSTGRES_DB
+              value: kloudlab
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kloudlab-api-postgres
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "kloudlab", "-d", "kloudlab"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "kloudlab", "-d", "kloudlab"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3-encrypted
+        resources:
+          requests:
+            storage: 10Gi

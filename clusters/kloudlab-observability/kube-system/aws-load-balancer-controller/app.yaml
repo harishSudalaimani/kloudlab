@@ -1,6 +1,6 @@
 # order: 2
 type: chart
-sync: manual
+sync: auto
 repo: https://aws.github.io/eks-charts
 chart: aws-load-balancer-controller
 version: 3.6.0

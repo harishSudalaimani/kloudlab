@@ -17,3 +17,9 @@ domainFilters:
 # Three clusters write to one Cloudflare zone: each owns only its own
 # records (chart default owner id is "default" on all of them).
 txtOwnerId: kloudlab-app
+
+# Public hostnames go through the Cloudflare proxy (orange cloud); a
+# record opts out with the annotation
+# external-dns.alpha.kubernetes.io/cloudflare-proxied: "false".
+extraArgs:
+  - --cloudflare-proxied

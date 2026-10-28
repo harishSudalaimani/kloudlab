@@ -1,0 +1,9 @@
+# The public Gateway (kgateway-system/public) only accepts routes from
+# namespaces with this label. Owned by this app only; the api and
+# api-postgres apps rely on CreateNamespace and this label.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kloudlab
+  labels:
+    kloudlab.dev/gateway-access: public
