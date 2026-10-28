@@ -104,18 +104,18 @@ func validateArgs(name string, args *Args) error {
 		return err
 	}
 	if len(args.AvailabilityZones) < 2 {
-		return fmt.Errorf("at least two Availability Zones are required, got %d", len(args.AvailabilityZones))
+		return fmt.Errorf("at least two availability zones are required, got %d", len(args.AvailabilityZones))
 	}
 	seenZones := make(map[string]struct{}, len(args.AvailabilityZones))
 	for _, zone := range args.AvailabilityZones {
 		if zone == "" {
-			return fmt.Errorf("Availability Zone names cannot be empty")
+			return fmt.Errorf("availability zone names cannot be empty")
 		}
 		if len(zone) <= len(args.Region) || zone[:len(args.Region)] != args.Region {
-			return fmt.Errorf("Availability Zone %q must belong to region %q", zone, args.Region)
+			return fmt.Errorf("availability zone %q must belong to region %q", zone, args.Region)
 		}
 		if _, exists := seenZones[zone]; exists {
-			return fmt.Errorf("Availability Zone %q is repeated", zone)
+			return fmt.Errorf("availability zone %q is repeated", zone)
 		}
 		seenZones[zone] = struct{}{}
 	}
@@ -126,7 +126,7 @@ func validateArgs(name string, args *Args) error {
 		return fmt.Errorf("NAT gateway mode must be %q or %q", NATGatewaySingle, NATGatewayPerAZ)
 	}
 	if (args.Environment == "prod" || args.Environment == "production") && args.NATGatewayMode != NATGatewayPerAZ {
-		return fmt.Errorf("production networks require one NAT gateway per Availability Zone")
+		return fmt.Errorf("production networks require one NAT gateway per availability zone")
 	}
 	_, err = splitCIDRs(args.CIDRBlock, args.SubnetPrefixLength, len(args.AvailabilityZones)*2)
 	return err

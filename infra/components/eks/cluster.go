@@ -156,7 +156,7 @@ func validateClusterArgs(name string, args *ClusterArgs) error {
 		return fmt.Errorf("cluster name %q must be 1-100 characters and contain only letters, digits, hyphens, or underscores", args.Name)
 	}
 	if args.KubernetesVersion == "" {
-		return fmt.Errorf("Kubernetes version is required")
+		return fmt.Errorf("the Kubernetes version is required")
 	}
 	if args.Network == nil {
 		return fmt.Errorf("an EKS VPC and private subnets are required")

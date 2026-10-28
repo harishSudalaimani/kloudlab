@@ -13,6 +13,11 @@ limited to the repository and branches configured in that stack. The role
 name is `kloudlab-<environment>-github-ecr-publisher`; it does not expand the
 permissions of the infrastructure preview role.
 
+The trust subject includes GitHub's immutable repository and owner IDs as well
+as their names. GitHub uses this subject format for repositories created after
+July 15, 2026; keep the IDs in `Pulumi.yaml` aligned with the repository so
+AWS can match the workflow token subject exactly.
+
 The role receives the least-privilege policy in
 [`github-actions-ecr-publish.json`](../../infra/components/iam/policies/github-actions-ecr-publish.json).
 It can push only to `kloudlab-api` and `kloudlab-frontend` in account

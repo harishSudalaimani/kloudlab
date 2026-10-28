@@ -48,6 +48,8 @@ func main() {
 		role, err := kloudiam.NewGitHubActionsRoleWithProvider(ctx, name, &kloudiam.GitHubActionsRoleArgs{
 			RoleName:          roleName,
 			Repository:        stackConfig.Require("repository"),
+			RepositoryOwnerID: stackConfig.Require("repositoryOwnerId"),
+			RepositoryID:      stackConfig.Require("repositoryId"),
 			Branches:          branches,
 			PermissionsPolicy: kloudiam.GitHubActionsECRPublishPolicy(),
 			PolicyDescription: "Publish KloudLab API and frontend images to ECR",

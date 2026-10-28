@@ -112,6 +112,7 @@ func NewS3Stack(ctx *pulumi.Context, name string, args *S3StackArgs, opts ...pul
 	return component, nil
 }
 
+//lint:ignore SA1019 Keep BucketV2 so existing protected telemetry buckets retain their Pulumi resource identity.
 func newTelemetryBucket(ctx *pulumi.Context, name, bucketName string, retention int, tags pulumi.StringMap, parent pulumi.Resource) (*s3.BucketV2, error) {
 	bucket, err := s3.NewBucketV2(ctx, name, &s3.BucketV2Args{
 		Bucket: pulumi.String(bucketName), Tags: tags,

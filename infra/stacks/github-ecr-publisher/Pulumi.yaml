@@ -9,6 +9,10 @@ config:
     default: dev
   kloudlab-github-ecr-publisher:repository:
     default: harishSudalaimani/kloudlab
+  kloudlab-github-ecr-publisher:repositoryOwnerId:
+    default: "199738497"
+  kloudlab-github-ecr-publisher:repositoryId:
+    default: "1423264393"
   kloudlab-github-ecr-publisher:branches:
     default:
       - main

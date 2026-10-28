@@ -12,6 +12,7 @@ import (
 )
 
 var githubRepositoryPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+var githubIDPattern = regexp.MustCompile(`^[0-9]+$`)
 var gitBranchPattern = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 var iamRoleNamePattern = regexp.MustCompile(`^[A-Za-z0-9_+=,.@-]{1,64}$`)
 
@@ -20,6 +21,8 @@ var iamRoleNamePattern = regexp.MustCompile(`^[A-Za-z0-9_+=,.@-]{1,64}$`)
 type GitHubActionsRoleArgs struct {
 	RoleName          string
 	Repository        string
+	RepositoryOwnerID string
+	RepositoryID      string
 	Branches          []string
 	PermissionsPolicy string
 	PolicyDescription string
@@ -102,6 +105,12 @@ func validateGitHubActionsRole(name string, args *GitHubActionsRoleArgs) ([]stri
 	if !githubRepositoryPattern.MatchString(args.Repository) {
 		return nil, fmt.Errorf("GitHub repository must use owner/repository format")
 	}
+	if (args.RepositoryOwnerID == "") != (args.RepositoryID == "") {
+		return nil, fmt.Errorf("GitHub repository owner and repository IDs must both be provided")
+	}
+	if args.RepositoryOwnerID != "" && (!githubIDPattern.MatchString(args.RepositoryOwnerID) || !githubIDPattern.MatchString(args.RepositoryID)) {
+		return nil, fmt.Errorf("GitHub repository owner and repository IDs must contain only digits")
+	}
 	if len(args.Branches) == 0 {
 		return nil, fmt.Errorf("at least one exact GitHub branch is required")
 	}
@@ -117,6 +126,11 @@ func validateGitHubActionsRole(name string, args *GitHubActionsRoleArgs) ([]stri
 	}
 	branchSubjects := make([]string, 0, len(args.Branches))
 	seen := make(map[string]struct{}, len(args.Branches))
+	repositorySubject := args.Repository
+	if args.RepositoryOwnerID != "" {
+		repository := strings.SplitN(args.Repository, "/", 2)
+		repositorySubject = repository[0] + "@" + args.RepositoryOwnerID + "/" + repository[1] + "@" + args.RepositoryID
+	}
 	for _, branch := range args.Branches {
 		if branch == "" || strings.HasPrefix(branch, "/") || strings.HasSuffix(branch, "/") || strings.Contains(branch, "..") || strings.Contains(branch, "//") || !gitBranchPattern.MatchString(branch) {
 			return nil, fmt.Errorf("branch %q is not a valid exact GitHub branch name", branch)
@@ -125,7 +139,7 @@ func validateGitHubActionsRole(name string, args *GitHubActionsRoleArgs) ([]stri
 			return nil, fmt.Errorf("branch %q is repeated", branch)
 		}
 		seen[branch] = struct{}{}
-		branchSubjects = append(branchSubjects, "repo:"+args.Repository+":ref:refs/heads/"+branch)
+		branchSubjects = append(branchSubjects, "repo:"+repositorySubject+":ref:refs/heads/"+branch)
 	}
 	return branchSubjects, nil
 }
