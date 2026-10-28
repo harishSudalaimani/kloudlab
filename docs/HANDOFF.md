@@ -282,12 +282,23 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   `KloudLab Kubernetes` (pod/node CPU, pod working set, container restarts,
   and cluster logs/events) dashboards from stable, labelled ConfigMaps. Grafana's
   dashboard sidecar watches only the `observability` namespace. The dashboard
-  Application is order 5, after Grafana at order 4. Push and sync these local
-  changes, then confirm the dashboards appear and the Prometheus/Loki/Tempo
-  queries return data. API HTTP metrics use OTel's Prometheus name translation;
-  the Kubernetes dashboard filters cluster metric labels from the OTel resource
-  attributes. A read-only live check from this workspace could not resolve the
-  EKS API DNS names, so current signal availability remains unverified here.
+  Application is order 5, after Grafana at order 4. Commit 173960c is synced;
+  both dashboard ConfigMaps are present and the Grafana sidecar wrote both files
+  and received a 200 response when reloading provisioned dashboards. The current
+  Grafana pod is Ready with the sidecar. The dashboards appear, but the panels
+  were empty. Live checks found no application or cluster metric series and
+  collectors repeatedly failed to export all three signals. The cause was the
+  gateway Service's old `external-dns.alpha.kubernetes.io/*` annotations:
+  ExternalDNS 0.22.0 uses `external-dns.kubernetes.io/` by default and no longer
+  reads the old prefix. Public DNS returned NXDOMAIN for `otel.kloudlab.in`.
+  The local GitOps change updates both hostname and Cloudflare-proxy annotations
+  to the current prefix; after pushing, confirm Argo syncs the gateway, DNS
+  publishes the internal NLB hostname without Cloudflare proxying, collector
+  export errors stop, and metrics/logs/traces are queryable. Dashboard-only
+  changes do not match the current GitHub Actions path filters; Argo CD is the
+  deployer. API HTTP metrics use OTel's Prometheus name translation; the
+  Kubernetes dashboard filters cluster metric labels from the OTel resource
+  attributes.
 
 ## Gaps found while migrating
 
@@ -307,9 +318,10 @@ workspace DNS resolution is blocked. Gaps:
   (token) on observability, `kloudlab-otel-gateway-client` (endpoint
   `otel.kloudlab.in:4317`, same token) on all three.
 - `kloudlab-otel-gateway-server-tls` comes from cert-manager
-  (Let's Encrypt, `otel.kloudlab.in`). `otel.kloudlab.in` must point to
-  the gateway's internal load balancer (external-dns or a record by
-  hand) and the collectors reach it over VPC peering.
+  (Let's Encrypt, `otel.kloudlab.in`). The gateway Service publishes
+  `otel.kloudlab.in` as an unproxied CNAME to its internal load balancer via
+  ExternalDNS; collectors reach it over VPC peering. ExternalDNS 0.22.0 uses
+  the `external-dns.kubernetes.io/` annotation prefix.
 - Loki and Tempo: the `storage-observability` Pulumi stack makes the
   S3 buckets and Pod Identity roles; check it is deployed.
 - kgateway charts come from the Helm OCI registry `cr.kgateway.dev`,
