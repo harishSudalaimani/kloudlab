@@ -21,5 +21,14 @@ spec:
     namespace: kloudlab-identity
   # Sync only after the one-time admin/app-credential Secret exists.
   syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true

@@ -22,5 +22,14 @@ spec:
     name: kloudlab-identity
     namespace: kloudlab-identity
   syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
