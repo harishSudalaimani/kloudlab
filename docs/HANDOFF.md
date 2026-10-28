@@ -140,12 +140,15 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   in `opentelemetry`, while keeping the existing Certificate in
   `observability` tracked because Argo pruning is disabled. This fix is
   not yet pushed.
-- Tempo 3.17.0 pods crash because the configured top-level `compactor`
-  field is no longer accepted. Local values now set retention under
-  `backend_worker.compaction` and remove the obsolete compactor replica
-  setting; this change is not yet pushed. Tempo pods have no CPU or memory
-  requests/limits configured; resource pressure is not their current
-  failure.
+- Tempo 3.17.0 trace storage uses the `kloudlab-observability-tempo` S3
+  bucket in `ap-south-1`. Its current crash is because the S3 endpoint was
+  empty; local values now set `s3.ap-south-1.amazonaws.com`. The
+  `storage-observability` Pulumi stack defines the association of
+  `observability/kloudlab-tempo` with the bucket-scoped Pod Identity role;
+  verify the stack is applied if Tempo reports an AWS credentials error.
+  After Argo sync, confirm Tempo becomes Healthy. Tempo
+  pods have no CPU or memory requests/limits configured; resource pressure
+  is not the current startup failure.
 - OpenFGA pods' `wait-for-migration` init container uses the `default`
   ServiceAccount and gets Forbidden when reading Job `openfga-migrate`.
   The local GitOps change adds an order-3 ServiceAccount and a Role limited
