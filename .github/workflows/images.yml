@@ -2,6 +2,7 @@ name: Images
 
 # Builds API and frontend images, publishes them to ECR, then commits the
 # short-SHA image tags to the GitOps deployments. Argo CD deploys that commit.
+# Pushing this workflow file is also a convenient way to validate image publishing.
 on:
   push:
     branches: [main]
