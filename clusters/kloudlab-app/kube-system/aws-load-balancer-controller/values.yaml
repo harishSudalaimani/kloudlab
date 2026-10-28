@@ -1,0 +1,12 @@
+image:
+  tag: v3.6.1
+clusterName: kloudlab-app
+region: ap-south-1
+vpcId: vpc-03ce110c48fd4a749
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+replicaCount: 2
+podDisruptionBudget:
+  maxUnavailable: 1
+enableServiceMutatorWebhook: true

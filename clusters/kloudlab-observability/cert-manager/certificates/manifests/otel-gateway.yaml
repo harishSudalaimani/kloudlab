@@ -1,0 +1,17 @@
+# Server cert of the central OTLP gateway. Collectors verify it with
+# the system CAs (exporter tls: {}), so it comes from Let's Encrypt.
+# otel.kloudlab.in resolves to the gateway's internal load balancer;
+# collectors reach it over VPC peering.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kloudlab-otel-gateway-server-tls
+  namespace: observability
+spec:
+  secretName: kloudlab-otel-gateway-server-tls
+  issuerRef:
+    name: kloudlab-letsencrypt
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - "otel.kloudlab.in"

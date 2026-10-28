@@ -1,0 +1,15 @@
+# Public Helm OCI registry for the kgateway charts. Argo CD needs it
+# declared with enableOCI; app.yaml uses the URL without oci://.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-kgateway-oci
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  name: kgateway
+  type: helm
+  enableOCI: "true"
+  url: cr.kgateway.dev/kgateway-dev/charts

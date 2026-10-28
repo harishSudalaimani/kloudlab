@@ -14,9 +14,6 @@ spec:
     - https://aws.github.io/eks-charts
     - https://kubernetes-sigs.github.io/external-dns/
     - https://open-telemetry.github.io/opentelemetry-helm-charts
-    # Helm OCI: Argo CD may need the form without oci:// (repo Secret
-    # with enableOCI); both listed until checked
-    - oci://cr.kgateway.dev/kgateway-dev/charts
     - cr.kgateway.dev/kgateway-dev/charts
   destinations:
     - name: kloudlab-management
@@ -35,10 +32,10 @@ spec:
   sourceRepos:
     - https://github.com/harishSudalaimani/kloudlab.git
     - https://openfga.github.io/helm-charts
+    - https://aws.github.io/eks-charts
     - https://charts.jetstack.io
     - https://kubernetes-sigs.github.io/external-dns/
     - https://open-telemetry.github.io/opentelemetry-helm-charts
-    - oci://cr.kgateway.dev/kgateway-dev/charts
     - cr.kgateway.dev/kgateway-dev/charts
   destinations:
     - name: kloudlab-app
@@ -55,13 +52,13 @@ metadata:
 spec:
   description: OpenTelemetry, Prometheus, Loki, Tempo and Grafana
   sourceRepos:
+    - https://aws.github.io/eks-charts
     - https://github.com/harishSudalaimani/kloudlab.git
     - https://charts.jetstack.io
     - https://kubernetes-sigs.github.io/external-dns/
     - https://open-telemetry.github.io/opentelemetry-helm-charts
     - https://prometheus-community.github.io/helm-charts
     - https://grafana-community.github.io/helm-charts
-    - oci://cr.kgateway.dev/kgateway-dev/charts
     - cr.kgateway.dev/kgateway-dev/charts
   destinations:
     - name: kloudlab-observability

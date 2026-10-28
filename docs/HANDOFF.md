@@ -138,17 +138,23 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 All `sync: manual`, unchecked against the real charts (no render was
 run). Sync by hand in `# order:` 1 to 5, Argo diff first. Gaps:
 
-- AWS Load Balancer Controller only on management; app and
-  observability need it (VPC ID + Pod Identity role in Pulumi) before
-  their Gateway NLBs and the internal otel-gateway Service work.
-- Secrets still missing: `cloudflare-dns-api-token` (cert-manager,
-  external-dns) on observability; `kloudlab-grafana-admin`,
-  `kloudlab-otel-gateway-server`, `kloudlab-otel-gateway-server-tls`
-  on observability; `kloudlab-otel-gateway-client` on all three.
-- Loki and Tempo need S3 buckets and Pod Identity roles
-  (`kloudlab-loki`, `kloudlab-tempo`).
-- kgateway charts are Helm OCI (`cr.kgateway.dev`): Argo CD may need
-  a repo Secret with `enableOCI` and the URL without `oci://`.
+- AWS Load Balancer Controller is in all three clusters, but no
+  cluster has its IAM role yet: add a Pod Identity role per cluster
+  in Pulumi (policy from `scripts/vendor-aws-load-balancer-controller-policy.sh`,
+  service account `kube-system/aws-load-balancer-controller`). Until
+  then no Gateway gets an AWS load balancer.
+- Secrets now in place (hand-made): Cloudflare token on all three,
+  `kloudlab-grafana-admin` (user `admin`), `kloudlab-otel-gateway-server`
+  (token) on observability, `kloudlab-otel-gateway-client` (endpoint
+  `otel.kloudlab.in:4317`, same token) on all three.
+- `kloudlab-otel-gateway-server-tls` comes from cert-manager
+  (Let's Encrypt, `otel.kloudlab.in`). `otel.kloudlab.in` must point to
+  the gateway's internal load balancer (external-dns or a record by
+  hand) and the collectors reach it over VPC peering.
+- Loki and Tempo: the `storage-observability` Pulumi stack makes the
+  S3 buckets and Pod Identity roles; check it is deployed.
+- kgateway charts come from the Helm OCI registry `cr.kgateway.dev`,
+  declared in `argocd/apps/repositories.yaml`.
 - Adopting live installs: Argo CD (`fullnameOverride: argocd`
   assumes the hand install used release `argocd`) and the hand-made
   kgateway on app: compare the diff before the first sync.
