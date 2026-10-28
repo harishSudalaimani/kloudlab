@@ -302,11 +302,12 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   six collector Applications are Synced and Healthy. Live checks now find API
   request and cluster metrics in Prometheus, API logs in Loki, and API traces in
   Tempo. Grafana's cluster logs panel had a separate Loki parser error because
-  the cluster variable's All value was `.*`; the local dashboard change uses
-  `.+` and still needs push/sync. Dashboard-only changes do not match the current
-  GitHub Actions path filters; Argo CD is the deployer. API HTTP metrics use
-  OTel's Prometheus name translation; the Kubernetes dashboard filters cluster
-  metric labels from the OTel resource attributes.
+  the cluster variable's All value was `.*`; commit 84cd6ac changes it to `.+`.
+  The dashboard Application is Synced and Healthy, and the sidecar reloaded the
+  updated ConfigMap with HTTP 200. Dashboard-only changes do not match the
+  current GitHub Actions path filters; Argo CD is the deployer. API HTTP metrics
+  use OTel's Prometheus name translation; the Kubernetes dashboard filters
+  cluster metric labels from the OTel resource attributes.
 
 ## Gaps found while migrating
 
