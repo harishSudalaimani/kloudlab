@@ -123,11 +123,11 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 - A Cloudflare API token was pasted into chat; rotate it and keep the
   replacement out of Git and chat. The Grafana and OTel certificates in
   the observability cluster are currently Ready.
-- Observability has four `t3.medium` nodes (17 pod slots each); all
+- Observability uses `t3.medium` nodes (17 pod slots each); all
   nodes Ready, untainted, and without MemoryPressure or DiskPressure.
-  The Loki chunks-cache is now Running after reducing its memory
-  allocation to 256 MB. One OTel node-agent pod remains Pending because
-  its target node is at the 17-pod limit.
+  Loki's Memcached caches are still running in the cluster; the local
+  values now disable both. One OTel node-agent pod remains Pending
+  because its target node is at the 17-pod limit.
 - The Grafana Gateway is Healthy and its references resolve. Its Argo
   application is OutOfSync only for the HTTPRoute; the local manifest now
   spells out the API default fields from the live route. The OTel gateway
@@ -150,11 +150,18 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   change is not yet synced. OpenFGA requests 100m CPU/128Mi memory and
   limits 1 CPU/512Mi; resource pressure is not its current failure.
 - OTel gateway requests 250m CPU/512Mi memory and limits 1 CPU/1Gi per
-  replica; its pods are blocked on the missing TLS Secret. OTel node
+  replica; its pod is blocked on the missing TLS Secret. OTel node
   agents request 100m CPU/256Mi and limit memory to 512Mi; the pending
   DaemonSet pod is blocked by its target node's pod count.
+- For the low-volume POC, local GitOps values now reduce the API,
+  frontend, OpenFGA, Tempo distributor and OTel gateway to one replica
+  each, and disable Loki's two Memcached caches. Core behavior remains;
+  these services no longer have a spare replica for node failures or
+  rollouts, and Loki queries may be slower. This change has not yet been
+  pushed. Because Argo automated pruning is disabled, sync the Loki app
+  once with `--prune` to remove the existing cache workloads.
 - Previously observed AWS CNI IP allocation errors are not represented
-  in the current pod states; EBS CSI node pods are Running on all four
+  in the current pod states; EBS CSI node pods are Running on all
   nodes. Recheck CNI logs if IP assignment failures recur.
 - Application rollout order is now an `order` field consumed by
   ApplicationSet `RollingSync`; the old `# order` comments were ignored.

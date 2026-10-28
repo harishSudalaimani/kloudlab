@@ -24,7 +24,7 @@ traces:
     enabled: false
 
 distributor:
-  replicas: 2
+  replicas: 1
 ingester:
   replicas: 1
 querier:

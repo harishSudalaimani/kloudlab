@@ -1,6 +1,6 @@
 mode: deployment
 fullnameOverride: otel-gateway
-replicaCount: 2
+replicaCount: 1
 image:
   repository: otel/opentelemetry-collector-contrib
   tag: 0.163.2

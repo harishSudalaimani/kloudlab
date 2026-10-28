@@ -1,4 +1,4 @@
-replicaCount: 2
+replicaCount: 1
 
 # The ServiceAccount and narrowly scoped migration-wait Role are installed
 # by the order-3 openfga-rbac application before this chart's PreSync Job.
