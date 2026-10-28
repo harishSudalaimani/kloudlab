@@ -34,10 +34,13 @@ spec:
       name: "*.secrets.infisical.com"
     - group: rbac.authorization.k8s.io
       kind: ClusterRole
-      name: infisical-secrets-operator*
+      name: infisical-secre-metrics-auth-role
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: infisical-secre-metrics-reader
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
-      name: infisical-secrets-operator*
+      name: infisical-secre-metrics-auth-rolebinding
   namespaceResourceWhitelist:
     - group: ""
       kind: ConfigMap
