@@ -246,30 +246,30 @@ jobs:
                 echo "A newer image source commit landed during promotion; skipping stale image tags."
                 exit 0
               fi
-              python3 - <<'PY'
-              import os
-              import re
-              from pathlib import Path
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
 
-              tag = os.environ["IMAGE_TAG"][:7]
-              images = {
-                  "api": ("clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml", "kloudlab-api", "UPDATE_API"),
-                  "frontend": ("clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml", "kloudlab-frontend", "UPDATE_FRONTEND"),
-              }
-              for path, image, result_var in images.values():
-                  if os.environ[result_var] != "true":
-                      continue
-                  file = Path(path)
-                  content = file.read_text()
-                  updated, count = re.subn(
-                      rf"(?m)^(\s*image:\s*).*/{re.escape(image)}:[^\s]+$",
-                      rf"\g<1>481665121849.dkr.ecr.ap-south-1.amazonaws.com/{image}:{tag}",
-                      content,
-                  )
-                  if count != 1:
-                      raise SystemExit(f"expected one {image} image in {path}, found {count}")
-                  file.write_text(updated)
-              PY
+          tag = os.environ["IMAGE_TAG"][:7]
+          images = {
+              "api": ("clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml", "kloudlab-api", "UPDATE_API"),
+              "frontend": ("clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml", "kloudlab-frontend", "UPDATE_FRONTEND"),
+          }
+          for path, image, result_var in images.values():
+              if os.environ[result_var] != "true":
+                  continue
+              file = Path(path)
+              content = file.read_text()
+              updated, count = re.subn(
+                  rf"(?m)^(\s*image:\s*).*/{re.escape(image)}:[^\s]+$",
+                  rf"\g<1>481665121849.dkr.ecr.ap-south-1.amazonaws.com/{image}:{tag}",
+                  content,
+              )
+              if count != 1:
+                  raise SystemExit(f"expected one {image} image in {path}, found {count}")
+              file.write_text(updated)
+          PY
               git add \
                 clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml \
                 clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml
