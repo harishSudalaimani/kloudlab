@@ -9,7 +9,9 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 # newer corepack carries current pnpm signing keys
 RUN npm install -g corepack@latest && corepack enable
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# pnpm stops on unapproved install scripts (browser-tabs-lock, from the
+# Auth0 SDK); none is needed for the build, so skip them
+RUN pnpm install --frozen-lockfile --config.strict-dep-builds=false
 # only the sources: no local .env file reaches the build
 COPY index.html vite.config.ts tsconfig.json tsconfig.app.json \
   tsconfig.node.json ./

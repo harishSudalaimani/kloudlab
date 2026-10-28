@@ -1,5 +1,5 @@
 # KloudLab frontend (static SPA on nginx-unprivileged, uid 101).
-# Pulls from GHCR with the hand-made Secret ghcr-pull.
+# Image from ECR (node role pulls it); ghcr-pull is unused.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: ghcr.io/harishsudalaimani/kloudlab-frontend:main
+          image: 481665121849.dkr.ecr.ap-south-1.amazonaws.com/kloudlab-frontend:main
           imagePullPolicy: Always
           ports:
             - name: http

@@ -1,6 +1,6 @@
 # KloudLab API. Hand-made Secrets in namespace kloudlab (not in Git):
 #   kloudlab-api   keys openfga-api-token, database-url
-#   ghcr-pull      kubernetes.io/dockerconfigjson for ghcr.io
+#   ghcr-pull      registry login, unused since images moved to ECR
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,7 +31,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/harishsudalaimani/kloudlab-api:main
+          image: 481665121849.dkr.ecr.ap-south-1.amazonaws.com/kloudlab-api:main
           imagePullPolicy: Always
           ports:
             - name: http

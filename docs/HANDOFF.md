@@ -177,6 +177,13 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 - Tempo (`tempo-distributed` 3.17.0): `blockBuilder` and `liveStore`
   are off (they need Kafka); traces use the ingester path.
 
+- App images: ECR repos `kloudlab-api` and `kloudlab-frontend`
+  (created with the AWS CLI, not yet in Pulumi), built on an operator
+  machine with `docker buildx --platform linux/amd64` and pushed as
+  `:main` and `:<short sha>`. The GHCR workflow's frontend build
+  failed; move the workflow to ECR with GitHub OIDC to drop the
+  local build.
+
 ## Gaps found while migrating
 
 Unchecked against the real charts (no render was run). Gaps:
