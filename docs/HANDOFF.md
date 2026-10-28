@@ -20,10 +20,11 @@ ECR publishing, GitOps tag commit and Argo CD rollout; Pulumi-managed VPCs,
 peering, EKS and IAM; Cloudflare DNS and DNS-01 TLS; all three EKS clusters,
 application services, and the observability pipeline. It distinguishes the
 versioned, KMS-encrypted Pulumi state bucket from Loki/Tempo S3 storage, and
-shows the KloudLab API and OpenFGA PostgreSQL links. An older starter with the
-same components and connections upgrades on open, carrying over changed
-component settings; structurally edited drafts remain as saved. **New
-architecture** starts with a blank canvas.
+shows the KloudLab API and OpenFGA PostgreSQL links. Earlier 12-component and
+55-component starter drafts upgrade on open, carrying over component settings;
+the full starter also retains node positions. Its grouping panels render behind
+the components, and its seeded connections pass validation. Structurally edited
+drafts remain as saved. **New architecture** starts with a blank canvas.
 
 ## Clusters (ap-south-1, EKS 1.36)
 
@@ -268,8 +269,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 - App: `apps/api/Dockerfile`, `apps/frontend/Dockerfile`, workflow
   `.github/workflows/images.yml` builds and publishes ECR images on push,
   then promotes each successful build's short-SHA tag independently to its
-  GitOps deployment manifest. Stale push builds are skipped and GitOps push
-  races are retried. Argo CD deploys that Git commit. Deployed in namespace
+  GitOps deployment manifest. Stale push builds are skipped, and push races
+  retry by applying the tags to the latest main branch. Argo CD deploys that
+  Git commit. Deployed in namespace
   `kloudlab` on app (`clusters/kloudlab-app/kloudlab/`): api,
   api-postgres, frontend; routes `kloudlab.in` (frontend),
   `www.kloudlab.in` (301 to apex), `api.kloudlab.in` (API).

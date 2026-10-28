@@ -344,7 +344,7 @@ const additionalCatalog: ComponentDefinition[] = [
     name,
     zone: { type: 'string', title: 'DNS zone', pattern: '^[a-zA-Z0-9.-]+$' },
   }, ['name', 'zone'], [
-    { id: 'provider', direction: 'output', connectionTypes: ['dns-provider'], allowedComponentTypes: ['external-dns'] },
+    { id: 'provider', direction: 'output', connectionTypes: ['dns-provider'], allowedComponentTypes: ['external-dns', 'cert-manager'] },
   ], [], ['https://developers.cloudflare.com/dns/']),
   definition('aws-vpc-peering', 'AWS VPC peering mesh', 'Private connectivity between the management, app, and observability VPCs.', 'Networking', 'PEER', categoryAccent.Networking, {
     name,

@@ -212,6 +212,8 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
           EVENT_SHA: ${{ github.sha }}
+          UPDATE_API: ${{ needs['build-api'].result == 'success' }}
+          UPDATE_FRONTEND: ${{ needs['build-frontend'].result == 'success' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -229,17 +231,53 @@ jobs:
               exit 0
             fi
             if [[ "$attempt" -lt 3 ]]; then
-              echo "Push raced with another main commit; rebasing and retrying (attempt $((attempt + 1))/3)."
+              echo "Push raced with another main commit; refreshing manifests and retrying (attempt $((attempt + 1))/3)."
               git fetch origin main
-              git rebase origin/main
+              git reset --hard origin/main
               latest_source_commit="$(git log -1 --format=%H origin/main -- \
                 apps/api apps/frontend \
                 clusters/kloudlab-app/kloudlab/api/manifests/configmap.yaml \
                 .github/workflows/images.yml)"
+              if [[ -z "$latest_source_commit" ]]; then
+                echo "Could not find the latest image source commit on main." >&2
+                exit 1
+              fi
               if ! git merge-base --is-ancestor "$latest_source_commit" "$EVENT_SHA"; then
-                echo "A newer image source commit landed during promotion; leaving its deployment tag untouched."
+                echo "A newer image source commit landed during promotion; skipping stale image tags."
                 exit 0
               fi
+              python3 - <<'PY'
+              import os
+              import re
+              from pathlib import Path
+
+              tag = os.environ["IMAGE_TAG"][:7]
+              images = {
+                  "api": ("clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml", "kloudlab-api", "UPDATE_API"),
+                  "frontend": ("clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml", "kloudlab-frontend", "UPDATE_FRONTEND"),
+              }
+              for path, image, result_var in images.values():
+                  if os.environ[result_var] != "true":
+                      continue
+                  file = Path(path)
+                  content = file.read_text()
+                  updated, count = re.subn(
+                      rf"(?m)^(\s*image:\s*).*/{re.escape(image)}:[^\s]+$",
+                      rf"\g<1>481665121849.dkr.ecr.ap-south-1.amazonaws.com/{image}:{tag}",
+                      content,
+                  )
+                  if count != 1:
+                      raise SystemExit(f"expected one {image} image in {path}, found {count}")
+                  file.write_text(updated)
+              PY
+              git add \
+                clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml \
+                clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml
+              if git diff --cached --quiet; then
+                echo "GitOps already contains the successful image tags."
+                exit 0
+              fi
+              git commit -m "chore(gitops): deploy app images ${IMAGE_TAG:0:7}"
             fi
           done
           echo "Could not push the GitOps image update after 3 attempts." >&2

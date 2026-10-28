@@ -224,9 +224,8 @@ export function createStarterCanvas(): CanvasDocument {
     for (const serviceId of serviceIds) {
       const component = nodes.find((item) => item.id === serviceId)
       const telemetryAgent = component?.typeId === 'otel-collector' && serviceId !== 'otel-gateway'
-      const clusterPort = telemetryAgent ? 'telemetry' : 'workloads'
-      const targetPort = telemetryAgent ? 'telemetry' : 'cluster'
-      connect(clusterId, clusterPort, serviceId, targetPort)
+      if (telemetryAgent) continue
+      connect(clusterId, 'workloads', serviceId, 'cluster')
     }
   }
   const gitopsTargets = [
@@ -346,7 +345,47 @@ function stableSerialize(value: unknown): string {
   return JSON.stringify(value) ?? 'undefined'
 }
 
+function matchesPreviousFullStarter(document: CanvasDocument): boolean {
+  if (document.id !== STARTER_CANVAS_ID || document.name !== 'KloudLab · Full Architecture') return false
+  const current = createStarterCanvas()
+  const nodeShape = (nodes: CanvasNodeDocument[]) => nodes
+    .map(({ id, typeId }) => ({ id, typeId }))
+    .sort((left, right) => left.id.localeCompare(right.id))
+  if (stableSerialize(nodeShape(document.nodes)) !== stableSerialize(nodeShape(current.nodes))) return false
+
+  const connectionShape = (edges: CanvasEdgeDocument[]) => edges
+    .map(({ source, sourcePort, target, targetPort }) => ({ source, sourcePort, target, targetPort }))
+    .sort((left, right) => stableSerialize(left).localeCompare(stableSerialize(right)))
+  const oldDuplicateTelemetryLinks: CanvasEdgeDocument[] = [
+    { id: 'old-management-telemetry', source: 'management-eks', sourcePort: 'telemetry', target: 'management-otel', targetPort: 'telemetry' },
+    { id: 'old-app-telemetry', source: 'app-eks', sourcePort: 'telemetry', target: 'app-otel', targetPort: 'telemetry' },
+    { id: 'old-observability-telemetry', source: 'observability-eks', sourcePort: 'telemetry', target: 'observability-otel', targetPort: 'telemetry' },
+  ]
+  return document.edges.length === current.edges.length + oldDuplicateTelemetryLinks.length &&
+    stableSerialize(connectionShape(document.edges)) === stableSerialize(connectionShape([...current.edges, ...oldDuplicateTelemetryLinks]))
+}
+
+function upgradePreviousFullStarter(document: CanvasDocument): CanvasDocument {
+  const upgraded = createStarterCanvas()
+  const baselineById = new Map(upgraded.nodes.map((canvasNode) => [canvasNode.id, canvasNode]))
+  const upgradedById = new Map(upgraded.nodes.map((canvasNode) => [canvasNode.id, canvasNode]))
+  for (const oldNode of document.nodes) {
+    const baseline = baselineById.get(oldNode.id)
+    const target = upgradedById.get(oldNode.id)
+    if (!baseline || !target || baseline.typeId !== oldNode.typeId || target.typeId !== oldNode.typeId) continue
+    target.position = { ...oldNode.position }
+    for (const [key, value] of Object.entries(oldNode.config)) {
+      if (!Object.hasOwn(target.config, key) || stableSerialize(value) === stableSerialize(baseline.config[key])) continue
+      target.config[key] = value
+    }
+  }
+  if (document.viewport) upgraded.viewport = { ...document.viewport }
+  return upgraded
+}
+
 export function migrateStarterCanvas(document: CanvasDocument): CanvasDocument {
+  if (matchesPreviousFullStarter(document)) return upgradePreviousFullStarter(document)
+
   if (document.id === 'starter-kloudlab-platform' && document.name === 'KloudLab platform') {
     const matchesLegacyStructure = (layout: 'current' | 'early') => {
       const legacy = legacyStarterSnapshot(layout)
