@@ -25,9 +25,9 @@ config:
     value:
       - t3.medium
   kloudlab-cluster:minSize:
-    value: 3
+    value: 4
   kloudlab-cluster:desiredSize:
-    value: 3
+    value: 4
   kloudlab-cluster:maxSize:
     value: 4
   kloudlab-cluster:diskSizeGiB:
