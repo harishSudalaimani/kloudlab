@@ -1,6 +1,0 @@
-apiVersion: v2
-name: kloudlab-identity-database-bootstrap
-description: One-time bootstrap for isolated identity service databases and roles
-type: application
-version: 0.1.0
-appVersion: "17"
