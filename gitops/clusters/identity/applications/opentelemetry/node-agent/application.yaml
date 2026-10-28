@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: kloudlab-identity-otel-node-agent
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: kloudlab-identity
   sources:
@@ -22,7 +24,7 @@ spec:
   syncPolicy:
     automated:
       selfHeal: true
-      prune: false
+      prune: true
     retry:
       limit: 5
       backoff:

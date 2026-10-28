@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: kloudlab-identity-parameter-store
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
   annotations:
     argocd.argoproj.io/sync-wave: "20"
 spec:
@@ -19,7 +21,7 @@ spec:
   syncPolicy:
     automated:
       selfHeal: true
-      prune: false
+      prune: true
     retry:
       limit: 5
       backoff:
