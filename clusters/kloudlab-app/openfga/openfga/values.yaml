@@ -1,5 +1,11 @@
 replicaCount: 2
 
+# The migrate Job runs as a PreSync hook, before the chart's own
+# ServiceAccount exists ("serviceaccount openfga not found"). OpenFGA
+# needs no Kubernetes API or AWS access, so use the namespace default.
+serviceAccount:
+  create: false
+
 service:
   type: ClusterIP
 

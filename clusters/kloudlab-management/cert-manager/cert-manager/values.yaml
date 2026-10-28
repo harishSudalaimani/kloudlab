@@ -1,0 +1,4 @@
+# Upstream defaults otherwise: charts/cert-manager/values.yaml was an
+# unmodified copy of the official v1.21.2 values.
+crds:
+  enabled: true

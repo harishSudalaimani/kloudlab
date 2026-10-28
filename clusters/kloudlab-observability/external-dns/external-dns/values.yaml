@@ -1,0 +1,19 @@
+provider:
+  name: cloudflare
+
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: cloudflare-dns-api-token
+        key: api-token
+
+sources:
+  - gateway-httproute
+
+domainFilters:
+  - kloudlab.in
+
+# Three clusters write to one Cloudflare zone: each owns only its own
+# records (chart default owner id is "default" on all of them).
+txtOwnerId: kloudlab-observability

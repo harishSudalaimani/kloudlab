@@ -1,0 +1,63 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public
+  namespace: kgateway-system
+spec:
+  gatewayClassName: kgateway
+  listeners:
+    # kept from the old chart: plain HTTP, any hostname
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kloudlab.dev/gateway-access: "public"
+    - name: https-apex
+      protocol: HTTPS
+      port: 443
+      hostname: "kloudlab.in"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: public-kgateway-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kloudlab.dev/gateway-access: "public"
+    - name: https-www
+      protocol: HTTPS
+      port: 443
+      hostname: "www.kloudlab.in"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: public-kgateway-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kloudlab.dev/gateway-access: "public"
+    - name: https-api
+      protocol: HTTPS
+      port: 443
+      hostname: "api.kloudlab.in"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: public-kgateway-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kloudlab.dev/gateway-access: "public"

@@ -1,0 +1,6 @@
+# order: 2
+type: chart
+sync: manual
+repo: https://charts.jetstack.io
+chart: cert-manager
+version: v1.21.2

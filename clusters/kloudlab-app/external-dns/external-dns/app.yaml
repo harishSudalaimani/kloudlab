@@ -1,0 +1,6 @@
+# order: 2
+type: chart
+sync: manual
+repo: https://kubernetes-sigs.github.io/external-dns/
+chart: external-dns
+version: 1.22.0

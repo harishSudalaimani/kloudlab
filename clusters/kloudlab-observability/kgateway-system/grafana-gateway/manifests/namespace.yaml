@@ -1,0 +1,7 @@
+# Only namespaces with this label may attach routes to the Gateway.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kgateway-system
+  labels:
+    kloudlab.dev/gateway-access: public

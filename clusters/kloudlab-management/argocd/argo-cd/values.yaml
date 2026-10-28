@@ -1,0 +1,25 @@
+# The release is now "argo-cd" (folder name); the chart's default
+# nameOverride "argocd" would give "argo-cd-argocd-*". Keep the names
+# of the hand-installed release (argocd-server, ...).
+fullnameOverride: argocd
+
+global:
+  networkPolicy:
+    create: false
+
+controller:
+  # The EKS auth plugin uses the management cluster's Pod Identity role.
+  env:
+    - name: AWS_REGION
+      value: ap-south-1
+
+server:
+  service:
+    type: ClusterIP
+
+configs:
+  params:
+    # TLS ends at the kgateway Gateway argocd (kgateway-system).
+    server.insecure: "true"
+  cm:
+    url: https://argocd.kloudlab.in

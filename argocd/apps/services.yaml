@@ -1,0 +1,72 @@
+# One Application per service folder:
+#   clusters/<cluster>/<namespace>/<service>/app.yaml
+#     type: chart       repo, chart, version; values.yaml next to it
+#     type: manifests   plain YAML in manifests/ next to it
+#     sync: auto        Argo syncs (self-heal, never prune)
+#     sync: manual      Argo only shows the diff; sync by hand
+# Name <service>-<cluster>, project and destination <cluster>,
+# namespace <namespace>.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/harishSudalaimani/kloudlab.git
+        revision: main
+        files:
+          - path: clusters/*/*/*/app.yaml
+  # removing a folder deletes the Application, never what it deployed
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ index .path.segments 3 }}-{{ index .path.segments 1 }}'
+      labels:
+        cluster: '{{ index .path.segments 1 }}'
+        namespace: '{{ index .path.segments 2 }}'
+    spec:
+      project: '{{ index .path.segments 1 }}'
+      destination:
+        name: '{{ index .path.segments 1 }}'
+        namespace: '{{ index .path.segments 2 }}'
+      syncPolicy:
+        retry:
+          limit: 10
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 5m
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+  templatePatch: |
+    spec:
+      {{- if eq .type "chart" }}
+      sources:
+        - repoURL: {{ .repo | quote }}
+          chart: {{ .chart | quote }}
+          targetRevision: {{ .version | quote }}
+          helm:
+            releaseName: {{ index .path.segments 3 | quote }}
+            valueFiles:
+              - {{ printf "$values/%s/values.yaml" .path.path | quote }}
+        - repoURL: https://github.com/harishSudalaimani/kloudlab.git
+          targetRevision: main
+          ref: values
+      {{- else }}
+      source:
+        repoURL: https://github.com/harishSudalaimani/kloudlab.git
+        targetRevision: main
+        path: {{ printf "%s/manifests" .path.path | quote }}
+      {{- end }}
+      {{- if eq .sync "auto" }}
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: false
+      {{- end }}

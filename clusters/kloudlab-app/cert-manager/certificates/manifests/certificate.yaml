@@ -1,0 +1,16 @@
+# One certificate per Gateway, a SAN for each of its hostnames.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: public-kgateway-tls
+  namespace: kgateway-system
+spec:
+  secretName: public-kgateway-tls
+  issuerRef:
+    name: kloudlab-letsencrypt
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - "kloudlab.in"
+    - "www.kloudlab.in"
+    - "api.kloudlab.in"
