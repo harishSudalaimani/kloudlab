@@ -27,6 +27,16 @@ openfga:
     uriSecret: kloudlab-openfga-datastore
     applyMigrations: true
     waitForMigrations: true
+    migrationType: job
+
+  # Argo CD maps Helm post-install hooks to PostSync, which waits for the
+  # OpenFGA Deployment to become healthy. The Deployment itself waits for this
+  # migration Job, so run the Job as a PreSync hook to avoid that deadlock.
+  migrate:
+    annotations:
+      helm.sh/hook: "pre-install,pre-upgrade"
+      helm.sh/hook-weight: "-5"
+      helm.sh/hook-delete-policy: "before-hook-creation"
 
   resources:
     requests:
