@@ -125,9 +125,12 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   the observability cluster are currently Ready.
 - Observability uses `t3.medium` nodes (17 pod slots each); all
   nodes Ready, untainted, and without MemoryPressure or DiskPressure.
-  Loki's Memcached caches are still running in the cluster; the local
-  values now disable both. One OTel node-agent pod remains Pending
-  because its target node is at the 17-pod limit.
+  Loki's Memcached caches are disabled in local values. Tempo's optional
+  Memcached cache is also disabled locally to free a pod slot on the node
+  that blocks the OTel node-agent DaemonSet; Tempo queries may be slower.
+  Argo automated pruning is off, so sync the Tempo application with prune
+  once to remove its existing Memcached pod. No node-agent target is
+  excluded: it should keep collecting from every node.
 - The Grafana Gateway is Healthy and its references resolve. Its Argo
   application is OutOfSync only for the HTTPRoute; the local manifest now
   spells out the API default fields from the live route. The OTel gateway

@@ -41,9 +41,18 @@ liveStore:
 
 tempo:
   structuredConfig:
+    # The Memcached cache is optional. Disable Tempo's cache config as well
+    # as the chart workload so Tempo does not keep dialing a removed service.
+    cache:
+      caches: []
     backend_worker:
       compaction:
         block_retention: 168h
+
+# Saves one pod slot on the node that currently blocks the OTel DaemonSet.
+# Queries remain functional but may be slower without this cache.
+memcached:
+  enabled: false
 
 minio:
   enabled: false
