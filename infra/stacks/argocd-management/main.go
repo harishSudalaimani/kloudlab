@@ -64,12 +64,10 @@ func createArgoControllerAccess(ctx *pulumi.Context, region string) (pulumi.Stri
 	}
 
 	roleResources := []string{
-		fmt.Sprintf("arn:aws:iam::%s:role/kloudlab-identity-argocd-deployer", caller.AccountId),
 		fmt.Sprintf("arn:aws:iam::%s:role/kloudlab-app-argocd-deployer", caller.AccountId),
 		fmt.Sprintf("arn:aws:iam::%s:role/kloudlab-observability-argocd-deployer", caller.AccountId),
 	}
 	clusterResources := []string{
-		fmt.Sprintf("arn:aws:eks:%s:%s:cluster/kloudlab-identity", region, caller.AccountId),
 		fmt.Sprintf("arn:aws:eks:%s:%s:cluster/kloudlab-app", region, caller.AccountId),
 		fmt.Sprintf("arn:aws:eks:%s:%s:cluster/kloudlab-observability", region, caller.AccountId),
 	}

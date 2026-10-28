@@ -138,6 +138,7 @@ func Run(ctx *pulumi.Context, workload string) error {
 			Namespace:           "external-secrets",
 			ServiceAccount:      "external-secrets",
 			ParameterPathPrefix: fmt.Sprintf("/kloudlab/%s/identity/openfga", environment),
+			ProtectKey:          stackConfig.GetBool("protectCluster"),
 			Tags:                pulumiTags,
 		})
 		if err != nil {

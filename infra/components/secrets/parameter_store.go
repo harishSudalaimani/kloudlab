@@ -20,6 +20,7 @@ type ParameterStoreAccessArgs struct {
 	Namespace           string
 	ServiceAccount      string
 	ParameterPathPrefix string
+	ProtectKey          bool
 	Tags                pulumi.StringMap
 }
 
@@ -88,7 +89,7 @@ func NewParameterStoreAccess(ctx *pulumi.Context, name string, args *ParameterSt
 		EnableKeyRotation:    pulumi.BoolPtr(true),
 		DeletionWindowInDays: pulumi.IntPtr(30),
 		Tags:                 tags,
-	}, pulumi.Parent(component), pulumi.Protect(true))
+	}, pulumi.Parent(component), pulumi.Protect(args.ProtectKey))
 	if err != nil {
 		return nil, err
 	}

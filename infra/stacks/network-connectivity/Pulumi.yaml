@@ -19,3 +19,5 @@ config:
     value: 2
   kloudlab-connectivity:protectConnections:
     value: true
+  kloudlab-connectivity:includeIdentityNetwork:
+    value: true

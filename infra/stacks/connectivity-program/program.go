@@ -10,7 +10,7 @@ import (
 	"github.com/harishsudalaimani/kloudlab/infra/config"
 )
 
-// Run connects the app, identity, observability, and management network stacks.
+// Run connects the configured workload network stacks.
 func Run(ctx *pulumi.Context) error {
 	stackConfig := pulumiconfig.New(ctx, "kloudlab-connectivity")
 	awsConfig := pulumiconfig.New(ctx, "aws")
@@ -31,7 +31,12 @@ func Run(ctx *pulumi.Context) error {
 	if privateRouteTableCount < 2 {
 		return fmt.Errorf("privateRouteTableCount must be at least two")
 	}
-	networkNames := []string{"app", "identity", "observability", "management"}
+	networkNames := []string{"app"}
+	includeIdentity := stackConfig.GetBool("includeIdentityNetwork")
+	if includeIdentity {
+		networkNames = append(networkNames, "identity")
+	}
+	networkNames = append(networkNames, "observability", "management")
 	networks := make([]network.PeerNetwork, 0, len(networkNames))
 	for _, name := range networkNames {
 		referenceName := stackConfig.Require(name + "NetworkStack")
@@ -66,11 +71,13 @@ func Run(ctx *pulumi.Context) error {
 	if err != nil {
 		return err
 	}
-	ctx.Export("appIdentityPeeringId", mesh.AppIdentityPeeringID())
-	ctx.Export("appObservabilityPeeringId", mesh.AppObservabilityPeeringID())
-	ctx.Export("appManagementPeeringId", mesh.AppManagementPeeringID())
-	ctx.Export("identityObservabilityPeeringId", mesh.IdentityObservabilityPeeringID())
-	ctx.Export("identityManagementPeeringId", mesh.IdentityManagementPeeringID())
-	ctx.Export("observabilityManagementPeeringId", mesh.ObservabilityManagementPeeringID())
+	ctx.Export("appObservabilityPeeringId", mesh.PeeringID("app-observability"))
+	ctx.Export("appManagementPeeringId", mesh.PeeringID("app-management"))
+	ctx.Export("observabilityManagementPeeringId", mesh.PeeringID("observability-management"))
+	if includeIdentity {
+		ctx.Export("appIdentityPeeringId", mesh.PeeringID("app-identity"))
+		ctx.Export("identityObservabilityPeeringId", mesh.PeeringID("identity-observability"))
+		ctx.Export("identityManagementPeeringId", mesh.PeeringID("identity-management"))
+	}
 	return nil
 }

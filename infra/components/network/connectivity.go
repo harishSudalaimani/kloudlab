@@ -15,7 +15,7 @@ type PeerNetwork struct {
 	PrivateRouteTableIDs []pulumi.StringInput
 }
 
-// ConnectivityArgs defines the four VPCs joined by a direct, non-transitive
+// ConnectivityArgs defines the VPCs joined by a direct, non-transitive
 // peering mesh for private service and cluster-management traffic.
 type ConnectivityArgs struct {
 	Networks           []PeerNetwork
@@ -23,50 +23,19 @@ type ConnectivityArgs struct {
 	Tags               map[string]string
 }
 
-// Connectivity represents direct peering between the four VPCs.
+// Connectivity represents direct peering between the configured VPCs.
 type Connectivity struct {
 	pulumi.ResourceState
-
-	appIdentityPeeringID             pulumi.IDOutput
-	appObservabilityPeeringID        pulumi.IDOutput
-	appManagementPeeringID           pulumi.IDOutput
-	identityObservabilityPeeringID   pulumi.IDOutput
-	identityManagementPeeringID      pulumi.IDOutput
-	observabilityManagementPeeringID pulumi.IDOutput
+	peeringIDs map[string]pulumi.IDOutput
 }
 
-// AppIdentityPeeringID returns the application/identity peering ID.
-func (c *Connectivity) AppIdentityPeeringID() pulumi.IDOutput {
-	return c.appIdentityPeeringID
-}
-
-// AppObservabilityPeeringID returns the application/observability peering ID.
-func (c *Connectivity) AppObservabilityPeeringID() pulumi.IDOutput {
-	return c.appObservabilityPeeringID
-}
-
-// AppManagementPeeringID returns the application/management peering ID.
-func (c *Connectivity) AppManagementPeeringID() pulumi.IDOutput {
-	return c.appManagementPeeringID
-}
-
-// IdentityObservabilityPeeringID returns the identity/observability peering ID.
-func (c *Connectivity) IdentityObservabilityPeeringID() pulumi.IDOutput {
-	return c.identityObservabilityPeeringID
-}
-
-// IdentityManagementPeeringID returns the identity/management peering ID.
-func (c *Connectivity) IdentityManagementPeeringID() pulumi.IDOutput {
-	return c.identityManagementPeeringID
-}
-
-// ObservabilityManagementPeeringID returns the observability/management peering ID.
-func (c *Connectivity) ObservabilityManagementPeeringID() pulumi.IDOutput {
-	return c.observabilityManagementPeeringID
+// PeeringID returns the ID of a configured connection by its pair name.
+func (c *Connectivity) PeeringID(pair string) pulumi.IDOutput {
+	return c.peeringIDs[pair]
 }
 
 // NewConnectivity creates pairwise peering connections and routes in every
-// private subnet route table. It expects four VPCs in the same AWS account
+// private subnet route table. It expects two to four VPCs in the same AWS account
 // and region; VPC peering does not provide transitive routing. Routes provide
 // network paths only; endpoint exposure and security rules are managed by the
 // consuming services.
@@ -75,50 +44,28 @@ func NewConnectivity(ctx *pulumi.Context, name string, args *ConnectivityArgs, o
 	if err != nil {
 		return nil, err
 	}
-	component := &Connectivity{}
+	component := &Connectivity{peeringIDs: make(map[string]pulumi.IDOutput)}
 	if err := ctx.RegisterComponentResource("kloudlab:network:Connectivity", name, component, opts...); err != nil {
 		return nil, err
 	}
 
-	appIdentity, err := createPeering(ctx, component, name, "app-identity", networks["app"], networks["identity"], args)
-	if err != nil {
-		return nil, err
-	}
-	appObservability, err := createPeering(ctx, component, name, "app-observability", networks["app"], networks["observability"], args)
-	if err != nil {
-		return nil, err
-	}
-	appManagement, err := createPeering(ctx, component, name, "app-management", networks["app"], networks["management"], args)
-	if err != nil {
-		return nil, err
-	}
-	identityObservability, err := createPeering(ctx, component, name, "identity-observability", networks["identity"], networks["observability"], args)
-	if err != nil {
-		return nil, err
-	}
-	identityManagement, err := createPeering(ctx, component, name, "identity-management", networks["identity"], networks["management"], args)
-	if err != nil {
-		return nil, err
-	}
-	observabilityManagement, err := createPeering(ctx, component, name, "observability-management", networks["observability"], networks["management"], args)
-	if err != nil {
-		return nil, err
+	for left := 0; left < len(args.Networks); left++ {
+		for right := left + 1; right < len(args.Networks); right++ {
+			requester, accepter := args.Networks[left], args.Networks[right]
+			pair := requester.Name + "-" + accepter.Name
+			peering, err := createPeering(ctx, component, name, pair, networks[requester.Name], networks[accepter.Name], args)
+			if err != nil {
+				return nil, err
+			}
+			component.peeringIDs[pair] = peering.ID()
+		}
 	}
 
-	component.appIdentityPeeringID = appIdentity.ID()
-	component.appObservabilityPeeringID = appObservability.ID()
-	component.appManagementPeeringID = appManagement.ID()
-	component.identityObservabilityPeeringID = identityObservability.ID()
-	component.identityManagementPeeringID = identityManagement.ID()
-	component.observabilityManagementPeeringID = observabilityManagement.ID()
-	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
-		"appIdentityPeeringId":             component.appIdentityPeeringID,
-		"appObservabilityPeeringId":        component.appObservabilityPeeringID,
-		"appManagementPeeringId":           component.appManagementPeeringID,
-		"identityObservabilityPeeringId":   component.identityObservabilityPeeringID,
-		"identityManagementPeeringId":      component.identityManagementPeeringID,
-		"observabilityManagementPeeringId": component.observabilityManagementPeeringID,
-	}); err != nil {
+	outputs := pulumi.Map{}
+	for pair, peeringID := range component.peeringIDs {
+		outputs[pair] = peeringID
+	}
+	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{"peeringIds": outputs}); err != nil {
 		return nil, err
 	}
 	return component, nil
@@ -128,8 +75,8 @@ func validateConnectivityArgs(args *ConnectivityArgs) (map[string]PeerNetwork, e
 	if args == nil {
 		return nil, fmt.Errorf("connectivity arguments are required")
 	}
-	if len(args.Networks) != 4 {
-		return nil, fmt.Errorf("connectivity requires app, identity, observability, and management VPCs")
+	if len(args.Networks) < 2 || len(args.Networks) > 4 {
+		return nil, fmt.Errorf("connectivity requires between two and four VPCs")
 	}
 	networks := make(map[string]PeerNetwork, len(args.Networks))
 	for _, network := range args.Networks {
