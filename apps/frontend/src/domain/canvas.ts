@@ -38,7 +38,7 @@ export interface ValidationIssue {
 
 export const STORAGE_KEY = 'kloudlab.canvas-library.v1'
 export const ACTIVE_KEY = 'kloudlab.active-canvas.v1'
-export const STARTER_CANVAS_ID = 'starter-kloudlab-platform-v3'
+export const STARTER_CANVAS_ID = 'starter-kloudlab-platform-v4'
 
 export function makeId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`
@@ -58,31 +58,20 @@ function config(typeId: string, values: Record<string, unknown>): Record<string,
 
 export function createStarterCanvas(): CanvasDocument {
   const nodes = [
-    node('repository', 'github', -500, -400, config('github', { name: 'github.com/harishSudalaimani/kloudlab' })),
-    node('image-workflow', 'github-actions', -220, -400, config('github-actions', { name: 'Build images · update GitOps tags' })),
-    node('ecr', 'amazon-ecr', 60, -400, config('amazon-ecr', { name: 'ECR · API and frontend images', region: 'ap-south-1' })),
-    node('pulumi', 'pulumi', -500, -100, config('pulumi', { name: 'Pulumi Go · VPC, EKS, IAM' })),
-    node('aws-provider', 'pulumi-aws-provider', -220, -100, config('pulumi-aws-provider', { name: 'AWS provider · ap-south-1' })),
-    node('pulumi-state', 'aws-s3', 60, -100, config('aws-s3', { name: 'Pulumi state · versioned S3' })),
-    node('pulumi-kms', 'aws-kms', 60, 160, config('aws-kms', { name: 'Pulumi state · KMS encryption' })),
-
-    node('management-vpc', 'aws-vpc', 360, -560, config('aws-vpc', { name: 'Management VPC · 10.40.0.0/16', cidr: '10.40.0.0/16', region: 'ap-south-1', availabilityZones: 2 })),
-    node('management-eks', 'eks-cluster', 360, -300, config('eks-cluster', { name: 'kloudlab-management', region: 'ap-south-1', kubernetesVersion: '1.36', apiAccess: 'Private and public', availabilityZones: 2 })),
-    node('argocd', 'argocd', 640, -300, config('argocd', { name: 'Argo CD · deploys all three clusters' })),
-    node('app-vpc', 'aws-vpc', 360, -40, config('aws-vpc', { name: 'App VPC · 10.10.0.0/16', cidr: '10.10.0.0/16', region: 'ap-south-1', availabilityZones: 2 })),
-    node('app-eks', 'eks-cluster', 360, 220, config('eks-cluster', { name: 'kloudlab-app', region: 'ap-south-1', kubernetesVersion: '1.36', apiAccess: 'Private and public', availabilityZones: 2 })),
-    node('frontend', 'kubernetes-workload', 920, 80, config('kubernetes-workload', { name: 'KloudLab frontend', namespace: 'kloudlab', replicas: 1 })),
-    node('api', 'kubernetes-workload', 920, 340, config('kubernetes-workload', { name: 'KloudLab API', namespace: 'kloudlab', replicas: 1 })),
-    node('openfga', 'openfga', 1200, 220, config('openfga', { name: 'OpenFGA · authorization', modelVersion: 'authorization model' })),
-    node('api-postgres', 'postgresql', 1480, 80, config('postgresql', { name: 'KloudLab API PostgreSQL', engine: 'PostgreSQL 17', exposure: 'Private only', backupDays: 7 })),
-    node('openfga-postgres', 'postgresql', 1480, 340, config('postgresql', { name: 'OpenFGA PostgreSQL', engine: 'PostgreSQL 17', exposure: 'Private only', backupDays: 14 })),
-    node('observability-vpc', 'aws-vpc', 360, 520, config('aws-vpc', { name: 'Observability VPC · 10.30.0.0/16', cidr: '10.30.0.0/16', region: 'ap-south-1', availabilityZones: 2 })),
-    node('observability-eks', 'eks-cluster', 360, 780, config('eks-cluster', { name: 'kloudlab-observability', region: 'ap-south-1', kubernetesVersion: '1.36', apiAccess: 'Private and public', availabilityZones: 2 })),
-    node('otel-gateway', 'otel-collector', 640, 780, config('otel-collector', { name: 'OpenTelemetry · all clusters', mode: 'Gateway', authentication: 'Private network' })),
-    node('prometheus', 'prometheus', 920, 680, config('prometheus', { name: 'Prometheus · metrics', retention: '30 days', storage: 'Persistent volume' })),
-    node('loki', 'loki', 920, 920, config('loki', { name: 'Loki · logs', retention: '30 days', storage: 'Object storage' })),
-    node('tempo', 'tempo', 1200, 920, config('tempo', { name: 'Tempo · traces', retention: '14 days', storage: 'Object storage' })),
-    node('grafana', 'grafana', 1480, 780, config('grafana', { name: 'Grafana · dashboards', access: 'Restricted', authentication: 'OIDC' })),
+    node('repository', 'github', -440, 0, config('github', { name: 'KloudLab · GitHub' })),
+    node('image-workflow', 'github-actions', -160, 0, config('github-actions', { name: 'CI · build images and update GitOps' })),
+    node('ecr', 'amazon-ecr', 120, 0, config('amazon-ecr', { name: 'ECR · API and frontend images', region: 'ap-south-1' })),
+    node('app-vpc', 'aws-vpc', 410, -150, config('aws-vpc', { name: 'App VPC · 10.10.0.0/16', cidr: '10.10.0.0/16', region: 'ap-south-1', availabilityZones: 2 })),
+    node('app-eks', 'eks-cluster', 410, 130, config('eks-cluster', { name: 'kloudlab-app', region: 'ap-south-1', kubernetesVersion: '1.36', apiAccess: 'Private and public', availabilityZones: 2 })),
+    node('argocd', 'argocd', 700, 130, config('argocd', { name: 'Argo CD · deploys the app' })),
+    node('frontend', 'kubernetes-workload', 1010, -170, config('kubernetes-workload', { name: 'KloudLab frontend', namespace: 'kloudlab', replicas: 1 })),
+    node('api', 'kubernetes-workload', 1010, 100, config('kubernetes-workload', { name: 'KloudLab API', namespace: 'kloudlab', replicas: 1 })),
+    node('openfga', 'openfga', 1320, 100, config('openfga', { name: 'OpenFGA · authorization', modelVersion: 'authorization model' })),
+    node('api-postgres', 'postgresql', 1630, -170, config('postgresql', { name: 'KloudLab API PostgreSQL', engine: 'PostgreSQL 17', exposure: 'Private only', backupDays: 7 })),
+    node('openfga-postgres', 'postgresql', 1630, 100, config('postgresql', { name: 'OpenFGA PostgreSQL', engine: 'PostgreSQL 17', exposure: 'Private only', backupDays: 14 })),
+    node('otel-gateway', 'otel-collector', 700, 500, config('otel-collector', { name: 'OpenTelemetry', mode: 'Gateway', authentication: 'Private network' })),
+    node('prometheus', 'prometheus', 1010, 500, config('prometheus', { name: 'Prometheus · metrics', retention: '30 days', storage: 'Persistent volume' })),
+    node('grafana', 'grafana', 1320, 500, config('grafana', { name: 'Grafana · dashboards', access: 'Restricted', authentication: 'OIDC' })),
   ]
   const edges: CanvasEdgeDocument[] = []
   let edgeNumber = 0
@@ -91,66 +80,41 @@ export function createStarterCanvas(): CanvasDocument {
     edges.push({ id: `edge-kloudlab-${edgeNumber}`, source, sourcePort, target, targetPort })
   }
 
-  // Source, image publishing, and GitOps delivery.
   connect('repository', 'repository', 'image-workflow', 'repository')
-  connect('repository', 'repository', 'pulumi', 'source')
   connect('image-workflow', 'images', 'ecr', 'push')
   connect('image-workflow', 'gitops-update', 'repository', 'gitops-update')
   connect('repository', 'gitops', 'argocd', 'repository')
-
-  // Pulumi provisions the three cluster networks and stores encrypted state.
-  connect('pulumi', 'provider', 'aws-provider', 'program')
-  connect('pulumi-state', 'objects', 'pulumi', 'state')
-  connect('pulumi-kms', 'key', 'pulumi-state', 'encryption')
-  for (const [vpcId, clusterId] of [
-    ['management-vpc', 'management-eks'],
-    ['app-vpc', 'app-eks'],
-    ['observability-vpc', 'observability-eks'],
-  ]) {
-    connect('aws-provider', 'resources', vpcId, 'provisioning')
-    connect(vpcId, 'network', clusterId, 'network')
-    connect('aws-provider', 'resources', clusterId, 'provisioning')
-  }
-  connect('aws-provider', 'resources', 'pulumi-kms', 'provisioning')
-  connect('aws-provider', 'resources', 'pulumi-state', 'provisioning')
-
-  // Argo CD runs on management and targets all three clusters.
-  for (const clusterId of ['management-eks', 'app-eks', 'observability-eks']) {
-    connect(clusterId, 'workloads', 'argocd', 'cluster')
-  }
-
-  // The application and its authorization stores run on the app cluster.
-  for (const serviceId of ['frontend', 'api', 'openfga', 'api-postgres', 'openfga-postgres']) {
-    connect('app-eks', 'workloads', serviceId, 'cluster')
-  }
+  connect('app-vpc', 'network', 'app-eks', 'network')
+  connect('app-eks', 'workloads', 'argocd', 'cluster')
   connect('ecr', 'image', 'frontend', 'image')
   connect('ecr', 'image', 'api', 'image')
+  for (const serviceId of ['frontend', 'api', 'openfga', 'api-postgres', 'openfga-postgres']) {
+    connect('argocd', 'deployments', serviceId, 'delivery')
+  }
+  connect('app-eks', 'workloads', 'frontend', 'cluster')
+  connect('app-eks', 'workloads', 'api', 'cluster')
+  connect('app-eks', 'workloads', 'openfga', 'cluster')
+  connect('app-eks', 'workloads', 'api-postgres', 'cluster')
+  connect('app-eks', 'workloads', 'openfga-postgres', 'cluster')
   connect('api', 'authorization', 'openfga', 'check')
   connect('openfga', 'decision', 'api', 'identity')
   connect('api', 'database-client', 'api-postgres', 'client')
   connect('api-postgres', 'database', 'api', 'database')
   connect('openfga-postgres', 'database', 'openfga', 'database')
-
-  // All clusters and app services send telemetry to the shared observability stack.
-  for (const clusterId of ['management-eks', 'app-eks', 'observability-eks']) {
-    connect(clusterId, 'telemetry', 'otel-gateway', 'telemetry')
-  }
-  for (const serviceId of ['otel-gateway', 'prometheus', 'loki', 'tempo', 'grafana']) {
-    connect('observability-eks', 'workloads', serviceId, 'cluster')
-  }
+  connect('app-eks', 'telemetry', 'otel-gateway', 'telemetry')
   connect('api', 'telemetry', 'otel-gateway', 'telemetry')
   connect('frontend', 'telemetry', 'otel-gateway', 'telemetry')
   connect('otel-gateway', 'metrics', 'prometheus', 'metrics')
-  connect('otel-gateway', 'logs', 'loki', 'logs')
-  connect('otel-gateway', 'traces', 'tempo', 'traces')
   connect('prometheus', 'dashboard', 'grafana', 'sources')
-  connect('loki', 'dashboard', 'grafana', 'sources')
-  connect('tempo', 'dashboard', 'grafana', 'sources')
 
-  return { schemaVersion: '1.0.0', id: STARTER_CANVAS_ID, name: 'KloudLab platform', nodes, edges }
+  return { schemaVersion: '1.0.0', id: STARTER_CANVAS_ID, name: 'KloudLab core', nodes, edges }
 }
 
-const PREVIOUS_STARTER_IDS = new Set(['starter-kloudlab-platform', 'starter-kloudlab-platform-v2'])
+const PREVIOUS_STARTER_IDS = new Set([
+  'starter-kloudlab-platform',
+  'starter-kloudlab-platform-v2',
+  'starter-kloudlab-platform-v3',
+])
 
 export function migrateStarterCanvas(document: CanvasDocument): CanvasDocument {
   if (PREVIOUS_STARTER_IDS.has(document.id)) return createStarterCanvas()
