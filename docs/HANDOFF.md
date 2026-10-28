@@ -18,10 +18,11 @@ For an account without a saved local draft, the playground starts with a
 compact, editable overview: GitHub CI and ECR image publishing; Pulumi-managed
 VPCs and EKS; Argo CD across the three clusters; the KloudLab API, frontend,
 OpenFGA and their databases; and the OpenTelemetry, Prometheus, Loki, Tempo and
-Grafana path. The canvas has no background grouping panels. Earlier 12- and
-55-component starter drafts upgrade on open, carrying over component settings
-and using the compact layout. Structurally edited drafts remain as saved.
-**New architecture** starts with a blank canvas.
+Grafana path. The canvas has no background grouping panels. On open, saved local
+drafts from the earlier 12- and 55-component starter versions are replaced by
+this compact starter, including drafts edited from those versions. Once loaded,
+the new starter is editable: component and connection changes persist through
+refreshes. **New architecture** starts with a blank canvas.
 
 ## Clusters (ap-south-1, EKS 1.36)
 
