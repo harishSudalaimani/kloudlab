@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kloudlab-openfga-secrets
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+spec:
+  project: kloudlab-identity
+  source:
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    targetRevision: main
+    path: gitops/clusters/identity/applications/infisical/openfga-secrets
+    directory:
+      recurse: false
+  destination:
+    name: kloudlab-identity
+    namespace: kloudlab-identity
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,69 @@
+apiVersion: secrets.infisical.com/v1beta1
+kind: InfisicalConnection
+metadata:
+  name: kloudlab-infisical
+  namespace: kloudlab-identity
+spec:
+  address: http://infisical-infisical-standalone-infisical.kloudlab-identity.svc.cluster.local:8080
+---
+apiVersion: secrets.infisical.com/v1beta1
+kind: InfisicalAuth
+metadata:
+  name: kloudlab-infisical-openfga
+  namespace: kloudlab-identity
+spec:
+  infisicalConnectionRef:
+    name: kloudlab-infisical
+    namespace: kloudlab-identity
+  method: universal
+  universal:
+    clientIdRef:
+      name: infisical-machine-identity
+      namespace: kloudlab-identity
+      key: clientId
+    clientSecretRef:
+      name: infisical-machine-identity
+      namespace: kloudlab-identity
+      key: clientSecret
+---
+apiVersion: secrets.infisical.com/v1beta1
+kind: InfisicalStaticSecret
+metadata:
+  name: kloudlab-openfga-auth
+  namespace: kloudlab-identity
+spec:
+  infisicalAuthRef:
+    name: kloudlab-infisical-openfga
+    namespace: kloudlab-identity
+  syncOptions:
+    refreshInterval: 1m
+  sources:
+    - projectSlug: kloudlab
+      environmentSlug: dev
+      secretPath: /openfga/auth
+  targets:
+    - name: kloudlab-openfga-auth
+      namespace: kloudlab-identity
+      kind: Secret
+      creationPolicy: Owner
+---
+apiVersion: secrets.infisical.com/v1beta1
+kind: InfisicalStaticSecret
+metadata:
+  name: kloudlab-openfga-datastore
+  namespace: kloudlab-identity
+spec:
+  infisicalAuthRef:
+    name: kloudlab-infisical-openfga
+    namespace: kloudlab-identity
+  syncOptions:
+    refreshInterval: 1m
+  sources:
+    - projectSlug: kloudlab
+      environmentSlug: dev
+      secretPath: /openfga/datastore
+  targets:
+    - name: kloudlab-openfga-datastore
+      namespace: kloudlab-identity
+      kind: Secret
+      creationPolicy: Owner

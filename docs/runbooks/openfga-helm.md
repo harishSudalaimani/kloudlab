@@ -7,7 +7,14 @@ OpenFGA runs in the `kloudlab-identity` EKS cluster. Argo CD is hosted centrally
 - `charts/openfga/Chart.yaml` pins the upstream OpenFGA chart version. `gitops/clusters/identity/applications/openfga/application.yaml` references this local module; its adjacent `values.yaml` configures three replicas, disables the playground and ingress, enables pre-shared-key API authentication, and reads the RDS URI from a Kubernetes Secret.
 - OpenFGA runs in a private namespace and uses a `ClusterIP` service. The intended API URL is `https://fga.internal.kloudlab.in`; private cross-cluster routing and endpoint termination remain infrastructure work, and the service is not exposed publicly.
 
-Infisical must sync `kloudlab-openfga-datastore` with a `uri` key containing the RDS connection URI, including `sslmode=verify-full`. It must also sync `kloudlab-openfga-auth` with a `keys` key for OpenFGA and a `token` key for the API. Keep `keys` and `token` identical during normal operation. The identity GitOps Applications for Infisical server and Secrets Operator are now defined, but the server bootstrap, machine identity, connection/auth resources, and OpenFGA secret sync resources remain prerequisites. Do not commit credentials or put them in Helm values.
+The `kloudlab-openfga-secrets` Application defines the Infisical connection, auth reference, and two `InfisicalStaticSecret` resources. It syncs these Kubernetes Secrets:
+
+- `kloudlab-openfga-auth` from Infisical project `kloudlab`, environment `dev`, path `/openfga/auth`, with `keys` and `token` keys. Keep those values identical.
+- `kloudlab-openfga-datastore` from path `/openfga/datastore`, with a `uri` key containing the OpenFGA RDS URI, for example `postgresql://openfga:<password>@<rds-endpoint>:5432/openfga?sslmode=verify-full`.
+
+The Infisical machine identity needs read access only to those two paths. Its Universal Auth client ID and client secret are supplied through the `infisical-machine-identity` Kubernetes Secret in `kloudlab-identity`; never commit those credentials or put them in Helm values. Before syncing the secret Application, ensure Infisical is bootstrapped, create that credential Secret, and create the `kloudlab` project, `dev` environment, and both paths with the exact keys above.
+
+Sync in this order: `kloudlab-infisical-secrets-operator`, then `kloudlab-openfga-secrets`, confirm both generated Kubernetes Secrets exist, and finally sync `openfga`. OpenFGA migrations run as a pre-install/pre-upgrade Helm Job so the Deployment does not wait on a post-install migration hook while pods are unready. Do not commit credentials or put them in Helm values.
 
 ## Deployment ownership
 

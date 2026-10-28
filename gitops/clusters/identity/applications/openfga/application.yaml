@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: openfga
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   project: kloudlab-identity
   sources:
