@@ -174,9 +174,8 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   leaves its object in the cluster: delete it by hand (the old
   `charts` and `manifests` ApplicationSets were removed with
   `--cascade=orphan` so `services` adopts their Applications).
-- Tempo (`tempo-distributed` 3.17.0) does not render:
-  `ingest.kafka.address is required when blockBuilder` is enabled.
-  Give it a Kafka address or turn the block builder off in its values.
+- Tempo (`tempo-distributed` 3.17.0): `blockBuilder` and `liveStore`
+  are off (they need Kafka); traces use the ingester path.
 
 ## Gaps found while migrating
 
