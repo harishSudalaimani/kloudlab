@@ -10,6 +10,7 @@ import (
 	pulumiconfig "github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 
 	"github.com/harishsudalaimani/kloudlab/infra/components/eks"
+	"github.com/harishsudalaimani/kloudlab/infra/components/secrets"
 	"github.com/harishsudalaimani/kloudlab/infra/config"
 )
 
@@ -129,6 +130,21 @@ func Run(ctx *pulumi.Context, workload string) error {
 			return err
 		}
 		ctx.Export("argocdDeployerRoleArn", role.Arn)
+	}
+	if workload == "identity" {
+		parameterAccess, err := secrets.NewParameterStoreAccess(ctx, "kloudlab-identity-external-secrets", &secrets.ParameterStoreAccessArgs{
+			Region:              region,
+			ClusterName:         pulumi.String(clusterName),
+			Namespace:           "external-secrets",
+			ServiceAccount:      "external-secrets",
+			ParameterPathPrefix: fmt.Sprintf("/kloudlab/%s/identity/openfga", environment),
+			Tags:                pulumiTags,
+		})
+		if err != nil {
+			return err
+		}
+		ctx.Export("externalSecretsParameterStoreRoleArn", parameterAccess.RoleARN())
+		ctx.Export("externalSecretsParameterStoreKmsKeyArn", parameterAccess.KeyARN())
 	}
 	return nil
 }

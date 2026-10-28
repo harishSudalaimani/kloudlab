@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kloudlab-infisical-server
+  name: kloudlab-external-secrets
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "10"
@@ -9,19 +9,19 @@ spec:
   project: kloudlab-identity
   sources:
     - repoURL: https://github.com/harishSudalaimani/kloudlab.git
-      path: charts/infisical/server
+      path: charts/external-secrets
       targetRevision: main
       helm:
-        releaseName: infisical
+        releaseName: external-secrets
         valueFiles:
-          - $values/gitops/clusters/identity/applications/infisical/server/values.yaml
+          - $values/charts/external-secrets/values.yaml
     - repoURL: https://github.com/harishSudalaimani/kloudlab.git
       targetRevision: main
       ref: values
   destination:
     name: kloudlab-identity
-    namespace: kloudlab-identity
-  # Sync manually after the bootstrap Secret and external data services exist.
+    namespace: external-secrets
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true

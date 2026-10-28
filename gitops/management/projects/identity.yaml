@@ -16,6 +16,8 @@ spec:
       namespace: kloudlab-identity
     - name: kloudlab-identity
       namespace: opentelemetry
+    - name: kloudlab-identity
+      namespace: external-secrets
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
@@ -23,24 +25,24 @@ spec:
     - group: ""
       kind: Namespace
       name: opentelemetry
+    - group: ""
+      kind: Namespace
+      name: external-secrets
     - group: rbac.authorization.k8s.io
       kind: ClusterRole
       name: otel-cluster-collector*
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: otel-cluster-collector*
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: external-secrets*
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: external-secrets*
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
-      name: "*.secrets.infisical.com"
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: infisical-secre-metrics-auth-role
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: infisical-secre-metrics-reader
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRoleBinding
-      name: infisical-secre-metrics-auth-rolebinding
+      name: "*.external-secrets.io"
   namespaceResourceWhitelist:
     - group: ""
       kind: ConfigMap
@@ -66,11 +68,9 @@ spec:
       kind: Role
     - group: rbac.authorization.k8s.io
       kind: RoleBinding
-    - group: secrets.infisical.com
-      kind: InfisicalConnection
-    - group: secrets.infisical.com
-      kind: InfisicalAuth
-    - group: secrets.infisical.com
-      kind: InfisicalStaticSecret
+    - group: external-secrets.io
+      kind: SecretStore
+    - group: external-secrets.io
+      kind: ExternalSecret
     - group: ""
       kind: PersistentVolumeClaim

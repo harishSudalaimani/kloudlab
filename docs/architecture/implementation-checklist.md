@@ -78,7 +78,7 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 - [x] Validate access token signature, issuer, audience, expiry, and required claims in the API.
 - [x] Add a separately versioned OpenFGA Helm module that pins the official chart; its PostgreSQL dependency is external.
 - [x] Authenticate API-to-OpenFGA calls with a pre-shared bearer token.
-- [ ] Implement the private RDS PostgreSQL identity database stack in Pulumi and configure Infisical credential delivery.
+- [ ] Finish the identity RDS production settings and configure AWS SSM Parameter Store delivery through ESO and EKS Pod Identity.
 - [ ] Configure `fga.internal.kloudlab.in` (or approved equivalent), private cross-cluster routing, and TLS between the app and identity clusters.
 - [ ] Reconcile the OpenFGA Helm release from the management-hosted Argo CD into the identity cluster; configure datastore, backups, and verify restore.
 - [x] Define workspace ownership and architecture owner/editor/viewer relations in OpenFGA.
@@ -89,12 +89,11 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 
 ## Phase 7 — Secrets management
 
-- [x] Select self-hosted Infisical and add separate server and Kubernetes Secrets Operator Helm modules.
-- [x] Choose `kloudlab-identity` for Infisical's control plane; document licensing, service persistence, recovery, and bootstrap access before production use.
-- [ ] Create narrowly scoped identities and per-workload secret access policies.
-- [ ] Integrate app workloads with Infisical using machine identities or another supported authentication method, without committing secret material.
-- [ ] Back up configuration and required state outside the normal retrieval failure domain.
-- [ ] Exercise restore and break-glass procedures.
+- [x] Select AWS Systems Manager Parameter Store for OpenFGA credentials and External Secrets Operator for Kubernetes synchronization.
+- [ ] Deploy ESO in the identity cluster using its EKS Pod Identity role and least-privilege SSM parameter path policy.
+- [ ] Store OpenFGA's pre-shared token and RDS URI as `SecureString` parameters; verify ESO-generated Kubernetes Secrets.
+- [ ] Add separate per-cluster roles and parameter prefixes as application workloads adopt SSM.
+- [ ] Configure parameter retention, rotation, KMS key policy, and break-glass access for production.
 
 **Deliverable:** centrally managed secrets with a tested recovery path.
 
@@ -105,7 +104,7 @@ See [EKS Pulumi deployment runbook](../runbooks/eks-pulumi-deployment.md) for th
 - [x] Add per-node and cluster-level OpenTelemetry Collector Helm Applications to all four clusters, plus the central gateway and Prometheus, Loki, Tempo, and Grafana Helm Applications.
 - [ ] Generate `go.sum` and compile/format the API with an installed Go toolchain.
 - [x] Keep telemetry storage and query backends open source; EKS API-server metrics are scraped by the per-cluster Collector when endpoint access and RBAC allow it.
-- [ ] Provision the OTLP gateway's private cross-VPC endpoint and DNS; sync gateway client/server credentials and Grafana credentials through Infisical.
+- [ ] Provision the OTLP gateway's private cross-VPC endpoint and DNS; deliver gateway and Grafana credentials from SSM through ESO.
 - [ ] Provision S3 buckets and EKS workload identities for Loki and Tempo; install the EBS CSI driver and encrypted `gp3` storage.
 - [ ] Reconcile the telemetry Helm Applications in Argo CD after their AWS and secret prerequisites exist.
 - [ ] Validate host/kubelet/container/Kubernetes object/event/API-server collection and node log paths against the chosen EKS AMI.

@@ -2,7 +2,7 @@
 
 This is the canonical target layout for the updated four-cluster architecture. Pulumi Go owns AWS resources and Argo CD's AWS Pod Identity; Argo CD is bootstrapped directly with Helm on `kloudlab-management`. GitHub Actions validates and publishes artifacts. After bootstrap, clusters are connected and applications are added one at a time. Karpenter belongs only to `kloudlab-app`. Directories for unimplemented features are added with their first working slice; this tree is a reference, not a claim that every listed subsystem exists today.
 
-Install Argo CD from the local chart module at `charts/argocd` with Helm CLI commands documented in `docs/runbooks/argocd-bootstrap-helm.md`. Do not keep an auto-sync root that activates every cluster; create or sync only the next reviewed Application. OpenFGA's `Application` and values live under the identity cluster path and reference the KloudLab chart module at `charts/openfga`. Infisical server and Kubernetes Secrets Operator chart modules live under `charts/infisical/`; their identity-cluster values and Argo Applications live under `gitops/clusters/identity/`. OpenFGA uses the selected private Amazon RDS PostgreSQL datastore. Infisical placement is selected as `kloudlab-identity`; its database/cache topology, edition, backup location, and independent bootstrap/recovery procedure remain to be completed.
+Install Argo CD from the local chart module at `charts/argocd` with Helm CLI commands documented in `docs/runbooks/argocd-bootstrap-helm.md`. Do not keep an auto-sync root that activates every cluster; create or sync only the next reviewed Application. OpenFGA's `Application` and values live under the identity cluster path and reference the KloudLab chart module at `charts/openfga`. The External Secrets Operator chart module lives under `charts/external-secrets/`; its identity-cluster Application and SSM-backed `ExternalSecret` resources live under `gitops/clusters/identity/`. OpenFGA uses private Amazon RDS PostgreSQL and AWS Systems Manager Parameter Store. Pulumi provisions a narrowly scoped EKS Pod Identity role for the operator; secret values remain outside Git.
 
 ```text
 kloudlab/
@@ -68,9 +68,7 @@ kloudlab/
 │   ├── cert-manager/          # standalone upstream chart; do not make it a subchart
 │   ├── cert-manager-resources/
 │   ├── external-dns/
-│   ├── infisical/
-│   │   ├── server/
-│   │   └── secrets-operator/
+│   ├── external-secrets/
 │   ├── kgateway/
 │   │   ├── controller/
 │   │   ├── crds/
@@ -116,13 +114,14 @@ kloudlab/
 │   │   │   │   ├── frontend/
 │   │   │   │   └── api/
 │   │   │   └── platform/
-│   │   │       ├── infisical/
+│   │   │       ├── external-secrets/
 │   │   │       └── policies/
 │   │   ├── identity/
-│   │   │   ├── applications/openfga/
-│   │   │   └── platform/
-│   │   │       ├── infisical/
-│   │   │       └── policies/
+│   │   │   ├── applications/
+│   │   │   │   ├── external-secrets/
+│   │   │   │   ├── parameter-store/
+│   │   │   │   └── openfga/
+│   │   │   └── platform/policies/
 │   │   ├── observability/
 │   │   │   └── applications/
 │   │   │       ├── opentelemetry/

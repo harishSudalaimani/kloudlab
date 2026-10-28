@@ -13,7 +13,7 @@ Use Auth0 for OAuth 2.0/OpenID Connect authentication and token issuance. The Go
 
 Use OpenFGA for relationship-based checks over users, organizations, memberships, and canvases. Check permissions in the backend on every protected operation. Keep OpenFGA private and reachable only from approved workloads. Editing a canvas does not grant infrastructure generation, approval, or execution permissions. Protected operations fail closed if authorization cannot be established.
 
-Deploy OpenFGA in the identity cluster using its Helm chart, reconciled by Argo CD hosted in the dedicated management cluster. Use private Amazon RDS PostgreSQL for its datastore, provisioned by Pulumi. Keep OpenFGA private behind `fga.internal.kloudlab.in` and authenticate API-to-OpenFGA requests with a pre-shared service token stored in Infisical.
+Deploy OpenFGA in the identity cluster using its Helm chart, reconciled by Argo CD hosted in the dedicated management cluster. Use private Amazon RDS PostgreSQL for its datastore, provisioned by Pulumi. Keep OpenFGA private behind `fga.internal.kloudlab.in` and authenticate API-to-OpenFGA requests with a pre-shared service token stored in AWS Systems Manager Parameter Store and synchronized by External Secrets Operator.
 
 ## Consequences
 

@@ -14,8 +14,8 @@ flowchart LR
     API -.->|private route via peering; endpoint and security rules pending| FGA[Identity cluster: OpenFGA]
     FGA --> FGA_DB[(Private Amazon RDS PostgreSQL)]
     API --> AppDB[(Application PostgreSQL, placement TBD)]
-    AppWorkloads[App workloads] -->|machine identity or supported auth| Secrets[Infisical, optional identity-cluster workload]
-    Secrets --> InfisicalDB[(Infisical persistent datastore, if required)]
+    AppWorkloads[App workloads] --> ESO[External Secrets Operator in workload cluster]
+    ESO -->|EKS Pod Identity| SSM[AWS Systems Manager Parameter Store]
     AppCluster[App cluster telemetry agents] -.->|private route via peering; gateway rules pending| OTel[Observability cluster: OTel gateway]
     FGACluster[Identity cluster telemetry agents] -.->|private route via peering; gateway rules pending| OTel
     ManagementCluster[Management cluster: Argo CD] -.->|private route via peering; EKS API rules pending| AppCluster
@@ -35,11 +35,11 @@ The initial platform has four independent EKS control planes in one AWS region:
 | Cluster | Owns | Main boundary |
 | --- | --- | --- |
 | `kloudlab-app` | Frontend, API, application workloads, kgateway and application telemetry agents | Public application entry point; private calls to OpenFGA and telemetry gateway |
-| `kloudlab-identity` | OpenFGA, self-hosted Infisical control plane, identity support workloads and telemetry agents | Private authorization endpoint; persistent service data and independent recovery path |
+| `kloudlab-identity` | OpenFGA, External Secrets Operator, identity support workloads and telemetry agents | Private authorization endpoint; SSM access scoped to required parameter paths |
 | `kloudlab-observability` | Central OpenTelemetry gateway, Prometheus, Loki, Tempo and Grafana | Restricted operational access and durable telemetry storage |
 | `kloudlab-management` | Central Argo CD control plane, management kgateway, certificate management and management AWS Load Balancer Controller | Reconciles GitOps workloads across all four clusters and exposes the Argo CD UI through its own Gateway API route |
 
-Auth0 is external and is not deployed in Kubernetes. Each cluster has a dedicated VPC with proposed ranges `10.10.0.0/16` (app), `10.20.0.0/16` (identity), `10.30.0.0/16` (observability), and `10.40.0.0/16` (management). Start with two AZs per VPC; review these ranges against existing networks before provisioning. A separate Pulumi connectivity stack creates direct VPC peering routes and enables peering DNS resolution. The dashed paths indicate that endpoint exposure, TLS, and security rules still need configuration; they do not indicate that AWS resources have already been deployed. App workloads retrieve secrets from self-hosted Infisical in the identity cluster using securely provisioned machine identities or another supported authentication method. Its database, backups, bootstrap credentials, and restore path must remain usable during an identity-cluster outage. Use persistent PostgreSQL storage where required by each service. Cluster separation creates lifecycle and security boundaries, but four clusters in one region do not provide regional disaster recovery. Keep the management cluster dedicated to Argo CD and management ingress.
+Auth0 is external and is not deployed in Kubernetes. Each cluster has a dedicated VPC with proposed ranges `10.10.0.0/16` (app), `10.20.0.0/16` (identity), `10.30.0.0/16` (observability), and `10.40.0.0/16` (management). Start with two AZs per VPC; review these ranges against existing networks before provisioning. A separate Pulumi connectivity stack creates direct VPC peering routes and enables peering DNS resolution. The dashed paths indicate that endpoint exposure, TLS, and security rules still need configuration; they do not indicate that AWS resources have already been deployed. Workloads retrieve secrets from AWS Systems Manager Parameter Store through an External Secrets Operator instance in their cluster, authenticated with EKS Pod Identity. The initial rollout installs ESO in the identity cluster and scopes its role to the OpenFGA parameter path; other clusters receive their own roles and parameter paths as workloads are added. Argo CD manages ESO and its `ExternalSecret` resources. Use persistent PostgreSQL storage where required by each service. Cluster separation creates lifecycle and security boundaries, but four clusters in one region do not provide regional disaster recovery. Keep the management cluster dedicated to Argo CD and management ingress.
 
 The product request path is DNS → AWS load balancer → app-cluster kgateway/Gateway API → application service → backend token validation and authorization. The Argo CD administrative path is `argocd.kloudlab.in` → management-cluster NLB → management kgateway/Gateway API → Argo CD service. Database, OpenFGA administration, telemetry backends, and Grafana remain private or tightly restricted.
 
@@ -80,9 +80,9 @@ The initial catalog candidates are EKS, Kubernetes workloads, gateways, database
 ## Ownership split
 
 - **Pulumi Go:** AWS networking, EKS, foundational IAM, ECR, databases, DNS/certificates, and infrastructure prerequisites.
-- **Argo CD:** ongoing Kubernetes applications and Helm releases, including kgateway, OpenFGA, Infisical integrations, OTel collectors, and application workloads.
+- **Argo CD:** ongoing Kubernetes applications and Helm releases, including kgateway, OpenFGA, External Secrets Operator, OTel collectors, and application workloads.
 - **Auth0:** user authentication and token issuance.
 - **OpenFGA:** relationship-based application authorization, checked by the backend on every protected action.
-- **Infisical:** secrets distribution and audit policy, subject to an independent recovery design.
+- **AWS Systems Manager Parameter Store:** managed secret storage; ESO synchronizes approved parameter values into Kubernetes Secrets.
 
 The same live Kubernetes object must not be owned by both Pulumi and Argo CD.

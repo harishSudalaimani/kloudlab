@@ -32,8 +32,8 @@ Current modules:
 - `aws-load-balancer-controller`: upstream EKS controller wrapper for Gateway NLBs.
 - `cert-manager-resources`: KloudLab Cloudflare DNS-01 issuer and Gateway certificate.
 - `openfga`: OpenFGA upstream chart.
-- `infisical/{server,secrets-operator}`: Infisical self-hosted server and
-  Kubernetes Secrets Operator upstream charts.
+- `external-secrets`: External Secrets Operator upstream chart, configured for
+  AWS Systems Manager Parameter Store via EKS Pod Identity.
 - `cert-manager`: standalone copy of the official v1.21.2 chart for later
   platform rollout.
 - `external-dns`: pinned module for later platform rollout.

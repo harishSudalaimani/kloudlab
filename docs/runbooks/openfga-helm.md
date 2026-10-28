@@ -1,42 +1,110 @@
 # OpenFGA Helm deployment
 
-OpenFGA runs in the `kloudlab-identity` EKS cluster. Argo CD is hosted centrally in the dedicated `kloudlab-management` cluster and reconciles the OpenFGA `Application` into identity. Pulumi owns its private Amazon RDS PostgreSQL database; Argo CD owns the OpenFGA Helm release. This follows the master architecture, including its RDS recommendation. The OpenFGA module at `charts/openfga` pins the official chart dependency, and the cluster values disable its bundled legacy Bitnami databases.
+OpenFGA runs in `kloudlab-identity`, uses the private identity RDS PostgreSQL
+instance, and is reconciled by management-hosted Argo CD. AWS Systems Manager
+Parameter Store holds the pre-shared token and PostgreSQL URI. External Secrets
+Operator (ESO) reads only the OpenFGA parameter path through EKS Pod Identity
+and creates the Kubernetes Secrets consumed by the Helm release.
 
-## Release layout
+## Secret contract
 
-- `charts/openfga/Chart.yaml` pins the upstream OpenFGA chart version. `gitops/clusters/identity/applications/openfga/application.yaml` references this local module; its adjacent `values.yaml` configures three replicas, disables the playground and ingress, enables pre-shared-key API authentication, and reads the RDS URI from a Kubernetes Secret.
-- OpenFGA runs in a private namespace and uses a `ClusterIP` service. The intended API URL is `https://fga.internal.kloudlab.in`; private cross-cluster routing and endpoint termination remain infrastructure work, and the service is not exposed publicly.
+Create these `SecureString` parameters in `ap-south-1`:
 
-The `kloudlab-openfga-secrets` Application defines the Infisical connection, auth reference, and two `InfisicalStaticSecret` resources. It syncs these Kubernetes Secrets:
+| Parameter | Kubernetes target |
+| --- | --- |
+| `/kloudlab/dev/identity/openfga/auth-token` | `kloudlab-openfga-auth`, keys `keys` and `token` |
+| `/kloudlab/dev/identity/openfga/datastore-uri` | `kloudlab-openfga-datastore`, key `uri` |
 
-- `kloudlab-openfga-auth` from Infisical project `kloudlab`, environment `dev`, path `/openfga/auth`, with `keys` and `token` keys. Keep those values identical.
-- `kloudlab-openfga-datastore` from path `/openfga/datastore`, with a `uri` key containing the OpenFGA RDS URI, for example `postgresql://openfga:<password>@<rds-endpoint>:5432/openfga?sslmode=verify-full`.
+The auth token is mapped to both keys because OpenFGA expects `keys`, while the
+API uses the same value as its bearer token. The database URI should point to
+the `openfga` database and use RDS TLS, for example
+`postgresql://openfga:<password>@<rds-endpoint>:5432/openfga?sslmode=require`.
+Do not put secret values in Git, Helm values, Pulumi outputs, or shell history.
 
-The Infisical machine identity needs read access only to those two paths. Its Universal Auth client ID and client secret are supplied through the `infisical-machine-identity` Kubernetes Secret in `kloudlab-identity`; never commit those credentials or put them in Helm values. Before syncing the secret Application, ensure Infisical is bootstrapped, create that credential Secret, and create the `kloudlab` project, `dev` environment, and both paths with the exact keys above.
+The identity-cluster Pulumi stack creates the `external-secrets` Pod Identity
+role and association. Its IAM policy permits SSM reads only below
+`/kloudlab/dev/identity/openfga/`. The ESO Helm Application installs the CRDs
+and controller; the parameter-store Application creates a namespaced
+`SecretStore` and two `ExternalSecret` resources.
 
-Sync in this order: `kloudlab-infisical-secrets-operator`, then `kloudlab-openfga-secrets`, confirm both generated Kubernetes Secrets exist, and finally sync `openfga`. OpenFGA migrations run as a pre-install/pre-upgrade Helm Job so the Deployment does not wait on a post-install migration hook while pods are unready. Do not commit credentials or put them in Helm values.
+## Setup and sync
 
-## Deployment ownership
+Create the two `SecureString` parameters using a protected local shell:
 
-The planned Pulumi identity database stack will provision the RDS instance, subnet group, encryption, backups, and security groups in the identity VPC. The existing database package currently defines only its typed contract; it does not yet create RDS resources. The API and OpenFGA traffic must be allowed through explicit network rules. Store the RDS endpoint and credentials in Infisical; only the synced Secret reference belongs in Helm values.
-
-```sh
-helm dependency build charts/openfga
-helm template openfga charts/openfga \
-  --values gitops/clusters/identity/applications/openfga/values.yaml \
-  --namespace kloudlab-identity
+```bash
+export AWS_PROFILE=kloudlab
+export AWS_REGION=ap-south-1
+read -rsp 'OpenFGA pre-shared token: ' OPENFGA_TOKEN
+printf '\n'
+aws ssm put-parameter \
+  --name /kloudlab/dev/identity/openfga/auth-token \
+  --type SecureString --overwrite \
+  --key-id alias/kloudlab-identity-ssm \
+  --value "$OPENFGA_TOKEN" \
+  --region "$AWS_REGION" --profile "$AWS_PROFILE"
+unset OPENFGA_TOKEN
 ```
 
-The management-hosted Argo CD will reconcile this Application into identity after the target cluster is registered. The values file is supplied through Argo CD's multi-source Helm values feature, which requires Argo CD 2.6 or newer ([multi-source Helm values](https://argo-cd.readthedocs.io/en/latest/user-guide/multiple_sources/)). Helm is used to render the chart; Argo CD owns synchronization and lifecycle ([Argo CD Helm integration](https://argo-cd.readthedocs.io/en/latest/user-guide/helm/)). Do not run `helm upgrade` against a managed cluster. No AWS database or Kubernetes release has been deployed.
+Construct the datastore URI from the existing bootstrap Secret without printing
+the password or URI:
 
-## Store and model bootstrap
+```bash
+secret_value() {
+  kubectl --context kloudlab-identity -n kloudlab-identity \
+    get secret kloudlab-identity-db-bootstrap \
+    -o "jsonpath={.data.$1}" | base64 --decode
+}
 
-After OpenFGA is ready, create a store and publish `apps/api/internal/authorization/model.fga` using the OpenFGA CLI or API from an approved operator environment. Record the resulting store ID and authorization model ID in the secret manager, then provide them to the API as `OPENFGA_STORE_ID` and `OPENFGA_AUTHORIZATION_MODEL_ID`. The API sends `Authorization: Bearer $OPENFGA_API_TOKEN` on every OpenFGA request and fails closed on authorization errors.
+PGHOST="$(secret_value PGHOST)"
+OPENFGA_DB_PASSWORD="$(secret_value OPENFGA_DB_PASSWORD)"
+DATASTORE_URI="postgresql://openfga:${OPENFGA_DB_PASSWORD}@${PGHOST}:5432/openfga?sslmode=require"
+aws ssm put-parameter \
+  --name /kloudlab/dev/identity/openfga/datastore-uri \
+  --type SecureString --overwrite \
+  --key-id alias/kloudlab-identity-ssm \
+  --value "$DATASTORE_URI" \
+  --region ap-south-1 --profile kloudlab
+unset OPENFGA_DB_PASSWORD DATASTORE_URI
+```
 
-The model file is the source of truth. Treat model changes as versioned authorization migrations: validate the new model against representative user/workspace/architecture tuples, publish the immutable model version, and update the API's model ID through a reviewed deployment.
+After Pulumi creates the role and association, sync `kloudlab-external-secrets`
+from Argo CD and wait for it to become healthy. The old Infisical resources
+currently own the OpenFGA Kubernetes Secrets, so remove that old secret-sync
+Application and its Secrets before creating the replacements:
 
-## Connectivity and production gates
+```bash
+argocd app delete kloudlab-openfga-secrets --cascade --yes
+kubectl --context kloudlab-identity -n kloudlab-identity \
+  delete secret kloudlab-openfga-auth kloudlab-openfga-datastore \
+  --ignore-not-found
+```
 
-The API and OpenFGA are in separate EKS clusters. The connectivity Pulumi stack creates an app-to-identity VPC peering route, but a `ClusterIP` is still not routable across clusters. Before deploying the integration, expose OpenFGA through an internal endpoint in the identity VPC and configure private DNS, TLS, and narrow security-group rules. The proposed API URL is `https://fga.internal.kloudlab.in`. Do not replace this with a public endpoint. The Helm baseline intentionally has no public ingress or `LoadBalancer` service.
+Then sync the remaining Applications in order:
 
-This baseline is not production-ready until the private API-to-OpenFGA path, RDS sizing and Multi-AZ configuration, verified database TLS, backups and restore, secrets delivery, resource sizing, and monitoring have been configured and reviewed.
+1. `kloudlab-identity-parameter-store`
+2. `openfga`
+
+Confirm the generated Secrets and ExternalSecret conditions before syncing
+OpenFGA:
+
+```bash
+kubectl --context kloudlab-identity -n kloudlab-identity \
+  get secret kloudlab-openfga-auth kloudlab-openfga-datastore
+kubectl --context kloudlab-identity -n kloudlab-identity \
+  get externalsecrets.external-secrets.io
+```
+
+The OpenFGA chart runs database migrations as a pre-install/pre-upgrade Job.
+Keep the OpenFGA API private; do not expose it to browsers. See the identity
+rollout runbook for endpoint, TLS, and cross-VPC prerequisites.
+
+Once OpenFGA is healthy, remove the retired Infisical and Valkey applications:
+
+```bash
+argocd app delete kloudlab-infisical-server --cascade --yes
+argocd app delete kloudlab-infisical-secrets-operator --cascade --yes
+argocd app delete kloudlab-valkey --cascade --yes
+kubectl --context kloudlab-identity -n kloudlab-identity \
+  delete secret infisical-machine-identity infisical-secrets kloudlab-valkey-auth \
+  --ignore-not-found
+```

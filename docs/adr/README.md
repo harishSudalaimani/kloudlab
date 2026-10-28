@@ -6,6 +6,7 @@ These records capture the current boundaries and choices for the platform founda
 2. [Dedicated VPCs and cross-VPC connectivity](0002-network-topology.md)
 3. [Pulumi components and stack boundaries](0003-pulumi-stack-boundaries.md)
 4. [Auth0 authentication and OpenFGA authorization](0004-authentication-and-authorization.md)
-5. [Infisical recovery boundary](0005-infisical-recovery-boundary.md)
+5. [Infisical recovery boundary (superseded)](0005-infisical-recovery-boundary.md)
 6. [Pulumi and Argo CD ownership](0006-pulumi-and-argocd-ownership.md)
 7. [AWS bootstrap and initial networking](0007-aws-bootstrap-and-networking.md)
+8. [SSM Parameter Store for workload secrets](0008-ssm-parameter-store.md)

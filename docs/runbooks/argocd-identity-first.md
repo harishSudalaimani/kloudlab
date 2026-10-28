@@ -19,13 +19,13 @@ Confirm its connection is successful before creating an Application.
 ## Deploy one Application at a time
 
 Keep the EKS-managed kube-proxy add-on enabled. Prepare the identity services'
-external dependencies before creating their Applications:
+external dependencies before syncing their Applications:
 
-1. Provision PostgreSQL and Redis endpoints and the required Secrets through
-   the approved secret workflow.
-2. Create `kloudlab-infisical-server` only after its bootstrap Secret, database,
-   Redis, private HTTPS hostname, and TLS path are ready.
-3. Initialize Infisical, then create its Secrets Operator Application.
+1. Provision PostgreSQL and create the OpenFGA database account.
+2. Store the OpenFGA service token and datastore URI as SSM `SecureString`
+   parameters, then apply the identity stack's ESO Pod Identity role.
+3. Sync the External Secrets Operator Application, then the SSM SecretStore and
+   ExternalSecret Application.
 4. Create OpenFGA only after its datastore and service-token Secrets exist.
 5. Add the identity OpenTelemetry node agent and cluster collector after the
    observability gateway endpoint is reachable.

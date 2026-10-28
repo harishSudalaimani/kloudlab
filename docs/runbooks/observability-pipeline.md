@@ -74,8 +74,8 @@ Argo CD creates the child Applications, but sync must wait for these resources:
    kloudlab-otel-gateway-server with token in the observability namespace.
    Sync kloudlab-otel-gateway-client with endpoint and token in each
    collector namespace. For remote clusters, the endpoint must resolve
-   privately and match the TLS certificate. Use Infisical or another approved
-   secret delivery mechanism; never commit the values.
+   privately and match the TLS certificate. Deliver values from SSM Parameter
+   Store through ESO; never commit them.
 4. Create encrypted S3 buckets named kloudlab-observability-loki and
    kloudlab-observability-tempo, lifecycle/retention policies, and EKS
    workload identities scoped to those buckets. Replace the example bucket

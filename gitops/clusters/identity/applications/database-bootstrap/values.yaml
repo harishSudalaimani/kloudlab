@@ -5,9 +5,6 @@ bootstrap:
   activeDeadlineSeconds: 900
   ttlSecondsAfterFinished: 86400
   databases:
-    infisical:
-      name: infisical
-      role: infisical
     openfga:
       name: openfga
       role: openfga

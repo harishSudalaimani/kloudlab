@@ -16,10 +16,10 @@ control cost. Set `instanceClass` to an appropriate production size and
 `multiAZ` to `true` when the environment and budget are ready for database HA.
 
 The stack uses a Pulumi secret config value for the RDS master password and
-does not export that password. The master account is for bootstrap/admin use;
-Infisical and OpenFGA must receive separate database accounts with only their
-own database privileges before their Argo applications are synced. Their
-connection credentials belong in Infisical, not Git.
+does not export that password. The master account is for bootstrap/admin use.
+The database-bootstrap Job creates a separate `openfga` account with access
+only to its database. OpenFGA's connection URI is stored as an SSM
+`SecureString`, not in Git.
 
 From the repository root, initialize and preview the stack:
 
@@ -113,16 +113,14 @@ AWS_PROFILE=kloudlab aws eks list-pod-identity-associations \
 
 The RDS stack creates the PostgreSQL server, initial `kloudlab` database, and
 admin account. The `kloudlab-identity-database-bootstrap` Argo CD Application
-uses a short-lived Job to create separate `infisical` and `openfga` roles and
-databases. The Job reads its credentials from the Kubernetes Secret
-`kloudlab-identity-db-bootstrap`; that Secret is bootstrap input and must not be
-committed to Git.
+uses a short-lived Job to create the `openfga` role and database. The Job reads
+its credentials from `kloudlab-identity-db-bootstrap`; that Secret is
+bootstrap input and must not be committed to Git.
 
-Commit and push the identity database-bootstrap chart, Application, Valkey
-chart/Application, values, and AppProject changes. Argo CD discovers both leaf
-Applications; they remain manually synced. In one terminal, load the RDS
-endpoint and generate the dev service credentials. Keep this terminal open
-until the Infisical bootstrap Secret is created:
+Commit and push the identity database-bootstrap chart, Application, values,
+External Secrets Operator chart/Application, SSM resources, and AppProject
+changes. Argo CD discovers the leaf Applications; they remain manually synced.
+Load the RDS endpoint and generate the OpenFGA database password locally:
 
 ```bash
 cd ~/Documents/kloudlab/infra/stacks/database-identity
@@ -131,11 +129,7 @@ cd ~/Documents/kloudlab
 
 read -rsp 'RDS master password: ' RDS_MASTER_PASSWORD
 printf '\n'
-export INFISICAL_DB_PASSWORD="$(openssl rand -hex 32)"
 export OPENFGA_DB_PASSWORD="$(openssl rand -hex 32)"
-export VALKEY_PASSWORD="$(openssl rand -hex 32)"
-export INFISICAL_ENCRYPTION_KEY="$(openssl rand -hex 16)"
-export INFISICAL_AUTH_SECRET="$(openssl rand -base64 32)"
 export PGPORT=5432 PGUSER=kloudlab_admin PGDATABASE=kloudlab
 export PGPASSWORD="$RDS_MASTER_PASSWORD"
 
@@ -155,67 +149,17 @@ items = [
     secret("kloudlab-identity-db-bootstrap", {
         k: os.environ[k] for k in (
             "PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE",
-            "INFISICAL_DB_PASSWORD", "OPENFGA_DB_PASSWORD",
+            "OPENFGA_DB_PASSWORD",
         )
     }),
-    secret("kloudlab-valkey-auth", {"default": os.environ["VALKEY_PASSWORD"]}),
 ]
 print(json.dumps({"apiVersion": "v1", "kind": "List", "items": items}))
 PY
 unset RDS_MASTER_PASSWORD PGPASSWORD
 ```
 
-In Argo CD, sync `kloudlab-valkey` and
-`kloudlab-identity-database-bootstrap`. Confirm the Valkey pod is Ready and the
-database bootstrap Job completed successfully before continuing. The Job
-creates each app role as the owner of only its own database and removes the
-default public `CONNECT` access from those two databases.
-
-After Valkey is ready, check its Service name:
-
-```bash
-kubectl --context kloudlab-identity -n kloudlab-identity get service
-```
-
-Set `VALKEY_HOST` to the Service name shown above (without the namespace), then
-create Infisical's initial Secret. Use `SITE_URL=http://localhost:8080` until
-the Infisical HTTPS hostname is configured; port-forward its Service when
-opening the UI locally.
-
-```bash
-export VALKEY_HOST=kloudlab-valkey
-export SITE_URL=http://localhost:8080
-
-python3 - <<'PY' | kubectl --context kloudlab-identity -n kloudlab-identity apply -f -
-import base64, json, os
-
-values = {
-    "DB_CONNECTION_URI": (
-        f"postgresql://infisical:{os.environ['INFISICAL_DB_PASSWORD']}@"
-        f"{os.environ['PGHOST']}:5432/infisical?sslmode=require"
-    ),
-    "REDIS_URL": (
-        f"redis://default:{os.environ['VALKEY_PASSWORD']}@"
-        f"{os.environ['VALKEY_HOST']}.kloudlab-identity.svc.cluster.local:6379"
-    ),
-    "ENCRYPTION_KEY": os.environ["INFISICAL_ENCRYPTION_KEY"],
-    "AUTH_SECRET": os.environ["INFISICAL_AUTH_SECRET"],
-    "SITE_URL": os.environ["SITE_URL"],
-}
-secret = {
-    "apiVersion": "v1",
-    "kind": "Secret",
-    "metadata": {"name": "infisical-secrets", "namespace": "kloudlab-identity"},
-    "type": "Opaque",
-    "data": {k: base64.b64encode(v.encode()).decode() for k, v in values.items()},
-}
-print(json.dumps(secret))
-PY
-```
-
-Once that Secret exists, sync `kloudlab-infisical-server`.
-
-After Infisical is up, store the OpenFGA database password and preshared auth
-key in Infisical and let the Secrets Operator create `kloudlab-openfga-auth`
-and `kloudlab-openfga-datastore`. Then sync the `openfga` Application. Do not
-put any of these credentials in the Git repository.
+In Argo CD, sync `kloudlab-identity-database-bootstrap` and confirm its Job
+completed successfully. It creates the OpenFGA role as owner of the OpenFGA
+database and removes default public `CONNECT` access. Create the SSM parameters
+and sync ESO, the parameter-store Application, then OpenFGA as shown in
+`docs/runbooks/openfga-helm.md`.

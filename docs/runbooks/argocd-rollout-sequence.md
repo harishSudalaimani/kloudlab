@@ -17,7 +17,7 @@ For each cluster, complete these steps before moving to the next:
 Use this order:
 
 1. **Management:** management platform services as needed.
-2. **Identity:** data services and Infisical prerequisites, Infisical,
+2. **Identity:** PostgreSQL bootstrap, SSM and External Secrets Operator,
    OpenFGA, and telemetry agents.
 3. **App:** kgateway and its prerequisites, application workloads, and
    telemetry agents.

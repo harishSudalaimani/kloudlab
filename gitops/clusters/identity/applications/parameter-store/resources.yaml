@@ -1,0 +1,49 @@
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: kloudlab-ssm-parameter-store
+  namespace: kloudlab-identity
+spec:
+  provider:
+    aws:
+      service: ParameterStore
+      region: ap-south-1
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: kloudlab-openfga-auth
+  namespace: kloudlab-identity
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: kloudlab-ssm-parameter-store
+    kind: SecretStore
+  target:
+    name: kloudlab-openfga-auth
+    creationPolicy: Owner
+  data:
+    - secretKey: keys
+      remoteRef:
+        key: /kloudlab/dev/identity/openfga/auth-token
+    - secretKey: token
+      remoteRef:
+        key: /kloudlab/dev/identity/openfga/auth-token
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: kloudlab-openfga-datastore
+  namespace: kloudlab-identity
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: kloudlab-ssm-parameter-store
+    kind: SecretStore
+  target:
+    name: kloudlab-openfga-datastore
+    creationPolicy: Owner
+  data:
+    - secretKey: uri
+      remoteRef:
+        key: /kloudlab/dev/identity/openfga/datastore-uri

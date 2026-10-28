@@ -1,0 +1,15 @@
+external-secrets:
+  replicaCount: 2
+  leaderElect: true
+  scopedNamespace: kloudlab-identity
+  scopedRBAC: true
+  installCRDs: true
+  serviceAccount:
+    create: true
+    name: external-secrets
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      memory: 256Mi

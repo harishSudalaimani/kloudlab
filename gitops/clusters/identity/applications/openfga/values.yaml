@@ -18,12 +18,12 @@ openfga:
   authn:
     method: preshared
     preshared:
-      # Infisical syncs this secret with the `keys` key.
+      # External Secrets Operator syncs the `keys` value from SSM.
       keysSecret: kloudlab-openfga-auth
 
   datastore:
     engine: postgres
-    # Infisical syncs the private RDS connection URI into this secret.
+    # External Secrets Operator syncs the private RDS connection URI from SSM.
     uriSecret: kloudlab-openfga-datastore
     applyMigrations: true
     waitForMigrations: true
