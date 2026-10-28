@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: 481665121849.dkr.ecr.ap-south-1.amazonaws.com/kloudlab-api:319b992
+          image: 481665121849.dkr.ecr.ap-south-1.amazonaws.com/kloudlab-api:d6bbcad
           imagePullPolicy: Always
           ports:
             - name: http
