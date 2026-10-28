@@ -130,6 +130,13 @@ func Run(ctx *pulumi.Context, workload string) error {
 		return err
 	}
 	ctx.Export("loadBalancerControllerRoleArn", lbcRoleArn)
+	if workload == "app" {
+		// Karpenter only on the app cluster (docs: eks-addons)
+		if err := kloudiam.NewKarpenterAccess(ctx, clusterName, pulumiTags,
+			pulumi.DependsOn([]pulumi.Resource{cluster})); err != nil {
+			return err
+		}
+	}
 	if workload != "management" {
 		role, err := createArgoDeployerRole(ctx, workload, clusterName, pulumiTags, cluster)
 		if err != nil {

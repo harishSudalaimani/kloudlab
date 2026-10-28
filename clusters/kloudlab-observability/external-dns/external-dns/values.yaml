@@ -25,3 +25,6 @@ txtOwnerId: kloudlab-observability
 # external-dns.alpha.kubernetes.io/cloudflare-proxied: "false".
 extraArgs:
   - --cloudflare-proxied
+
+# required by the chart schema; upsert-only never deletes records
+policy: upsert-only

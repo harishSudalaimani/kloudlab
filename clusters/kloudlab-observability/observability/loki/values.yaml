@@ -50,5 +50,3 @@ backend:
 gateway:
   enabled: true
 
-minio:
-  enabled: false

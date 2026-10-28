@@ -162,6 +162,22 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   `ghcr-pull` (dockerconfigjson for ghcr.io, token with
   `read:packages`).
 
+- Karpenter on app: Pulumi `infra/components/iam/karpenter.go`
+  (queue `kloudlab-app-karpenter`, node role
+  `kloudlab-app-karpenter-node`, controller role with Pod Identity);
+  GitOps `clusters/kloudlab-app/kube-system/karpenter` (chart 1.8.1,
+  check latest) and `karpenter-nodepool` (AL2023, spot + on-demand,
+  t/m/c medium-xlarge, max 16 vCPU). Controller IAM is POC-broad;
+  tighten to the upstream conditions.
+
+- `root` syncs with prune off, so deleting a file under `argocd/apps/`
+  leaves its object in the cluster: delete it by hand (the old
+  `charts` and `manifests` ApplicationSets were removed with
+  `--cascade=orphan` so `services` adopts their Applications).
+- Tempo (`tempo-distributed` 3.17.0) does not render:
+  `ingest.kafka.address is required when blockBuilder` is enabled.
+  Give it a Kafka address or turn the block builder off in its values.
+
 ## Gaps found while migrating
 
 Unchecked against the real charts (no render was run). Gaps:

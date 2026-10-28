@@ -37,6 +37,7 @@ spec:
     - https://kubernetes-sigs.github.io/external-dns/
     - https://open-telemetry.github.io/opentelemetry-helm-charts
     - cr.kgateway.dev/kgateway-dev/charts
+    - public.ecr.aws/karpenter
   destinations:
     - name: kloudlab-app
       namespace: "*"

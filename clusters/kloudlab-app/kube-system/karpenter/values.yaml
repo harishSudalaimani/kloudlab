@@ -1,0 +1,21 @@
+# AWS access through EKS Pod Identity (Pulumi: kloudlab-app-karpenter-
+# controller, service account kube-system/karpenter).
+serviceAccount:
+  name: karpenter
+
+settings:
+  clusterName: kloudlab-app
+  interruptionQueue: kloudlab-app-karpenter
+
+# Two replicas on the managed baseline nodes; the chart's default
+# affinity keeps them off nodes Karpenter itself launches.
+replicas: 2
+
+controller:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
