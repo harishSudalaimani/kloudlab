@@ -14,17 +14,14 @@ so here.
 
 ## Frontend playground
 
-For an account without a saved local draft, the playground starts with an
-editable end-to-end view of KloudLab's GitHub CI, API/frontend image builds,
-ECR publishing, GitOps tag commit and Argo CD rollout; Pulumi-managed VPCs,
-peering, EKS and IAM; Cloudflare DNS and DNS-01 TLS; all three EKS clusters,
-application services, and the observability pipeline. It distinguishes the
-versioned, KMS-encrypted Pulumi state bucket from Loki/Tempo S3 storage, and
-shows the KloudLab API and OpenFGA PostgreSQL links. Earlier 12-component and
-55-component starter drafts upgrade on open, carrying over component settings;
-the full starter also retains node positions. Its grouping panels render behind
-the components, and its seeded connections pass validation. Structurally edited
-drafts remain as saved. **New architecture** starts with a blank canvas.
+For an account without a saved local draft, the playground starts with a
+compact, editable overview: GitHub CI and ECR image publishing; Pulumi-managed
+VPCs and EKS; Argo CD across the three clusters; the KloudLab API, frontend,
+OpenFGA and their databases; and the OpenTelemetry, Prometheus, Loki, Tempo and
+Grafana path. The canvas has no background grouping panels. Earlier 12- and
+55-component starter drafts upgrade on open, carrying over component settings
+and using the compact layout. Structurally edited drafts remain as saved.
+**New architecture** starts with a blank canvas.
 
 ## Clusters (ap-south-1, EKS 1.36)
 
