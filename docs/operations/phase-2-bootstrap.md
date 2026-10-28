@@ -2,8 +2,10 @@
 
 This runbook prepares the AWS network foundation. The bootstrap-state S3/KMS
 resources have already been created and the stack migrated to the DIY S3
-backend. The four network stacks remain unapplied. `pulumi up` is an operator
-step after account, CIDR, cost, and deployment approval.
+backend. The three active network stack definitions and connectivity stack
+are in the repository; check the selected Pulumi backend for their current
+state before initializing or updating them. `pulumi up` is an operator step
+after account, CIDR, cost, and deployment approval.
 
 ## Resources implemented
 
@@ -13,24 +15,24 @@ step after account, CIDR, cost, and deployment approval.
 - `github-oidc` creates GitHub's OIDC provider and an IAM role restricted to
   exact `owner/repo` branch subjects. The permissions policy is required input
   so the role cannot silently inherit broad administrator access.
-- `network-app`, `network-identity`, `network-observability`, and
-  `network-management` create DNS-enabled VPCs across two AZs, with two public
-  and two private subnets, explicit route tables, configurable NAT, and a
+- `network-app`, `network-observability`, and `network-management` create
+  DNS-enabled VPCs across two AZs, with two public and two private subnets,
+  explicit route tables, configurable NAT, and a
   private-subnet S3 gateway endpoint.
-- `network-connectivity` creates six direct same-account VPC peerings, enables
-  DNS resolution across each connection, and adds private routes between all
-  four VPCs. VPC peering is direct and non-transitive.
+- `network-connectivity` creates three direct same-account VPC peerings,
+  enables DNS resolution across each connection, and adds private routes
+  between all three VPCs. VPC peering is direct and non-transitive.
 - Transit Gateway and Network Firewall are not part of the initial rollout.
 - The reusable security-group helper creates explicit, separately managed
   IPv4 rules. No service traffic rules are guessed before the EKS and workload
   ports are selected.
 
-The sample VPC CIDRs are `10.10.0.0/16` (app), `10.20.0.0/16` (identity),
-`10.30.0.0/16` (observability), and `10.40.0.0/16` (management).
-Each network stack checks its CIDR against the other three reserved KloudLab
-VPC ranges and any configured existing/connected CIDRs, rejecting overlap.
-These values remain proposals until checked against existing VPCs, VPNs, and
-on-premises ranges so future routing remains possible.
+The sample VPC CIDRs are `10.10.0.0/16` (app), `10.30.0.0/16`
+(observability), and `10.40.0.0/16` (management).
+The retired identity range, `10.20.0.0/16`, remains reserved in the network
+stack configs to avoid reusing it. Each stack checks its CIDR against the
+configured reserved and connected CIDRs, rejecting overlap. Check the sample
+ranges against existing VPCs, VPNs, and on-premises ranges before deployment.
 The /16 is split into four /20 subnets, one public and one private in each of
 the two configured AZs. Confirm the selected subnet size against expected EKS
 node and pod counts; AWS VPC CNI pod addresses consume subnet addresses.
@@ -55,7 +57,7 @@ or CloudFront resources.
 
 Each network stack defaults `cidrInventoryReviewed` to `false`, which blocks
 the program until the operator confirms the existing-network CIDR inventory.
-Set it to `true` in all four stack configs only after the ranges have been
+Set it to `true` in all three stack configs only after the ranges have been
 checked.
 
 The state bucket stack must be bootstrapped first from a protected local state
@@ -119,8 +121,8 @@ approved repository branch. Set a GitHub Actions environment or repository
 variable `AWS_NETWORK_PREVIEW_ROLE_ARN` to the resulting role ARN, and set
 `PULUMI_BACKEND_URL` to `s3://<globally-unique-bucket-name>`. The
 `network-preview.yml` workflow is manually dispatched from `main` and uses
-only preview commands. Its default run previews the four VPC stacks. Set
-`include_connectivity` only after all four VPC stacks have been deployed so
+only preview commands. Its default run previews the three VPC stacks. Set
+`include_connectivity` only after all three VPC stacks have been deployed so
 the connectivity stack can read their outputs. Initialize each stack in the
 DIY backend before previewing it.
 
@@ -130,15 +132,14 @@ Initialize each stack in the S3 backend with the KMS secrets provider, then
 review and preview in this order:
 
 1. `kloudlab-network-app/dev`
-2. `kloudlab-network-identity/dev`
-3. `kloudlab-network-observability/dev`
-4. `kloudlab-network-management/dev`
-5. `kloudlab-network-connectivity/dev`
+2. `kloudlab-network-observability/dev`
+3. `kloudlab-network-management/dev`
+4. `kloudlab-network-connectivity/dev`
 
 The network stacks export VPC ID and CIDR, AZ order, public/private subnet IDs,
 route table IDs, and S3 endpoint ID. Connectivity consumes those outputs and
-creates six direct peerings plus routes in each private route table. This makes
-private IP routing possible, but does not expose `ClusterIP` services or open
+creates three direct peerings plus routes in each private route table. This
+makes private IP routing possible, but does not expose `ClusterIP` services or open
 security groups. Internal service endpoints, TLS, DNS names, and narrow
 security rules remain prerequisites for OpenFGA and OTel. EKS private API
 access must also be enabled and its control-plane security groups configured
@@ -170,13 +171,6 @@ pulumi preview
 # After reviewing the plan:
 pulumi up
 
-cd ../network-identity
-pulumi stack init dev --secrets-provider='awskms://alias/kloudlab-pulumi-state?region=ap-south-1'
-pulumi config set kloudlab-network:cidrInventoryReviewed true
-pulumi preview
-# After reviewing the plan:
-pulumi up
-
 cd ../network-observability
 pulumi stack init dev --secrets-provider='awskms://alias/kloudlab-pulumi-state?region=ap-south-1'
 pulumi config set kloudlab-network:cidrInventoryReviewed true
@@ -194,13 +188,13 @@ pulumi up
 cd ../network-connectivity
 pulumi stack init dev --secrets-provider='awskms://alias/kloudlab-pulumi-state?region=ap-south-1'
 pulumi preview
-# After reviewing all six peerings and route entries:
+# After reviewing all three peerings and route entries:
 pulumi up
 ```
 
 `pulumi stack init` is a one-time command for each stack; if a stack already
 exists, use `pulumi stack select dev` instead. Connectivity must be previewed
-after all four VPC stacks have been applied. The `up` operations create AWS
+after all three VPC stacks have been applied. The `up` operations create AWS
 resources and incur charges.
 
 ## Recovery notes

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       include_connectivity:
-        description: Preview connectivity after all four VPC stacks have been deployed
+        description: Preview connectivity after all three VPC stacks have been deployed
         required: false
         default: false
         type: boolean
@@ -28,8 +28,6 @@ jobs:
         include:
           - stack: app
             work-dir: infra/stacks/network-app
-          - stack: identity
-            work-dir: infra/stacks/network-identity
           - stack: observability
             work-dir: infra/stacks/network-observability
           - stack: management

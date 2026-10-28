@@ -93,9 +93,9 @@ function definition(
   return {
     typeId,
     version: '1.0.0',
-    availability: typeId === 'aws-vpc' || typeId === 'eks-cluster'
+    availability: typeId === 'aws-vpc' || typeId === 'eks-cluster' || typeId === 'amazon-ecr' || typeId === 'aws-vpc-peering'
       ? 'cloud-hosting'
-      : typeId === 'auth0'
+      : typeId === 'auth0' || typeId === 'cloudflare-dns'
         ? 'managed-service'
         : typeId === 'infisical'
           ? 'open-core'
@@ -163,7 +163,27 @@ const tool = (
   const gatewayTypes = ['envoy-gateway', 'traefik', 'kong', 'nginx', 'haproxy', 'envoy-proxy', 'apisix', 'caddy', 'contour']
   const databaseTypes = ['mysql', 'mariadb', 'valkey', 'clickhouse', 'cassandra', 'sqlite', 'tidb', 'influxdb', 'questdb', 'duckdb', 'druid', 'etcd', 'ferretdb', 'yugabytedb']
   const messagingTypes = ['nats', 'rabbitmq', 'kafka', 'pulsar', 'activemq-artemis', 'mosquitto', 'emqx']
-  const ports: ComponentPort[] = gatewayTypes.includes(typeId)
+  const ports: ComponentPort[] = typeId === 'argocd'
+    ? [
+        { id: 'repository', direction: 'input', connectionTypes: ['gitops-source'], allowedComponentTypes: ['github'] },
+        { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
+        { id: 'http', direction: 'input', connectionTypes: ['http-service'], allowedComponentTypes: ['kgateway'] },
+        { id: 'deployments', direction: 'output', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['kubernetes-workload', 'kgateway', 'postgresql', 'openfga', 'otel-collector', 'prometheus', 'loki', 'tempo', 'grafana', 'external-dns', 'cert-manager'] },
+      ]
+    : typeId === 'external-dns'
+      ? [
+          { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
+          { id: 'provider', direction: 'input', connectionTypes: ['dns-provider'], allowedComponentTypes: ['cloudflare-dns'] },
+          { id: 'records', direction: 'output', connectionTypes: ['dns-record'], allowedComponentTypes: ['kgateway'] },
+          { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
+        ]
+      : typeId === 'cert-manager'
+        ? [
+            { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
+            { id: 'certificate', direction: 'output', connectionTypes: ['tls-certificate'], allowedComponentTypes: ['kgateway'] },
+            { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
+          ]
+        : gatewayTypes.includes(typeId)
     ? [
         { id: 'route', direction: 'input' as const, connectionTypes: ['http-route'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-service'] },
         { id: 'service', direction: 'output' as const, connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-workload'] },
@@ -254,19 +274,23 @@ const additionalCatalog: ComponentDefinition[] = [
   ], 'https://www.pulumi.com/docs/'),
   openSourceTool('github', 'GitHub', 'Git repository and collaboration platform used by KloudLab.', 'Source Control', 'GH', [
     { id: 'repository', direction: 'output', connectionTypes: ['iac-source'], allowedComponentTypes: ['pulumi', 'github-actions'] },
+    { id: 'gitops', direction: 'output', connectionTypes: ['gitops-source'], allowedComponentTypes: ['argocd'] },
+    { id: 'gitops-update', direction: 'input', connectionTypes: ['gitops-update'], allowedComponentTypes: ['github-actions'] },
   ], 'https://docs.github.com/', 'managed-service'),
   openSourceTool('github-actions', 'GitHub Actions', 'Repository workflows that build, validate, and deploy KloudLab infrastructure.', 'CI/CD', 'GHA', [
     { id: 'repository', direction: 'input', connectionTypes: ['iac-source'], allowedComponentTypes: ['github'] },
     { id: 'oidc', direction: 'output', connectionTypes: ['oidc-token'], allowedComponentTypes: ['aws-iam-role'] },
+    { id: 'images', direction: 'output', connectionTypes: ['container-image'], allowedComponentTypes: ['amazon-ecr'] },
+    { id: 'gitops-update', direction: 'output', connectionTypes: ['gitops-update'], allowedComponentTypes: ['github'] },
   ], 'https://docs.github.com/actions', 'managed-service'),
   openSourceTool('aws-iam-role', 'AWS IAM role for GitHub OIDC', 'Short-lived AWS access for trusted GitHub Actions branches.', 'Security', 'IAM', [
     { id: 'trust', direction: 'input', connectionTypes: ['oidc-token'], allowedComponentTypes: ['github-actions'], required: true, multiple: false },
-    { id: 'identity', direction: 'output', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'identity', direction: 'output', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['pulumi-aws-provider', 'amazon-ecr'] },
   ], 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html', 'cloud-hosting'),
   openSourceTool('pulumi-aws-provider', 'Pulumi AWS Provider', 'Pulumi provider package used by KloudLab to provision AWS infrastructure.', 'Infrastructure', 'AWS', [
     { id: 'program', direction: 'input', connectionTypes: ['pulumi-program'], allowedComponentTypes: ['pulumi'], required: true, multiple: false },
     { id: 'identity', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
-    { id: 'resources', direction: 'output', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['aws-vpc', 'eks-cluster', 'aws-s3', 'aws-kms', 'aws-route53', 'aws-subnet', 'aws-security-group', 'aws-nat-gateway'] },
+    { id: 'resources', direction: 'output', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['aws-vpc', 'eks-cluster', 'aws-s3', 'aws-kms', 'aws-route53', 'aws-subnet', 'aws-security-group', 'aws-nat-gateway', 'aws-vpc-peering'] },
   ], 'https://www.pulumi.com/registry/packages/aws/'),
   openSourceTool('aws-s3', 'Amazon S3 bucket', 'Object storage used for encrypted, versioned Pulumi state.', 'Storage', 'S3', [
     { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
@@ -296,6 +320,27 @@ const additionalCatalog: ComponentDefinition[] = [
     { id: 'network', direction: 'input', connectionTypes: ['network'], allowedComponentTypes: ['aws-subnet'], required: true, multiple: false },
     { id: 'egress', direction: 'output', connectionTypes: ['network-egress'] },
   ], 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html', 'cloud-hosting'),
+  definition('amazon-ecr', 'Amazon ECR', 'Private container registry for KloudLab API and frontend images.', 'Artifact Registry', 'ECR', categoryAccent['Artifact Registry'], {
+    name,
+    region,
+  }, ['name', 'region'], [
+    { id: 'identity', direction: 'input', connectionTypes: ['cloud-identity'], allowedComponentTypes: ['aws-iam-role'] },
+    { id: 'push', direction: 'input', connectionTypes: ['container-image'], allowedComponentTypes: ['github-actions'] },
+    { id: 'image', direction: 'output', connectionTypes: ['container-image'], allowedComponentTypes: ['kubernetes-workload'] },
+  ], [], ['https://docs.aws.amazon.com/AmazonECR/latest/userguide/what-is-ecr.html']),
+  definition('cloudflare-dns', 'Cloudflare DNS', 'Public DNS provider for KloudLab hostnames and ExternalDNS records.', 'Networking', 'CF', categoryAccent.Networking, {
+    name,
+    zone: { type: 'string', title: 'DNS zone', pattern: '^[a-zA-Z0-9.-]+$' },
+  }, ['name', 'zone'], [
+    { id: 'provider', direction: 'output', connectionTypes: ['dns-provider'], allowedComponentTypes: ['external-dns'] },
+  ], [], ['https://developers.cloudflare.com/dns/']),
+  definition('aws-vpc-peering', 'AWS VPC peering mesh', 'Private connectivity between the management, app, and observability VPCs.', 'Networking', 'PEER', categoryAccent.Networking, {
+    name,
+  }, ['name'], [
+    { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
+    { id: 'networks', direction: 'input', connectionTypes: ['network'], allowedComponentTypes: ['aws-vpc'] },
+    { id: 'peering', direction: 'output', connectionTypes: ['vpc-peering'], allowedComponentTypes: ['eks-cluster'] },
+  ], [], ['https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html']),
 
   // Infrastructure, containers, delivery, and API routing.
   tool('ansible', 'Ansible', 'Agentless automation for operating systems, networks, and applications.', 'Infrastructure', 'ANS', 'automation', 'https://docs.ansible.com/'),
@@ -425,12 +470,13 @@ export const catalog: ComponentDefinition[] = [
   definition('eks-cluster', 'Amazon EKS', 'Managed Kubernetes control plane with private worker subnets.', 'Compute', 'EKS', '#447eb4', {
     name,
     region,
-    kubernetesVersion: { type: 'string', title: 'Kubernetes version', enum: ['1.34', '1.33', '1.32'] },
+    kubernetesVersion: { type: 'string', title: 'Kubernetes version', enum: ['1.36', '1.34', '1.33', '1.32'] },
     apiAccess: { type: 'string', title: 'API endpoint', enum: ['Private', 'Private and public'] },
     availabilityZones: { type: 'number', title: 'Availability zones', minimum: 1, maximum: 6 },
   }, ['name', 'region', 'kubernetesVersion', 'apiAccess', 'availabilityZones'], [
     { id: 'provisioning', direction: 'input', connectionTypes: ['cloud-resource'], allowedComponentTypes: ['pulumi-aws-provider'] },
     { id: 'network', direction: 'input', connectionTypes: ['network'], required: true, multiple: false },
+    { id: 'peering', direction: 'input', connectionTypes: ['vpc-peering'], allowedComponentTypes: ['aws-vpc-peering'] },
     { id: 'workloads', direction: 'output', connectionTypes: ['workload'] },
     { id: 'telemetry', direction: 'output', connectionTypes: ['telemetry'] },
   ], [
@@ -445,6 +491,7 @@ export const catalog: ComponentDefinition[] = [
   }, ['name', 'namespace', 'replicas', 'exposure'], [
     { id: 'cluster', direction: 'input', connectionTypes: ['workload'], required: true, multiple: false },
     { id: 'http', direction: 'input', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kgateway', 'envoy-gateway', 'traefik', 'kong', 'nginx', 'haproxy', 'envoy-proxy', 'apisix', 'caddy', 'contour'], multiple: false },
+    { id: 'image', direction: 'input', connectionTypes: ['container-image'], allowedComponentTypes: ['amazon-ecr'] },
     { id: 'oidc', direction: 'input', connectionTypes: ['oidc'] },
     { id: 'identity', direction: 'input', connectionTypes: ['identity-decision'] },
     { id: 'database', direction: 'input', connectionTypes: ['database'], protocols: ['TCP'] },
@@ -483,7 +530,10 @@ export const catalog: ComponentDefinition[] = [
   }, ['name', 'hostname', 'exposure', 'tls'], [
     { id: 'cluster', direction: 'input', connectionTypes: ['workload'], required: true, multiple: false },
     { id: 'route', direction: 'input', connectionTypes: ['http-route'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-service'] },
-    { id: 'service', direction: 'output', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-workload'] },
+    { id: 'dns', direction: 'input', connectionTypes: ['dns-record'], allowedComponentTypes: ['external-dns'] },
+    { id: 'certificate', direction: 'input', connectionTypes: ['tls-certificate'], allowedComponentTypes: ['cert-manager'] },
+    { id: 'service', direction: 'output', connectionTypes: ['http-service'], protocols: ['HTTP', 'HTTPS'], allowedComponentTypes: ['kubernetes-workload', 'argocd', 'grafana'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [
     { id: 'gateway.tls', scope: 'configuration', severity: 'error', message: 'Public routes must use TLS.' },
   ], ['https://gateway-api.sigs.k8s.io/']),
@@ -494,8 +544,10 @@ export const catalog: ComponentDefinition[] = [
     exposure: { type: 'string', title: 'Network access', enum: ['Private only', 'Public'] },
     backupDays: { type: 'number', title: 'Backup retention (days)', minimum: 1, maximum: 35 },
   }, ['name', 'engine', 'exposure', 'backupDays'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'client', direction: 'input', connectionTypes: ['database-client'], protocols: ['TCP'], allowedComponentTypes: ['kubernetes-workload'] },
     { id: 'database', direction: 'output', connectionTypes: ['database'], protocols: ['TCP'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [
     { id: 'database.private', scope: 'configuration', severity: 'warning', message: 'This database is configured for public network access.', description: 'A public database endpoint increases the chance of unauthorized access and data exposure.', options: ['Change network access to Private only.', 'If public access is required, restrict inbound CIDRs and require TLS and strong authentication.'] },
     { id: 'database.backup', scope: 'configuration', severity: 'warning', message: 'Database backup retention is under seven days.', description: 'A short retention window may not be enough to recover from delayed discovery or accidental deletion.', options: ['Increase backup retention to at least 7 days.', 'Use 14–35 days when recovery requirements or compliance needs justify it.'] },
@@ -516,9 +568,11 @@ export const catalog: ComponentDefinition[] = [
     endpoint: { type: 'string', title: 'Endpoint', enum: ['Private service'] },
     modelVersion: { type: 'string', title: 'Authorization model', pattern: '^.{1,80}$' },
   }, ['name', 'datastore', 'endpoint', 'modelVersion'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'database', direction: 'input', connectionTypes: ['database'], protocols: ['TCP'], required: true, multiple: false },
     { id: 'check', direction: 'input', connectionTypes: ['authorization-check'], required: true },
     { id: 'decision', direction: 'output', connectionTypes: ['identity-decision'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [
     { id: 'openfga.private', scope: 'configuration', severity: 'error', message: 'Keep OpenFGA on a private endpoint.' },
   ], ['https://openfga.dev/docs']),
@@ -529,10 +583,13 @@ export const catalog: ComponentDefinition[] = [
     protocol: { type: 'string', title: 'OTLP transport', enum: ['gRPC', 'HTTP'] },
     authentication: { type: 'string', title: 'Receiver access', enum: ['Authenticated', 'Private network'] },
   }, ['name', 'mode', 'protocol', 'authentication'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'telemetry', direction: 'input', connectionTypes: ['telemetry'], required: true },
     { id: 'metrics', direction: 'output', connectionTypes: ['metrics'] },
     { id: 'logs', direction: 'output', connectionTypes: ['logs'] },
     { id: 'traces', direction: 'output', connectionTypes: ['traces'] },
+    { id: 'forward', direction: 'output', connectionTypes: ['telemetry'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [
     { id: 'otel.auth', scope: 'configuration', severity: 'warning', message: 'Collector receivers do not require authentication.', description: 'Untrusted clients could send telemetry, consume resources, or inject misleading data.', options: ['Require authenticated receiver access.', 'Keep the receiver on a private network and restrict which workloads can reach it.'] },
   ], ['https://opentelemetry.io/docs/collector/']),
@@ -542,8 +599,10 @@ export const catalog: ComponentDefinition[] = [
     retention: { type: 'string', title: 'Retention', enum: ['7 days', '14 days', '30 days', '90 days'] },
     storage: { type: 'string', title: 'Storage', enum: ['Persistent volume', 'Object storage'] },
   }, ['name', 'retention', 'storage'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'metrics', direction: 'input', connectionTypes: ['metrics'], required: true },
     { id: 'dashboard', direction: 'output', connectionTypes: ['observability-backend'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [], ['https://prometheus.io/docs/introduction/overview/']),
 
   definition('loki', 'Loki', 'Log aggregation with label-based indexing.', 'Observability', 'L', '#7b69a5', {
@@ -551,8 +610,11 @@ export const catalog: ComponentDefinition[] = [
     retention: { type: 'string', title: 'Retention', enum: ['7 days', '14 days', '30 days', '90 days'] },
     storage: { type: 'string', title: 'Storage', enum: ['Object storage'] },
   }, ['name', 'retention', 'storage'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'logs', direction: 'input', connectionTypes: ['logs'], required: true },
+    { id: 'storage', direction: 'input', connectionTypes: ['object-storage'], allowedComponentTypes: ['aws-s3'] },
     { id: 'dashboard', direction: 'output', connectionTypes: ['observability-backend'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [], ['https://grafana.com/docs/loki/latest/']),
 
   definition('tempo', 'Tempo', 'Distributed tracing backend for OpenTelemetry traces.', 'Observability', 'T', '#4d8290', {
@@ -560,8 +622,11 @@ export const catalog: ComponentDefinition[] = [
     retention: { type: 'string', title: 'Retention', enum: ['7 days', '14 days', '30 days', '90 days'] },
     storage: { type: 'string', title: 'Storage', enum: ['Object storage'] },
   }, ['name', 'retention', 'storage'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'traces', direction: 'input', connectionTypes: ['traces'], required: true },
+    { id: 'storage', direction: 'input', connectionTypes: ['object-storage'], allowedComponentTypes: ['aws-s3'] },
     { id: 'dashboard', direction: 'output', connectionTypes: ['observability-backend'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [], ['https://grafana.com/docs/tempo/latest/']),
 
   definition('grafana', 'Grafana', 'Dashboards and alerts across approved observability sources.', 'Observability', 'G', '#d18c50', {
@@ -569,7 +634,10 @@ export const catalog: ComponentDefinition[] = [
     access: { type: 'string', title: 'Access', enum: ['Private', 'Restricted'] },
     authentication: { type: 'string', title: 'Authentication', enum: ['OIDC'] },
   }, ['name', 'access', 'authentication'], [
+    { id: 'cluster', direction: 'input', connectionTypes: ['workload'], allowedComponentTypes: ['eks-cluster'] },
     { id: 'sources', direction: 'input', connectionTypes: ['observability-backend'], required: true },
+    { id: 'http', direction: 'input', connectionTypes: ['http-service'], allowedComponentTypes: ['kgateway'] },
+    { id: 'delivery', direction: 'input', connectionTypes: ['gitops-deployment'], allowedComponentTypes: ['argocd'] },
   ], [
     { id: 'grafana.restricted', scope: 'configuration', severity: 'error', message: 'Grafana must not be publicly unauthenticated.' },
   ], ['https://grafana.com/docs/grafana/latest/']),

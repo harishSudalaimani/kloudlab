@@ -10,6 +10,7 @@ import {
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
+  ViewportPortal,
   useReactFlow,
   type Connection,
   type Edge,
@@ -33,6 +34,8 @@ import {
   createEmptyCanvas,
   normalizeCanvasDocument,
   createStarterCanvas,
+  STARTER_CANVAS_ID,
+  STARTER_CANVAS_ZONES,
   isCanvasDocument,
   makeId,
   validateCanvas,
@@ -760,6 +763,18 @@ function AppContent({ theme, accessToken, apiConfigured, subject, accountName, o
               panOnDrag={canvasPanButtons}
               proOptions={flowProOptions}
             >
+              {document.id === STARTER_CANVAS_ID && nodes.length > 0 && <ViewportPortal>
+                <div className="starter-architecture-zones" aria-hidden="true">
+                  {STARTER_CANVAS_ZONES.map((zone) => <div
+                    key={zone.id}
+                    className="starter-architecture-zone"
+                    style={{ left: zone.x, top: zone.y, width: zone.width, height: zone.height, '--zone-accent': zone.accent } as CSSProperties}
+                  >
+                    <strong>{zone.title}</strong>
+                    <span>{zone.description}</span>
+                  </div>)}
+                </div>
+              </ViewportPortal>}
               <Background variant={BackgroundVariant.Lines} gap={28} size={1} color={theme === 'dark' ? '#293a49' : '#d6e2d9'} />
               <Controls position="bottom-right" showInteractive={false} showFitView={false}>
                 <ControlButton className="react-flow__controls-fullscreen" title={canvasFullscreen ? 'Exit full screen' : 'Full screen canvas'} aria-label={canvasFullscreen ? 'Exit full screen' : 'Full screen canvas'} onClick={toggleCanvasFullscreen}>

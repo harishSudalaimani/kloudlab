@@ -9,8 +9,6 @@ config:
     value: dev
   kloudlab-connectivity:appNetworkStack:
     value: organization/kloudlab-network-app/dev
-  kloudlab-connectivity:identityNetworkStack:
-    value: organization/kloudlab-network-identity/dev
   kloudlab-connectivity:observabilityNetworkStack:
     value: organization/kloudlab-network-observability/dev
   kloudlab-connectivity:managementNetworkStack:
@@ -20,4 +18,4 @@ config:
   kloudlab-connectivity:protectConnections:
     value: true
   kloudlab-connectivity:includeIdentityNetwork:
-    value: true
+    value: false

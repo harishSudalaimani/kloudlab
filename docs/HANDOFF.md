@@ -12,6 +12,14 @@ security, hosted at `kloudlab.in` (DNS on Cloudflare). POC sizing,
 but no shortcuts that a reviewer would call insecure without saying
 so here.
 
+## Frontend playground
+
+For an account without a saved local draft, the playground starts with an
+editable overview of KloudLab's GitHub workflows, Pulumi infrastructure,
+three EKS clusters, application services, DNS and TLS, and observability
+pipeline. Existing local drafts still take precedence; **New architecture**
+starts with a blank canvas.
+
 ## Clusters (ap-south-1, EKS 1.36)
 
 | Cluster | Runs |
@@ -28,6 +36,11 @@ Infrastructure (VPCs, peering, EKS, IAM) is Pulumi Go under `infra/`
 (state in `s3://kloudlab-pulumi-state`). Kubernetes workloads are
 GitOps only: never `helm install` or `kubectl apply` by hand, except
 the one bootstrap object below and Secrets.
+
+`.github/workflows/network-preview.yml` is a manually dispatched Pulumi
+preview for the app, observability, and management VPCs. Its optional
+connectivity preview assumes all three network stacks exist; it never applies
+changes. The connectivity config excludes the retired identity VPC.
 
 ## GitOps flow
 
@@ -62,8 +75,10 @@ in an order group so RollingSync does not leave it unsynced.
 - Pin chart versions in `app.yaml`; check the upstream release page
   before choosing one.
 
-The old `gitops/` and `charts/` folders are being migrated into this
-layout, then removed.
+The current cluster services are declared in this layout. Legacy
+`gitops/` and `charts/` content remains in the repository for cleanup;
+the presence of those folders does not make them the active source of
+the current service Applications.
 
 ## Secrets
 
@@ -92,18 +107,33 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 - Argo CD reaches app and observability through IAM deployer roles
   (`kloudlab-<cluster>-argocd-deployer`), registered as cluster
   secrets `cluster-kloudlab-app` and `cluster-kloudlab-observability`.
+- The application-controller ServiceAccount in `argocd` on management
+  receives `kloudlab-management-argocd-controller` through EKS Pod
+  Identity. That role can assume only the app and observability deployer
+  roles and call `eks:DescribeCluster` for those two clusters. Each target
+  deployer role trusts that management role and is registered as an EKS
+  access entry with `AmazonEKSClusterAdminPolicy` at cluster scope.
+- The remote cluster Secrets are live Kubernetes Secrets, not manifests
+  in this repo. Their AWS auth config should name the target cluster and
+  deployer role; record/recreate them during management-cluster recovery.
+  The management cluster's own Secret is declarative in
+  `argocd/apps/clusters.yaml` and uses the in-cluster ServiceAccount.
 
 ## Live state (Wed 2026-10-28)
 
 - All 3 clusters ACTIVE, nodes Ready; add-ons: vpc-cni, coredns,
   kube-proxy, metrics-server, pod identity agent, EBS CSI.
-- Argo CD on management (installed with Helm by hand). `root` applied
-  from commit 07bd3aa (two ApplicationSets `charts`, `manifests`).
+- Argo CD on management (installed with Helm by hand). The recorded live
+  bootstrap was from commit 07bd3aa, which had two ApplicationSets
+  (`charts`, `manifests`). The current `main` tree has the unified
+  `services` ApplicationSet. Since `root` has pruning disabled, verify
+  whether the old ApplicationSets still exist in the live cluster and
+  remove them manually if they do; do not assume Git deletion pruned them.
 - OpenFGA on app: Postgres and the `openfga-migrate` Job run, but the
   OpenFGA pods' `wait-for-migration` init container uses the default
-  ServiceAccount and gets Forbidden reading that Job. A local GitOps fix
-  adds a pre-created `openfga` ServiceAccount and narrowly scoped Role;
-  it must be pushed before Argo can apply it.
+  ServiceAccount and gets Forbidden reading that Job. The current Git
+  target includes an `openfga` ServiceAccount and narrowly scoped Role;
+  confirm that Argo has synced the fix and that the Application is Healthy.
 - Public hostnames (kgateway Gateway per cluster, one cert-manager
   DNS-01 certificate per Gateway, records by external-dns, all via
   Cloudflare):
@@ -207,17 +237,14 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
    `external-dns` namespaces on all three clusters; OpenFGA
    Secrets; layout committed and pushed (07bd3aa); root applied.
 2. Fix OpenFGA until `openfga-kloudlab-app` is Healthy.
-3. Next commit, all in one: replace `argocd/apps/charts.yaml` and
-   `manifests.yaml` by `services.yaml` (delete both in the same
-   commit, else two ApplicationSets make the same Application),
-   `sync:` and `type:` in every `app.yaml`, the migrated services
-   below, this file.
-4. Migrated services (`sync: manual`, synced later by hand): Argo CD
-   itself, cert-manager (+ issuer, certificate), kgateway (CRDs,
-   controller, gateways), AWS Load Balancer Controller, external-dns
-   (Cloudflare), OpenTelemetry, Prometheus, Loki, Tempo, Grafana.
-   Then remove `charts/` and `gitops/`.
-5. The KloudLab API and frontend, then Karpenter on app.
+3. Verify the live `root` has picked up the current `services.yaml`
+   ApplicationSet. Remove any surviving old `charts` and `manifests`
+   ApplicationSets by hand because root pruning is disabled; check that
+   no duplicate Applications remain.
+4. Compare the current `clusters/` desired state against live health,
+   especially the known OpenFGA, Tempo, OTel, and pruning follow-ups below.
+5. Remove obsolete `charts/` and `gitops/` content after confirming no
+   active Application still references it.
 6. Update ADRs and runbooks to three clusters.
 
 ## End to end (commit after a59503f)
