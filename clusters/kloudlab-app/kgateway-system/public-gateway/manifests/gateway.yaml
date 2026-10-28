@@ -23,7 +23,8 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - kind: Secret
+          - group: ""
+            kind: Secret
             name: public-kgateway-tls
       allowedRoutes:
         namespaces:
@@ -38,7 +39,8 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - kind: Secret
+          - group: ""
+            kind: Secret
             name: public-kgateway-tls
       allowedRoutes:
         namespaces:
@@ -53,7 +55,8 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - kind: Secret
+          - group: ""
+            kind: Secret
             name: public-kgateway-tls
       allowedRoutes:
         namespaces:

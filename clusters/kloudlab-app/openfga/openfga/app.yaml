@@ -1,3 +1,4 @@
+order: 4
 type: chart
 sync: auto
 repo: https://openfga.github.io/helm-charts

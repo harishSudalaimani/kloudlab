@@ -101,7 +101,7 @@ config:
     pipelines:
       logs:
         receivers:
-          - k8s_objects
+          - k8sobjects
         exporters:
           - otlp
         processors:

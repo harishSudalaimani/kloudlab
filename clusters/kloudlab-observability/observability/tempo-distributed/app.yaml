@@ -1,4 +1,4 @@
-# order: 3
+order: 3
 type: chart
 sync: auto
 repo: https://grafana-community.github.io/helm-charts

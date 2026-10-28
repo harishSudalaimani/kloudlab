@@ -45,9 +45,10 @@ clusters/<cluster>/<namespace>/<service>/
 
 `app.yaml` fields: `type: chart` (with `repo`, `chart`, `version`) or
 `type: manifests`; `sync: auto` (Argo syncs) or `sync: manual` (Argo
-shows the diff only). Migrated services start `manual`: review the
-diff, sync by hand in the order of the `# order: N` comment, then set
-`auto`.
+shows the diff only); and numeric `order`. `services` labels generated
+Applications with `order` and uses ApplicationSet `RollingSync`: each
+order group syncs after the previous group is Healthy. Keep every app
+in an order group so RollingSync does not leave it unsynced.
 
 - One folder = one Argo Application named `<service>-<cluster>`,
   project `<cluster>`, deployed to cluster `<cluster>`, namespace
@@ -71,7 +72,7 @@ by hand (random values, never printed), referenced by name:
 
 | Secret | Namespace, cluster | Keys | Used by |
 | --- | --- | --- | --- |
-| `cloudflare-dns-api-token` | cert-manager, external-dns on management and app | `api-token` | DNS-01, external-dns |
+| `cloudflare-dns-api-token` | `cert-manager` and `external-dns` namespaces on all three clusters | `api-token` | DNS-01, external-dns |
 | `openfga-auth` | openfga on app | `keys` | OpenFGA preshared auth, API token |
 | `openfga-postgres` | openfga on app | `password`, `uri` | Postgres, OpenFGA datastore |
 
@@ -113,11 +114,31 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
     balancer)
   Prometheus, Loki, Tempo, OpenTelemetry and OpenFGA stay internal.
 - kgateway runs on app (`kgateway-system`), installed by hand.
-- Nothing yet on observability.
+- Management, app and observability currently each have a Gateway and
+  certificate application. Their TLS certificate issuance is blocked;
+  see the current blockers below.
+
+## Current blockers (2026-10-28)
+
+- Gateway certificates are not Ready. The `argocd` Gateway reports
+  `ResolvedRefs=False`; its Certificate is waiting for the missing TLS
+  Secret. The Grafana and public Gateways also report unresolved TLS
+  references. Check each ClusterIssuer, CertificateRequest, Order and
+  Challenge, plus the Cloudflare token Secret in `cert-manager`, before
+  changing ACME configuration. Secret values stay out of Git.
+- Application rollout order is now an `order` field consumed by
+  ApplicationSet `RollingSync`; the old `# order` comments were ignored.
+- The three cluster-collector pipelines now reference the chart preset's
+  `k8sobjects` receiver. The chart preset supplies its receiver config;
+  keep the pipeline receiver ID in sync with that preset.
+- Gateway Secret references specify the core API group as `group: ""`
+  so the desired manifest matches the live API representation. HTTPS
+  listeners retain `tls.mode: Terminate`.
 
 ## Open work, in order
 
-1. Done: Cloudflare token Secret in management and app; OpenFGA
+1. Done: Cloudflare token Secret in the `cert-manager` and
+   `external-dns` namespaces on all three clusters; OpenFGA
    Secrets; layout committed and pushed (07bd3aa); root applied.
 2. Fix OpenFGA until `openfga-kloudlab-app` is Healthy.
 3. Next commit, all in one: replace `argocd/apps/charts.yaml` and
@@ -135,9 +156,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
 
 ## End to end (commit after a59503f)
 
-- Every service is `sync: auto`; Argo syncs all at once, anything out
-  of `# order:` fails and retries. Nothing was rendered before; real
-  failures stay to fix.
+- Every service is `sync: auto`; ApplicationSet `RollingSync` advances
+  in numeric `order` groups and waits for each group to become Healthy.
+  Nothing was rendered before; real failures stay to fix.
 - Load balancer controller IAM: `infra/components/iam/load_balancer_controller.go`
   (role, upstream policy v3.6.1 in `infra/components/iam/policies/`,
   Pod Identity for `kube-system/aws-load-balancer-controller`), called
@@ -193,7 +214,8 @@ Unchecked against the real charts (no render was run). Gaps:
   in Pulumi (policy from `scripts/vendor-aws-load-balancer-controller-policy.sh`,
   service account `kube-system/aws-load-balancer-controller`). Until
   then no Gateway gets an AWS load balancer.
-- Secrets now in place (hand-made): Cloudflare token on all three,
+- Secrets now in place (hand-made): Cloudflare token in the
+  `cert-manager` and `external-dns` namespaces on all three clusters,
   `kloudlab-grafana-admin` (user `admin`), `kloudlab-otel-gateway-server`
   (token) on observability, `kloudlab-otel-gateway-client` (endpoint
   `otel.kloudlab.in:4317`, same token) on all three.

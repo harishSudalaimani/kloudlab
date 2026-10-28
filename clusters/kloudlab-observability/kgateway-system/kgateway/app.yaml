@@ -1,4 +1,4 @@
-# order: 4
+order: 4
 type: chart
 sync: auto
 repo: cr.kgateway.dev/kgateway-dev/charts

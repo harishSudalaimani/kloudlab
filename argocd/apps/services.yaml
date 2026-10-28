@@ -14,6 +14,38 @@ metadata:
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
+  strategy:
+    type: RollingSync
+    rollingSync:
+      steps:
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["1"]
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["2"]
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["3"]
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["4"]
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["5"]
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["6"]
+        - matchExpressions:
+            - key: order
+              operator: In
+              values: ["7"]
   generators:
     - git:
         repoURL: https://github.com/harishSudalaimani/kloudlab.git
@@ -29,6 +61,7 @@ spec:
       labels:
         cluster: '{{ index .path.segments 1 }}'
         namespace: '{{ index .path.segments 2 }}'
+        order: '{{ printf "%v" .order }}'
     spec:
       project: '{{ index .path.segments 1 }}'
       destination:

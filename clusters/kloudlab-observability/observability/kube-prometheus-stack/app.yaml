@@ -1,4 +1,4 @@
-# order: 2
+order: 2
 type: chart
 sync: auto
 repo: https://prometheus-community.github.io/helm-charts
