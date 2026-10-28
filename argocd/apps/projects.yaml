@@ -1,0 +1,50 @@
+# One AppProject per cluster: an app in clusters/<cluster>/ can deploy
+# only to that cluster, and only from the listed sources.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kloudlab-management
+  namespace: argocd
+spec:
+  description: Argo CD and platform services of the management cluster
+  sourceRepos:
+    - https://github.com/harishSudalaimani/kloudlab.git
+  destinations:
+    - name: kloudlab-management
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kloudlab-app
+  namespace: argocd
+spec:
+  description: Application workloads, OpenFGA and Karpenter
+  sourceRepos:
+    - https://github.com/harishSudalaimani/kloudlab.git
+    - https://openfga.github.io/helm-charts
+  destinations:
+    - name: kloudlab-app
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kloudlab-observability
+  namespace: argocd
+spec:
+  description: OpenTelemetry, Prometheus, Loki, Tempo and Grafana
+  sourceRepos:
+    - https://github.com/harishSudalaimani/kloudlab.git
+  destinations:
+    - name: kloudlab-observability
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

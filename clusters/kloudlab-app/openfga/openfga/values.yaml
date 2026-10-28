@@ -1,0 +1,79 @@
+replicaCount: 2
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+
+playground:
+  enabled: false
+
+postgresql:
+  enabled: false
+mysql:
+  enabled: false
+
+authn:
+  method: preshared
+  preshared:
+    # Kubernetes Secret created by hand (key: keys); the API's
+    # OPENFGA_API_TOKEN is one of these keys.
+    keysSecret: openfga-auth
+
+datastore:
+  engine: postgres
+  # Kubernetes Secret created by hand (key: uri), pointing at the
+  # openfga-postgres Service (../postgres) in this namespace.
+  uriSecret: openfga-postgres
+  applyMigrations: true
+  waitForMigrations: true
+  migrationType: job
+
+# Argo CD maps Helm post-install hooks to PostSync, which waits for the
+# OpenFGA Deployment to become healthy. The Deployment itself waits for this
+# migration Job, so run the Job as a PreSync hook to avoid that deadlock.
+migrate:
+  annotations:
+    helm.sh/hook: "pre-install,pre-upgrade"
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: "before-hook-creation"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 1
+    memory: 512Mi
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/instance: openfga
+
+log:
+  format: json
+  level: info
+
+telemetry:
+  metrics:
+    enabled: true
+    addr: 0.0.0.0:2112
+    enableRPCHistograms: true
+  trace:
+    enabled: true
+    otlp:
+      endpoint: otel-node-agent.opentelemetry.svc.cluster.local:4317
+      tls:
+        enabled: false
+    serviceName: openfga
+    resourceAttributes: k8s.cluster.name=kloudlab-app
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "2112"
+  prometheus.io/path: /metrics

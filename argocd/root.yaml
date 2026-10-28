@@ -1,0 +1,21 @@
+# The only object applied by hand, once, on kloudlab-management after
+# Argo CD itself is installed. Everything else comes from Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/harishSudalaimani/kloudlab.git
+    targetRevision: main
+    path: argocd/apps
+  destination:
+    # by server: apps/clusters.yaml renames in-cluster
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false

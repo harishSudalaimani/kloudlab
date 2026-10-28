@@ -1,0 +1,16 @@
+# Gives the cluster Argo CD runs in the same name as its folder under
+# clusters/. No credentials: Argo CD uses its own ServiceAccount here.
+# kloudlab-app and kloudlab-observability are registered with their
+# IAM deployer roles (secrets cluster-kloudlab-app, -observability).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-kloudlab-management
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: kloudlab-management
+  server: https://kubernetes.default.svc
+  config: '{"tlsClientConfig":{"insecure":false}}'

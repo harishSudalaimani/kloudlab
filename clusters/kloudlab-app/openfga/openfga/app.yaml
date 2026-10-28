@@ -1,0 +1,3 @@
+repo: https://openfga.github.io/helm-charts
+chart: openfga
+version: 0.3.16

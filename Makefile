@@ -19,4 +19,7 @@ infra-test:
 	cd infra && go test ./...
 
 openfga-template:
-	helm template openfga openfga --repo https://openfga.github.io/helm-charts --version 0.3.16 --values gitops/clusters/identity/applications/openfga/values.yaml --namespace kloudlab-identity
+	helm template openfga openfga \
+		--repo https://openfga.github.io/helm-charts --version 0.3.16 \
+		--values clusters/kloudlab-app/openfga/openfga/values.yaml \
+		--namespace openfga
