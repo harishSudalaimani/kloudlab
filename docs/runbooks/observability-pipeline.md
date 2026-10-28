@@ -45,10 +45,14 @@ Collector. See [OpenFGA telemetry settings](https://github.com/openfga/openfga/b
 ## Central observability cluster
 
 kloudlab-observability runs an authenticated TLS OTLP gateway, Prometheus,
-Loki, Tempo, and Grafana as Helm releases. The gateway sends metrics to its
-Prometheus exporter endpoint, which Prometheus scrapes through a ServiceMonitor.
-It sends logs to Loki's native OTLP HTTP endpoint and traces to Tempo over
-OTLP/gRPC. Grafana has Prometheus, Loki, and Tempo datasources with trace-to-log
+Loki, monolithic Tempo, and Grafana as Helm releases. Tempo runs as one
+replica without Kafka, stores trace blocks in S3, and keeps its WAL on a 10 GiB
+encrypted gp3 volume with a seven-day retention period. The gateway sends
+metrics to its Prometheus exporter endpoint, which Prometheus scrapes through a
+ServiceMonitor. It sends logs to Loki's native OTLP HTTP endpoint and traces to Tempo over
+OTLP/gRPC at `tempo-monolithic.observability.svc.cluster.local:4317`. Grafana
+queries Tempo at `tempo-monolithic.observability.svc.cluster.local:3200` and
+has Prometheus, Loki, and Tempo datasources with trace-to-log
 navigation configured. Grafana has no public ingress.
 
 Telemetry application releases pin the OpenTelemetry Helm chart and Contrib

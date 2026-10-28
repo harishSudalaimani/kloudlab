@@ -27,7 +27,7 @@ datasources:
         type: tempo
         uid: tempo
         access: proxy
-        url: http://tempo-distributed-query-frontend.observability.svc.cluster.local:3200
+        url: http://tempo-monolithic.observability.svc.cluster.local:3200
         jsonData:
           tracesToLogsV2:
             datasourceUid: loki

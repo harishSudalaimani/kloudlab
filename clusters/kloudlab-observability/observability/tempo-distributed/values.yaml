@@ -1,59 +1,32 @@
+fullnameOverride: tempo-monolithic
+replicas: 1
+
 serviceAccount:
   create: true
   name: kloudlab-tempo
 
-multitenancyEnabled: false
-
-storage:
-  trace:
-    backend: s3
-    s3:
-      bucket: kloudlab-observability-tempo
-      endpoint: s3.ap-south-1.amazonaws.com
-      region: ap-south-1
-
-traces:
-  otlp:
-    grpc:
-      enabled: true
-    http:
-      enabled: true
-  jaeger:
-    thriftHttp:
-      enabled: false
-  zipkin:
-    enabled: false
-
-distributor:
-  replicas: 1
-ingester:
-  replicas: 1
-querier:
-  replicas: 1
-queryFrontend:
-  replicas: 1
-
-# Tempo 3.0's Kafka write path (block-builder, live-store) needs a Kafka
-# broker; this POC keeps the classic ingester path without Kafka.
-blockBuilder:
-  enabled: false
-liveStore:
-  enabled: false
-
 tempo:
-  structuredConfig:
-    # The Memcached cache is optional. Disable Tempo's cache config as well
-    # as the chart workload so Tempo does not keep dialing a removed service.
-    cache:
-      caches: []
-    backend_worker:
-      compaction:
-        block_retention: 168h
+  multitenancyEnabled: false
+  reportingEnabled: false
+  retention: 168h
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 3Gi
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: kloudlab-observability-tempo
+        endpoint: s3.ap-south-1.amazonaws.com
+        region: ap-south-1
+      wal:
+        path: /var/tempo/wal
 
-# Saves one pod slot on the node that currently blocks the OTel DaemonSet.
-# Queries remain functional but may be slower without this cache.
-memcached:
-  enabled: false
-
-minio:
-  enabled: false
+persistence:
+  enabled: true
+  storageClassName: gp3
+  size: 10Gi

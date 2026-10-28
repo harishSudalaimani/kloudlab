@@ -140,15 +140,16 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   in `opentelemetry`, while keeping the existing Certificate in
   `observability` tracked because Argo pruning is disabled. This fix is
   not yet pushed.
-- Tempo 3.17.0 trace storage uses the `kloudlab-observability-tempo` S3
-  bucket in `ap-south-1`. Its current crash is because the S3 endpoint was
-  empty; local values now set `s3.ap-south-1.amazonaws.com`. The
-  `storage-observability` Pulumi stack defines the association of
-  `observability/kloudlab-tempo` with the bucket-scoped Pod Identity role;
-  verify the stack is applied if Tempo reports an AWS credentials error.
-  After Argo sync, confirm Tempo becomes Healthy. Tempo
-  pods have no CPU or memory requests/limits configured; resource pressure
-  is not the current startup failure.
+- Tempo's distributed chart starts its supporting components, but the
+  distributor fails because Tempo 3 microservices mode requires a configured
+  Kafka-compatible ingest topic. The earlier claim that disabling the
+  block-builder and live-store preserved the old ingester path was incorrect.
+  GitOps now switches to the single-binary `tempo` chart (3.2.1 / Tempo 3.1.1)
+  for this low-volume POC, keeps the same S3 bucket and Pod Identity service
+  account, and stores the WAL on encrypted gp3. The OTel and Grafana endpoints
+  point to `tempo-monolithic`. After the Argo app updates, sync it with prune
+  enabled to remove the old distributed workloads; confirm the new pod is
+  Healthy and traces can be queried in Grafana.
 - OpenFGA pods' `wait-for-migration` init container uses the `default`
   ServiceAccount and gets Forbidden when reading Job `openfga-migrate`.
   The local GitOps change adds an order-3 ServiceAccount and a Role limited
@@ -252,8 +253,10 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   leaves its object in the cluster: delete it by hand (the old
   `charts` and `manifests` ApplicationSets were removed with
   `--cascade=orphan` so `services` adopts their Applications).
-- Tempo (`tempo-distributed` 3.17.0): `blockBuilder` and `liveStore`
-  are off (they need Kafka); traces use the ingester path.
+- Tempo is configured in monolithic mode for this low-volume POC; Tempo 3
+  microservices mode requires Kafka. The one-replica deployment shares CPU and
+  memory across ingest and query work, so move back to microservices with a
+  Kafka-compatible backend if the workload or availability needs grow.
 
 - App images: ECR repos `kloudlab-api` and `kloudlab-frontend`
   (created with the AWS CLI, not yet in Pulumi), built on an operator

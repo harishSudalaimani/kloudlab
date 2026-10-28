@@ -59,7 +59,7 @@ config:
             key_file: /etc/otel-gateway/tls/tls.key
   exporters:
     otlp/tempo:
-      endpoint: tempo-distributed-distributor.observability.svc.cluster.local:4317
+      endpoint: tempo-monolithic.observability.svc.cluster.local:4317
       tls:
         insecure: true
     otlphttp/loki:
