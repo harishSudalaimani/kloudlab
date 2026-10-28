@@ -27,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: 481665121849.dkr.ecr.ap-south-1.amazonaws.com/kloudlab-frontend:eb669ee
+          image: 481665121849.dkr.ecr.ap-south-1.amazonaws.com/kloudlab-frontend:af70ed8
           imagePullPolicy: Always
           ports:
             - name: http
