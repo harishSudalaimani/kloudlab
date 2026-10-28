@@ -1,9 +1,8 @@
 name: Images
 
-# Builds API and frontend images, publishes them to ECR, then commits the
-# short-SHA image tags to the GitOps deployments. Argo CD deploys that commit.
-# Pushing this workflow file is also a convenient way to validate image publishing.
-# The publisher role needs BatchGetImage because each run updates the mutable main tag.
+# Build API and frontend independently, publish each image to ECR, and promote
+# every successful build to GitOps. Argo CD deploys the GitOps commit.
+# The publisher role needs ecr:BatchGetImage to update the mutable :main tags.
 on:
   push:
     branches: [main]
@@ -22,21 +21,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  image:
-    name: Build and push ${{ matrix.name }}
+  build-api:
+    name: Build and push API image
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: kloudlab-api
-            context: apps/api
-          - name: kloudlab-frontend
-            context: apps/frontend
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -68,31 +59,86 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push
+      - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
+          context: apps/api
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ matrix.name }}:main
-            ${{ steps.ecr.outputs.registry }}/${{ matrix.name }}:${{ steps.sha.outputs.short }}
+            ${{ steps.ecr.outputs.registry }}/kloudlab-api:main
+            ${{ steps.ecr.outputs.registry }}/kloudlab-api:${{ steps.sha.outputs.short }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          # ignored by the API Dockerfile (no such ARGs there)
+          cache-from: type=gha,scope=kloudlab-api
+          cache-to: type=gha,mode=max,scope=kloudlab-api
+
+  build-frontend:
+    name: Build and push frontend image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate ECR publishing role
+        env:
+          AWS_ECR_PUBLISH_ROLE_ARN: ${{ vars.AWS_ECR_PUBLISH_ROLE_ARN }}
+        run: |
+          if [[ "$AWS_ECR_PUBLISH_ROLE_ARN" != arn:aws:iam::481665121849:role/* ]]; then
+            echo "Set AWS_ECR_PUBLISH_ROLE_ARN to a role ARN in account 481665121849." >&2
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ECR_PUBLISH_ROLE_ARN }}
+          aws-region: ap-south-1
+          role-session-name: kloudlab-images-${{ github.run_id }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/frontend
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/kloudlab-frontend:main
+            ${{ steps.ecr.outputs.registry }}/kloudlab-frontend:${{ steps.sha.outputs.short }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             VITE_AUTH0_DOMAIN=${{ vars.VITE_AUTH0_DOMAIN || 'dev-rfog4fw2atmd5wrd.us.auth0.com' }}
             VITE_AUTH0_CLIENT_ID=${{ vars.VITE_AUTH0_CLIENT_ID || 'gNuTg6P3eMIERdxAtowzW76AU7ihqP2L' }}
             VITE_AUTH0_AUDIENCE=${{ vars.VITE_AUTH0_AUDIENCE || 'https://api.kloudlab.in' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'https://api.kloudlab.in/api' }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          cache-from: type=gha,scope=kloudlab-frontend
+          cache-to: type=gha,mode=max,scope=kloudlab-frontend
 
   update-gitops:
-    name: Update GitOps image tags
-    needs: image
-    if: github.ref == 'refs/heads/main'
+    name: Promote successful images to GitOps
+    needs: [build-api, build-frontend]
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      (needs['build-api'].result == 'success' || needs['build-frontend'].result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -103,25 +149,48 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Short SHA
-        id: sha
-        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
-      - name: Point deployments at the published images
+      - name: Check source freshness
+        id: freshness
         env:
-          IMAGE_TAG: ${{ steps.sha.outputs.short }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != "push" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest_source_commit="$(git log -1 --format=%H origin/main -- \
+            apps/api apps/frontend \
+            clusters/kloudlab-app/kloudlab/api/manifests/configmap.yaml \
+            .github/workflows/images.yml)"
+          if ! git merge-base --is-ancestor "$latest_source_commit" "$EVENT_SHA"; then
+            echo "Skipping stale image build for $EVENT_SHA; latest relevant main commit is $latest_source_commit."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Update successful image tags
+        if: steps.freshness.outputs.current == 'true'
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          UPDATE_API: ${{ needs['build-api'].result == 'success' }}
+          UPDATE_FRONTEND: ${{ needs['build-frontend'].result == 'success' }}
         run: |
           python3 - <<'PY'
           import os
           import re
           from pathlib import Path
 
-          tag = os.environ["IMAGE_TAG"]
+          tag = os.environ["IMAGE_TAG"][:7]
           images = {
-              "api": ("clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml", "kloudlab-api"),
-              "frontend": ("clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml", "kloudlab-frontend"),
+              "api": ("clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml", "kloudlab-api", "UPDATE_API"),
+              "frontend": ("clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml", "kloudlab-frontend", "UPDATE_FRONTEND"),
           }
-          for path, image in images.values():
+          changed = []
+          for path, image, result_var in images.values():
+              if os.environ[result_var] != "true":
+                  print(f"Leaving {image} unchanged because its image build did not succeed.")
+                  continue
               file = Path(path)
               content = file.read_text()
               updated, count = re.subn(
@@ -131,20 +200,47 @@ jobs:
               )
               if count != 1:
                   raise SystemExit(f"expected one {image} image in {path}, found {count}")
-              file.write_text(updated)
+              if updated != content:
+                  file.write_text(updated)
+                  changed.append(path)
+          if not changed:
+              print(f"GitOps already uses image tag {tag} for all successful builds.")
           PY
 
-      - name: Commit GitOps image update
+      - name: Commit and push GitOps image update
+        if: steps.freshness.outputs.current == 'true'
         env:
-          IMAGE_TAG: ${{ steps.sha.outputs.short }}
+          IMAGE_TAG: ${{ github.sha }}
+          EVENT_SHA: ${{ github.sha }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml \
+          git add \
+            clusters/kloudlab-app/kloudlab/api/manifests/deployment.yaml \
             clusters/kloudlab-app/kloudlab/frontend/manifests/deployment.yaml
           if git diff --cached --quiet; then
-            echo "GitOps manifests already use image tag ${IMAGE_TAG}"
+            echo "No GitOps image changes to commit for ${IMAGE_TAG:0:7}."
             exit 0
           fi
-          git commit -m "chore(gitops): deploy app images ${IMAGE_TAG}"
-          git push origin HEAD:main
+          git commit -m "chore(gitops): deploy app images ${IMAGE_TAG:0:7}"
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo "Push raced with another main commit; rebasing and retrying (attempt $((attempt + 1))/3)."
+              git fetch origin main
+              git rebase origin/main
+              latest_source_commit="$(git log -1 --format=%H origin/main -- \
+                apps/api apps/frontend \
+                clusters/kloudlab-app/kloudlab/api/manifests/configmap.yaml \
+                .github/workflows/images.yml)"
+              if ! git merge-base --is-ancestor "$latest_source_commit" "$EVENT_SHA"; then
+                echo "A newer image source commit landed during promotion; leaving its deployment tag untouched."
+                exit 0
+              fi
+            fi
+          done
+          echo "Could not push the GitOps image update after 3 attempts." >&2
+          exit 1

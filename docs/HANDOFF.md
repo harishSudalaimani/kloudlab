@@ -266,8 +266,9 @@ Secrets Operator with EKS Pod Identity (ADR 0008).
   on the otel-gateway Service). Zone SSL mode must be Full (strict).
 - App: `apps/api/Dockerfile`, `apps/frontend/Dockerfile`, workflow
   `.github/workflows/images.yml` builds and publishes ECR images on push,
-  then commits their short-SHA tags to the GitOps deployment manifests.
-  Argo CD deploys that Git commit. Deployed in namespace
+  then promotes each successful build's short-SHA tag independently to its
+  GitOps deployment manifest. Stale push builds are skipped and GitOps push
+  races are retried. Argo CD deploys that Git commit. Deployed in namespace
   `kloudlab` on app (`clusters/kloudlab-app/kloudlab/`): api,
   api-postgres, frontend; routes `kloudlab.in` (frontend),
   `www.kloudlab.in` (301 to apex), `api.kloudlab.in` (API).
