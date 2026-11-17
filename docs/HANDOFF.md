@@ -12,6 +12,62 @@ security, hosted at `kloudlab.in` (DNS on Cloudflare). POC sizing,
 but no shortcuts that a reviewer would call insecure without saying
 so here.
 
+## Infrastructure teardown in progress (2026-10-29)
+
+The owner is deleting the AWS resources created for this project. This
+status supersedes the deployed-resource claims and deployment open work
+below; those sections describe the last known running setup. Pulumi destroy
+was reported complete for `network-app`, `network-connectivity`,
+`network-management`, `network-observability`, and
+`storage-observability`. The user reported the storage stack destroy removed
+all 3 remaining stack resources. Destruction of the three cluster stacks,
+`argocd-management`, `github-ecr-publisher`, `github-oidc`, and
+`bootstrap-state` has not been confirmed here; inspect each stack before
+assuming its AWS resources are gone. Remove `github-ecr-publisher` before
+`github-oidc`; destroy `bootstrap-state` last because it owns the S3/KMS
+resources used by the Pulumi DIY backend. Do not delete untagged AWS default
+VPC resources as project leftovers.
+
+The user later reported `cluster-app`, `cluster-observability`,
+`argocd-management`, and `cluster-management` each show 0 Pulumi resources;
+`github-ecr-publisher` shows 6. Five confirmed unattached EBS PVC volumes
+were listed for the app and observability clusters, and the user now reports
+that only an S3 bucket remains. AWS inventory has not been rechecked. The
+remaining bucket must be identified before deletion: if it is
+`kloudlab-pulumi-state`, keep it until `github-ecr-publisher`,
+`github-oidc`, and `bootstrap-state` cleanup is complete. The app and
+observability EBS StorageClasses set `reclaimPolicy: Retain`, so their
+PVC-backed volumes needed explicit cleanup.
+
+The latest stack listing identifies `kloudlab-pulumi-state` as the only
+bucket, with `github-ecr-publisher` at 6 resources, no `github-oidc` stack
+listed, and `bootstrap-state` at 10 resources. The bootstrap stack owns the
+versioned Pulumi backend bucket and a KMS key with a 30-day deletion window.
+Migrate the bootstrap stack state off S3 before emptying/deleting the backend;
+expect the KMS key to remain pending deletion after destroy.
+
+The user subsequently destroyed the five remaining `github-ecr-publisher`
+resources successfully. `github-oidc` had no stack listed. `bootstrap-state`
+is the next stack; migrate its checkpoint to an isolated local Pulumi backend
+before removing the S3 backend resources.
+
+The user migrated `bootstrap-state/dev` to the local backend at
+`file:///tmp/kloudlab-pulumi-final-state`, purged the S3 bucket's object
+versions and delete markers, unprotected the local state, destroyed its 9
+remaining AWS resources, and removed the local `dev` stack. Verify in AWS
+that `kloudlab-pulumi-state` is absent and check the KMS key's state; its
+30-day deletion window means it can remain pending deletion after destroy.
+
+The user verified the state bucket is absent and the bootstrap KMS key
+`c240fa09-2807-474e-b347-8a07ec45152f` is `PendingDeletion` until
+2026-11-28. A subsequent, unfiltered Resource Groups Tagging API scan showed
+other tagged account resources, including EC2 instances/fleets, ENI, two
+EBS volumes (`vol-016470e57e57dace8`, `vol-0b9167dd7b3186241`), a VPC
+endpoint (`vpce-025ff1d08c5c977d7`), and a different KMS key. These are not
+yet classified as KloudLab-owned; inspect tags and resource metadata before
+deleting anything. EKS list was empty; the only remaining VPC shown was the
+untagged default VPC.
+
 ## Frontend playground
 
 For an account without a saved local draft, the playground starts with a
